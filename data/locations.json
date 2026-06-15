@@ -1,0 +1,19 @@
+{
+  "locations": [
+    {
+      "id": "loc-miskatonic-museum",
+      "name": "ミスカトニック大学・考古学博物館",
+      "icon": "🏛️"
+    },
+    {
+      "id": "loc-miller-manor",
+      "name": "アーカム・ミラー邸",
+      "icon": "🏠"
+    },
+    {
+      "id": "loc-kyoto-underground",
+      "name": "京都・地下遺跡",
+      "icon": "🗺️"
+    }
+  ]
+}

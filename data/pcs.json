@@ -1,0 +1,25 @@
+{
+  "pcs": [
+    {
+      "id": "pc-takahashi",
+      "name": "高橋一郎",
+      "playerName": "Player A",
+      "affiliation": "ミスカトニック大学（客員研究員）",
+      "relatedNpcIds": ["phil-miller"]
+    },
+    {
+      "id": "pc-tanaka",
+      "name": "田中太郎",
+      "playerName": "Player B",
+      "affiliation": "私立探偵事務所",
+      "relatedNpcIds": ["phil-miller", "james-blackwood"]
+    },
+    {
+      "id": "pc-kanzaki",
+      "name": "神崎蓮",
+      "playerName": "Player C",
+      "affiliation": "東京大学（民俗学研究室）",
+      "relatedNpcIds": ["phil-miller", "yuki-tanaka"]
+    }
+  ]
+}

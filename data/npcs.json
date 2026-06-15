@@ -1,0 +1,200 @@
+{
+  "npcs": [
+    {
+      "id": "phil-miller",
+      "name": "フィル・ミラー",
+      "furigana": "ふぃる・みらー",
+      "nameEn": "Phil Miller",
+      "birthdate": "1892/03/15",
+      "age": 58,
+      "nationality": "アメリカ合衆国",
+      "origin": "アメリカ・マサチューセッツ州",
+      "job": "考古学者",
+      "organizationIds": ["org-miskatonic-univ", "org-japan-archaeology"],
+      "status": "alive",
+      "bio": [
+        "製材所を営む父と数学学者の母を持つ。幼少期より祖父に連れられ世界中の発掘現場を訪れる。",
+        "ミスカトニック大学卒業後、世界各地で発掘活動を行い数々の賞を受賞。その後日本に移住し日本考古学協会賞も受賞している。",
+        "穏やかな物腰だが、学術的な議論になると途端に饒舌になる。特に先カンブリア紀の化石に関しては誰にも負けない情熱を持つ。"
+      ],
+      "person": {
+        "family": "父（製材所経営）、母（数学学者）、祖父タティス・ミラー博士（古生物学者）",
+        "pet": "ゴールデンレトリバー「ダイナ」",
+        "traits": "常に鞭を携帯している。実戦で使ったことはないが「いざという時のために」と主張している。",
+        "personality": "穏やかで知的。学術的な話題では饒舌になり、特に化石や古代文明の話になると目を輝かせる。"
+      },
+      "episodes": [
+        {
+          "icon": "🦴",
+          "title": "化石破壊事件",
+          "desc": "ミスカトニック大学の保管庫で貴重な三葉虫化石が破壊された事件。フィルは真犯人を突き止め、大学の名誉を守った。"
+        },
+        {
+          "icon": "🪢",
+          "title": "鞭へのこだわり",
+          "desc": "幼い頃に読んだ冒険小説の影響で、いつも鞭を携帯している。実戦で使ったことは一度もないが、「いざという時のために」と主張している。"
+        },
+        {
+          "icon": "🦛",
+          "title": "カバ恐怖症",
+          "desc": "アフリカでの発掘中にカバに襲われた経験があり、以降カバの映像すら見られなくなった。動物園の前を通る際は遠回りする。"
+        },
+        {
+          "icon": "⛰️",
+          "title": "山の神事件",
+          "desc": "京都府の山村で共同調査中、不可解な現象に遭遇。民俗学の観点からも調査を続けている。"
+        },
+        {
+          "icon": "🎩",
+          "title": "タキシードサム好き",
+          "desc": "1920年代のジャズとタキシードサムの音楽をこよなく愛する。研究の合間にレコードを聴くのが日課。"
+        }
+      ],
+      "contactablePcIds": ["pc-takahashi", "pc-tanaka", "pc-kanzaki"],
+      "scenarioIds": ["scn-lost-city", "scn-black-tide", "scn-yellow-invite"],
+      "relatedNpcIds": [
+        { "npcId": "tatis-miller", "relation": "祖父 / 古生物学者" },
+        { "npcId": "yuki-tanaka", "relation": "共同研究者 / 民俗学者" },
+        { "npcId": "james-blackwood", "relation": "協力者 / 私立探偵" },
+        { "npcId": "elena-vance", "relation": "友人 / 医師" }
+      ],
+      "locationIds": ["loc-miskatonic-museum", "loc-miller-manor", "loc-kyoto-underground"]
+    },
+    {
+      "id": "tatis-miller",
+      "name": "タティス・ミラー博士",
+      "furigana": "たてぃす・みらー",
+      "nameEn": "Dr. Tatis Miller",
+      "birthdate": "1860/07/22",
+      "age": "享年 78歳",
+      "nationality": "イギリス→アメリカ",
+      "origin": "イギリス・ロンドン",
+      "job": "古生物学者",
+      "organizationIds": ["org-miskatonic-univ"],
+      "status": "dead",
+      "bio": [
+        "イギリス生まれの天才古生物学者。若くしてアメリカに渡り、ミスカトニック大学の考古学部を創設した伝説的人物。",
+        "孫のフィルを幼い頃から発掘現場に連れて回り、考古学への道を開いた。"
+      ],
+      "person": {
+        "family": "孫フィル・ミラー",
+        "pet": "なし",
+        "traits": "常に化石標本を手元に置いていた",
+        "personality": "厳格だが孫への愛情は深い"
+      },
+      "episodes": [],
+      "contactablePcIds": [],
+      "scenarioIds": ["scn-yellow-invite"],
+      "relatedNpcIds": [
+        { "npcId": "phil-miller", "relation": "孫 / 考古学者" }
+      ],
+      "locationIds": ["loc-miskatonic-museum"]
+    },
+    {
+      "id": "yuki-tanaka",
+      "name": "田中 雪",
+      "furigana": "たなか ゆき",
+      "nameEn": "Yuki Tanaka",
+      "birthdate": "1985/11/03",
+      "age": 38,
+      "nationality": "日本",
+      "origin": "日本・京都府",
+      "job": "民俗学者",
+      "organizationIds": [],
+      "status": "alive",
+      "bio": ["京都出身の民俗学者。フィル・ミラーと共同調査を行っている。"],
+      "person": {
+        "family": "不明",
+        "pet": "三毛猫「ミャア」",
+        "traits": "フィールドワークに情熱的",
+        "personality": "冷静で観察力に優れる"
+      },
+      "episodes": [],
+      "contactablePcIds": ["pc-kanzaki"],
+      "scenarioIds": ["scn-lost-city", "scn-black-tide"],
+      "relatedNpcIds": [
+        { "npcId": "phil-miller", "relation": "共同研究者 / 考古学者" }
+      ],
+      "locationIds": ["loc-kyoto-underground"]
+    },
+    {
+      "id": "james-blackwood",
+      "name": "ジェームズ・ブラックウッド",
+      "furigana": "じぇーむず・ぶらっくうっど",
+      "nameEn": "James Blackwood",
+      "birthdate": "1895/09/08",
+      "age": 55,
+      "nationality": "アメリカ合衆国",
+      "origin": "アメリカ・ニューヨーク",
+      "job": "私立探偵",
+      "organizationIds": [],
+      "status": "alive",
+      "bio": ["アーカム在住の私立探偵。超常事件にも関わることが多い。"],
+      "person": {
+        "family": "不明",
+        "pet": "なし",
+        "traits": "口は悪いが根は良い",
+        "personality": "皮肉屋だが信頼できる"
+      },
+      "episodes": [],
+      "contactablePcIds": ["pc-tanaka"],
+      "scenarioIds": ["scn-yellow-invite"],
+      "relatedNpcIds": [
+        { "npcId": "phil-miller", "relation": "協力者 / 考古学者" }
+      ],
+      "locationIds": []
+    },
+    {
+      "id": "elena-vance",
+      "name": "エレナ・ヴァンス",
+      "furigana": "えれな・ゔぁんす",
+      "nameEn": "Elena Vance",
+      "birthdate": "1900/04/18",
+      "age": 50,
+      "nationality": "アメリカ合衆国",
+      "origin": "アメリカ・ボストン",
+      "job": "医師",
+      "organizationIds": [],
+      "status": "missing",
+      "bio": ["アーカム総合病院の院長。「黒き潮騒」事件の後、行方不明となった。"],
+      "person": {
+        "family": "不明",
+        "pet": "なし",
+        "traits": "献身的な医師",
+        "personality": "冷静沈着"
+      },
+      "episodes": [],
+      "contactablePcIds": [],
+      "scenarioIds": ["scn-black-tide"],
+      "relatedNpcIds": [
+        { "npcId": "phil-miller", "relation": "友人 / 考古学者" }
+      ],
+      "locationIds": []
+    },
+    {
+      "id": "old-man-jenkins",
+      "name": "ジェンキンス老人",
+      "furigana": "じぇんきんすろうじん",
+      "nameEn": "Old Man Jenkins",
+      "birthdate": "1870/12/01",
+      "age": 80,
+      "nationality": "アメリカ合衆国",
+      "origin": "アメリカ・インスマス",
+      "job": "灯台守",
+      "organizationIds": [],
+      "status": "alive",
+      "bio": ["インスマス港の灯台を30年以上守り続けている老人。"],
+      "person": {
+        "family": "不明",
+        "pet": "なし",
+        "traits": "過去のインスマスの暗い歴史を知る",
+        "personality": "寡黙で慎重"
+      },
+      "episodes": [],
+      "contactablePcIds": [],
+      "scenarioIds": ["scn-black-tide"],
+      "relatedNpcIds": [],
+      "locationIds": []
+    }
+  ]
+}

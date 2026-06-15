@@ -1,313 +1,96 @@
 /* ========================================
-   TRPG World Archive — NPC Data & UI
+   TRPG World Archive v0.1
    ======================================== */
 
-const NPC_DATA = [
-  {
-    id: 'phil-miller',
-    name: 'フィル・ミラー',
-    nameEn: 'Phil Miller',
-    job: '考古学者',
-    affiliation: 'ミスカトニック大学',
-    status: 'alive',
-    important: true,
-    avatar: generateAvatar('フィル', '#2d5a3d', '#4a9eff'),
-    image: generatePortrait('フィル', '#1a3a2a', '#c9a84c'),
-    birthdate: '1892/03/15',
-    origin: 'アメリカ・マサチューセッツ州',
-    age: 58,
-    gender: '男性',
-    nationality: 'アメリカ合衆国',
-    language: '英語、日本語',
-    pet: 'ゴールデンレトリバー「ダイナ」',
-    san: '65 / 99',
-    skills: '考古学 80%、歴史 65%、乗馬 55%',
-    notes: '常に鞭を携帯している',
-    bio: [
-      '製材所を営む父と数学学者の母を持つ。幼少期より祖父に連れられ世界中の発掘現場を訪れる。',
-      'ミスカトニック大学卒業後、世界各地で発掘活動を行い数々の賞を受賞。その後日本に移住し日本考古学協会賞も受賞している。',
-      '穏やかな物腰だが、学術的な議論になると途端に饒舌になる。特に先カンブリア紀の化石に関しては誰にも負けない情熱を持つ。'
-    ],
-    episodes: [
-      {
-        icon: '🦴',
-        title: '化石破壊事件',
-        desc: 'ミスカトニック大学の保管庫で貴重な三葉虫化石が破壊された事件。フィルは真犯人を突き止め、大学の名誉を守った。'
-      },
-      {
-        icon: '🪢',
-        title: '鞭へのこだわり',
-        desc: '幼い頃に読んだ冒険小説の影響で、いつも鞭を携帯している。実戦で使ったことは一度もないが、「いざという時のために」と主張している。'
-      },
-      {
-        icon: '🦛',
-        title: 'カバ恐怖症',
-        desc: 'アフリカでの発掘中にカバに襲われた経験があり、以降カバの映像すら見られなくなった。動物園の前を通る際は遠回りする。'
-      }
-    ],
-    scenarios: [
-      { title: '失われた都', date: '2023/08/15' },
-      { title: '黒き潮騒', date: '2024/01/22' },
-      { title: '黄衣の招待状', date: '2024/05/12' }
-    ],
-    relatedNpcs: [
-      { name: 'タティス・ミラー博士', relation: '祖父 / 古生物学者', avatar: generateAvatar('タティス', '#3d2d5a', '#a78bfa') }
-    ],
-    organizations: [
-      { name: 'ミスカトニック大学', role: '名誉教授', icon: '🏛️' },
-      { name: '日本考古学協会', role: '会員', icon: '🔬' }
-    ],
-    locations: [
-      { name: 'ミスカトニック大学・考古学博物館', icon: '🏛️' },
-      { name: 'アーカム・ミラー邸', icon: '🏠' },
-      { name: '京都・地下遺跡', icon: '🗺️' }
-    ]
-  },
-  {
-    id: 'tatis-miller',
-    name: 'タティス・ミラー博士',
-    nameEn: 'Dr. Tatis Miller',
-    job: '古生物学者',
-    affiliation: 'ミスカトニック大学',
-    status: 'dead',
-    important: true,
-    avatar: generateAvatar('タティス', '#3d2d5a', '#a78bfa'),
-    image: generatePortrait('タティス', '#2a1a3a', '#8b7ec8'),
-    birthdate: '1860/07/22',
-    origin: 'イギリス・ロンドン',
-    age: '享年 78歳',
-    gender: '男性',
-    nationality: 'イギリス→アメリカ',
-    language: '英語、ラテン語',
-    pet: 'なし',
-    san: '—',
-    skills: '古生物学 90%、地質学 75%',
-    notes: '孫フィルに考古学を教えた',
-    bio: [
-      'イギリス生まれの天才古生物学者。若くしてアメリカに渡り、ミスカトニック大学の考古学部を創設した伝説的人物。',
-      '孫のフィルを幼い頃から発掘現場に連れて回り、考古学への道を開いた。晩年は隠居し、貴重な化石コレクションを孫に託した。'
-    ],
-    episodes: [
-      {
-        icon: '🦕',
-        title: '恐竜化石の発見',
-        desc: 'モンタナ州で当時としては画期的な恐竜化石を発見。学術界に大きな衝撃を与えた。'
-      },
-      {
-        icon: '📚',
-        title: '最後の講義',
-        desc: '引退前の最後の講義「地球の記憶を読む」は今もミスカトニック大学で語り継がれている。'
-      }
-    ],
-    scenarios: [
-      { title: '黄衣の招待状', date: '2024/05/12' }
-    ],
-    relatedNpcs: [
-      { name: 'フィル・ミラー', relation: '孫 / 考古学者', avatar: generateAvatar('フィル', '#2d5a3d', '#4a9eff') }
-    ],
-    organizations: [
-      { name: 'ミスカトニック大学', role: '創設者', icon: '🏛️' }
-    ],
-    locations: [
-      { name: 'ミスカトニック大学・考古学博物館', icon: '🏛️' },
-      { name: 'アーカム墓地', icon: '⚰️' }
-    ]
-  },
-  {
-    id: 'yuki-tanaka',
-    name: '田中 雪',
-    nameEn: 'Yuki Tanaka',
-    job: '民俗学者',
-    affiliation: '東京大学',
-    status: 'alive',
-    important: false,
-    avatar: generateAvatar('田中', '#5a2d3d', '#f472b6'),
-    image: generatePortrait('田中', '#3a1a2a', '#e879a8'),
-    birthdate: '1985/11/03',
-    origin: '日本・京都府',
-    age: 38,
-    gender: '女性',
-    nationality: '日本',
-    language: '日本語、英語',
-    pet: '三毛猫「ミャア」',
-    san: '72 / 99',
-    skills: '民俗学 70%、図書館利用 60%',
-    notes: 'フィルと共同研究を行っている',
-    bio: [
-      '京都出身の民俗学者。地方の伝承や怪奇譚のフィールドワークを専門とする。',
-      'フィル・ミラーと共同で日本各地の地下遺跡調査を行っており、学術的な面とオカルト的な面の両方に精通している。'
-    ],
-    episodes: [
-      {
-        icon: '👻',
-        title: '山の神の伝承',
-        desc: '京都府の山村で「山の神」の伝承を調査中、実際に不可解な現象に遭遇した。'
-      }
-    ],
-    scenarios: [
-      { title: '失われた都', date: '2023/08/15' },
-      { title: '黒き潮騒', date: '2024/01/22' }
-    ],
-    relatedNpcs: [
-      { name: 'フィル・ミラー', relation: '共同研究者 / 考古学者', avatar: generateAvatar('フィル', '#2d5a3d', '#4a9eff') }
-    ],
-    organizations: [
-      { name: '東京大学', role: '助手', icon: '🏛️' }
-    ],
-    locations: [
-      { name: '京都・地下遺跡', icon: '🗺️' },
-      { name: '東京大学・民俗学研究室', icon: '🏠' }
-    ]
-  },
-  {
-    id: 'james-blackwood',
-    name: 'ジェームズ・ブラックウッド',
-    nameEn: 'James Blackwood',
-    job: '私立探偵',
-    affiliation: '独立',
-    status: 'alive',
-    important: false,
-    avatar: generateAvatar('JB', '#2d3d5a', '#60a5fa'),
-    image: generatePortrait('JB', '#1a2a3a', '#3b82f6'),
-    birthdate: '1895/09/08',
-    origin: 'アメリカ・ニューヨーク',
-    age: 55,
-    gender: '男性',
-    nationality: 'アメリカ合衆国',
-    language: '英語',
-    pet: 'なし',
-    san: '58 / 99',
-    skills: '探索 75%、拳銃 60%、説得 55%',
-    notes: 'アーカム在住',
-    bio: [
-      'ニューヨーク出身の私立探偵。第一次世界大戦の経験を経てアーカムに移住。',
-      '表向きは普通の探偵だが、超常的な事件にも関わることが多い。口は悪いが根は良い人物。'
-    ],
-    episodes: [
-      {
-        icon: '🔍',
-        title: '消えた教授',
-        desc: 'ミスカトニック大学の教授が失踪した事件を受け、フィルと共に調査を行った。'
-      }
-    ],
-    scenarios: [
-      { title: '黄衣の招待状', date: '2024/05/12' }
-    ],
-    relatedNpcs: [
-      { name: 'フィル・ミラー', relation: '協力者 / 考古学者', avatar: generateAvatar('フィル', '#2d5a3d', '#4a9eff') }
-    ],
-    organizations: [],
-    locations: [
-      { name: 'アーカム・ブラックウッド事務所', icon: '🏠' }
-    ]
-  },
-  {
-    id: 'elena-vance',
-    name: 'エレナ・ヴァンス',
-    nameEn: 'Elena Vance',
-    job: '医師',
-    affiliation: 'アーカム総合病院',
-    status: 'missing',
-    important: true,
-    avatar: generateAvatar('EV', '#5a4d2d', '#fbbf24'),
-    image: generatePortrait('EV', '#3a2a1a', '#d97706'),
-    birthdate: '1900/04/18',
-    origin: 'アメリカ・ボストン',
-    age: 50,
-    gender: '女性',
-    nationality: 'アメリカ合衆国',
-    language: '英語、フランス語',
-    pet: 'なし',
-    san: '—',
-    skills: '医学 80%、応急手当 75%',
-    notes: '行方不明（2024年6月）',
-    bio: [
-      'ボストン出身の外科医。アーカム総合病院の院長を務め、地域医療に貢献してきた。',
-      '「黒き潮騒」事件の後、行方不明となった。最後に目撃されたのはミスカトニック大学付近。'
-    ],
-    episodes: [
-      {
-        icon: '🏥',
-        title: '深夜の救急',
-        desc: '原因不明の患者を次々と受け入れ、異常な症状のパターンを発見した。'
-      },
-      {
-        icon: '❓',
-        title: '失踪',
-        desc: '病院の書類をまとめた後、誰にも告げずに姿を消した。フィルは最後の目撃者の一人。'
-      }
-    ],
-    scenarios: [
-      { title: '黒き潮騒', date: '2024/01/22' }
-    ],
-    relatedNpcs: [
-      { name: 'フィル・ミラー', relation: '友人 / 考古学者', avatar: generateAvatar('フィル', '#2d5a3d', '#4a9eff') }
-    ],
-    organizations: [
-      { name: 'アーカム総合病院', role: '院長', icon: '🏥' }
-    ],
-    locations: [
-      { name: 'アーカム総合病院', icon: '🏥' },
-      { name: 'ミスカトニック大学', icon: '🏛️' }
-    ]
-  },
-  {
-    id: 'old-man-jenkins',
-    name: 'ジェンキンス老人',
-    nameEn: 'Old Man Jenkins',
-    job: '灯台守',
-    affiliation: 'なし',
-    status: 'alive',
-    important: false,
-    avatar: generateAvatar('ジェ', '#4d4d4d', '#9ca3af'),
-    image: generatePortrait('ジェ', '#2a2a2a', '#6b7280'),
-    birthdate: '1870/12/01',
-    origin: 'アメリカ・インスマス',
-    age: 80,
-    gender: '男性',
-    nationality: 'アメリカ合衆国',
-    language: '英語',
-    pet: 'なし',
-    san: '40 / 99',
-    skills: '航海 50%、聞き込み 45%',
-    notes: 'インスマス灯台で30年以上勤務',
-    bio: [
-      'インスマス港の灯台を30年以上守り続けている老人。地元の漁師たちからは「あの人は何でも知っている」と恐れられている。',
-      '過去のインスマスの暗い歴史を知る数少ない生存者の一人だが、それについて語ることは滅多にない。'
-    ],
-    episodes: [
-      {
-        icon: '🌊',
-        title: '潮騒の夜',
-        desc: '嵐の夜、灯台から不気味な光を目撃したと証言。公式記録には残っていない。'
-      }
-    ],
-    scenarios: [
-      { title: '黒き潮騒', date: '2024/01/22' }
-    ],
-    relatedNpcs: [],
-    organizations: [],
-    locations: [
-      { name: 'インスマス灯台', icon: '🗼' },
-      { name: 'インスマス港', icon: '⚓' }
-    ]
-  }
-];
+const STATUS_LABELS = {
+  alive: '生存',
+  dead: '死亡',
+  missing: '行方不明',
+  unknown: '不明'
+};
 
-/* ---- Avatar / Portrait SVG Generator ---- */
-function generateAvatar(text, bg, accent) {
-  const initial = text.charAt(0);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
-    <rect width="80" height="80" rx="8" fill="${bg}"/>
-    <circle cx="40" cy="32" r="14" fill="${accent}" opacity="0.6"/>
-    <ellipse cx="40" cy="68" rx="22" ry="16" fill="${accent}" opacity="0.4"/>
-    <text x="40" y="36" text-anchor="middle" fill="#fff" font-size="14" font-family="sans-serif" font-weight="600">${initial}</text>
-  </svg>`;
-  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+const STATUS_CLASSES = {
+  alive: 'status-alive',
+  dead: 'status-dead',
+  missing: 'status-missing',
+  unknown: 'status-unknown'
+};
+
+const store = {
+  npcs: [],
+  organizations: [],
+  scenarios: [],
+  pcs: [],
+  locations: []
+};
+
+const indexes = {
+  npcById: new Map(),
+  orgById: new Map(),
+  scenarioById: new Map(),
+  pcById: new Map(),
+  locationById: new Map(),
+  npcsByOrgId: new Map()
+};
+
+let route = { section: 'npcs', id: null };
+
+const contentArea = document.getElementById('contentArea');
+const globalSearch = document.getElementById('globalSearch');
+const navMenu = document.getElementById('navMenu');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+const menuToggle = document.getElementById('menuToggle');
+const sidebarClose = document.getElementById('sidebarClose');
+
+/* ---- Data Loading ---- */
+
+async function loadData() {
+  const [npcs, organizations, scenarios, pcs, locations] = await Promise.all([
+    fetch('data/npcs.json').then(r => r.json()),
+    fetch('data/organizations.json').then(r => r.json()),
+    fetch('data/scenarios.json').then(r => r.json()),
+    fetch('data/pcs.json').then(r => r.json()),
+    fetch('data/locations.json').then(r => r.json())
+  ]);
+
+  store.npcs = npcs.npcs;
+  store.organizations = organizations.organizations;
+  store.scenarios = scenarios.scenarios;
+  store.pcs = pcs.pcs;
+  store.locations = locations.locations;
+
+  buildIndexes();
 }
 
-function generatePortrait(text, bg, accent) {
-  const initial = text.charAt(0);
+function buildIndexes() {
+  indexes.npcById.clear();
+  indexes.orgById.clear();
+  indexes.scenarioById.clear();
+  indexes.pcById.clear();
+  indexes.locationById.clear();
+  indexes.npcsByOrgId.clear();
+
+  store.npcs.forEach(npc => indexes.npcById.set(npc.id, npc));
+  store.organizations.forEach(org => indexes.orgById.set(org.id, org));
+  store.scenarios.forEach(sc => indexes.scenarioById.set(sc.id, sc));
+  store.pcs.forEach(pc => indexes.pcById.set(pc.id, pc));
+  store.locations.forEach(loc => indexes.locationById.set(loc.id, loc));
+
+  store.npcs.forEach(npc => {
+    (npc.organizationIds || []).forEach(orgId => {
+      if (!indexes.npcsByOrgId.has(orgId)) {
+        indexes.npcsByOrgId.set(orgId, []);
+      }
+      indexes.npcsByOrgId.get(orgId).push(npc);
+    });
+  });
+}
+
+/* ---- Avatar Generator ---- */
+
+function generatePortrait(name, bg = '#1a3a2a', accent = '#c9a84c') {
+  const initial = name.charAt(0);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
     <defs>
       <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -324,411 +107,584 @@ function generatePortrait(text, bg, accent) {
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
-/* ---- Status Labels ---- */
-const STATUS_LABELS = {
-  alive: '生存',
-  dead: '死亡',
-  missing: '行方不明'
-};
+function generateAvatar(name, bg = '#2d5a3d', accent = '#4a9eff') {
+  const initial = name.charAt(0);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+    <rect width="80" height="80" rx="8" fill="${bg}"/>
+    <circle cx="40" cy="32" r="14" fill="${accent}" opacity="0.6"/>
+    <ellipse cx="40" cy="68" rx="22" ry="16" fill="${accent}" opacity="0.4"/>
+    <text x="40" y="36" text-anchor="middle" fill="#fff" font-size="14" font-family="sans-serif" font-weight="600">${initial}</text>
+  </svg>`;
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
 
-const STATUS_CLASSES = {
-  alive: 'status-alive',
-  dead: 'status-dead',
-  missing: 'status-missing'
-};
+function npcImage(npc) {
+  return npc.image || generatePortrait(npc.name);
+}
 
-/* ---- State ---- */
-let currentNpcId = 'phil-miller';
-let activeTab = 'summary';
+function npcAvatar(npc) {
+  return npc.avatar || generateAvatar(npc.name);
+}
 
-/* ---- DOM Elements ---- */
-const npcListEl = document.getElementById('npcList');
-const npcDetailEl = document.getElementById('npcDetail');
-const npcMetaEl = document.getElementById('npcMeta');
-const npcSearchEl = document.getElementById('npcSearch');
-const npcFilterEl = document.getElementById('npcFilter');
-const npcCountEl = document.getElementById('npcCount');
-const menuToggle = document.getElementById('menuToggle');
-const sidebarClose = document.getElementById('sidebarClose');
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('overlay');
+/* ---- Routing ---- */
 
-/* ---- Render Functions ---- */
-function getFilteredNpcs() {
-  const query = npcSearchEl.value.toLowerCase().trim();
-  const filter = npcFilterEl.value;
+function parseHash() {
+  const hash = location.hash.slice(1) || 'npcs';
+  const parts = hash.split('/').filter(Boolean);
+  return { section: parts[0] || 'npcs', id: parts[1] || null };
+}
 
-  return NPC_DATA.filter(npc => {
-    const matchQuery = !query ||
-      npc.name.toLowerCase().includes(query) ||
-      npc.nameEn.toLowerCase().includes(query) ||
-      npc.job.toLowerCase().includes(query);
+function navigate(section, id) {
+  const hash = id ? `#${section}/${id}` : `#${section}`;
+  if (location.hash !== hash) {
+    location.hash = hash;
+  } else {
+    route = { section, id };
+    render();
+  }
+}
 
-    let matchFilter = true;
-    if (filter === 'alive') matchFilter = npc.status === 'alive';
-    else if (filter === 'dead') matchFilter = npc.status === 'dead';
-    else if (filter === 'missing') matchFilter = npc.status === 'missing';
-    else if (filter === 'important') matchFilter = npc.important;
+function onHashChange() {
+  route = parseHash();
+  updateNavActive();
+  render();
+}
 
-    return matchQuery && matchFilter;
+function updateNavActive() {
+  navMenu.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.toggle('active', link.dataset.section === route.section);
   });
 }
 
-function renderNpcList() {
-  const filtered = getFilteredNpcs();
-  npcCountEl.innerHTML = `全 <strong>${filtered.length}</strong> 名`;
+/* ---- Search ---- */
 
-  npcListEl.innerHTML = filtered.map(npc => `
-    <li class="npc-item ${npc.id === currentNpcId ? 'active' : ''}"
-        role="option"
-        aria-selected="${npc.id === currentNpcId}"
-        data-id="${npc.id}">
-      <img class="npc-avatar" src="${npc.avatar}" alt="${npc.name}">
-      <div class="npc-item-info">
-        <div class="npc-item-name">${npc.name}</div>
-        <div class="npc-item-job">${npc.job}</div>
-      </div>
-      <span class="npc-item-status ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span>
-    </li>
-  `).join('');
+function getSearchQuery() {
+  return globalSearch.value.toLowerCase().trim();
+}
 
-  npcListEl.querySelectorAll('.npc-item').forEach(item => {
-    item.addEventListener('click', () => {
-      currentNpcId = item.dataset.id;
-      activeTab = 'summary';
-      renderNpcList();
-      renderNpcDetail();
-      renderNpcMeta();
+function matchesQuery(text, query) {
+  return !query || (text || '').toLowerCase().includes(query);
+}
+
+function filterNpcs(query) {
+  return store.npcs.filter(npc =>
+    matchesQuery(npc.name, query) ||
+    matchesQuery(npc.furigana, query) ||
+    matchesQuery(npc.job, query)
+  );
+}
+
+function filterOrganizations(query) {
+  return store.organizations.filter(org =>
+    matchesQuery(org.name, query) ||
+    matchesQuery(org.summary, query)
+  );
+}
+
+function filterScenarios(query) {
+  return store.scenarios.filter(sc =>
+    matchesQuery(sc.title, query) ||
+    matchesQuery(sc.summary, query)
+  );
+}
+
+function filterPcs(query) {
+  return store.pcs.filter(pc =>
+    matchesQuery(pc.name, query) ||
+    matchesQuery(pc.playerName, query)
+  );
+}
+
+/* ---- Render Helpers ---- */
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderLink(href, label, sub = '') {
+  return `<a href="${href}" class="entity-link">${escapeHtml(label)}${sub ? `<span class="link-sub">${escapeHtml(sub)}</span>` : ''}</a>`;
+}
+
+function renderEmpty(message = 'なし') {
+  return `<p class="empty-note">${message}</p>`;
+}
+
+function renderListLayout(listHtml, detailHtml) {
+  return `
+    <div class="list-panel">${listHtml}</div>
+    <div class="detail-panel">${detailHtml}</div>
+  `;
+}
+
+function bindListItems() {
+  contentArea.querySelectorAll('[data-nav-section]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.preventDefault();
+      navigate(el.dataset.navSection, el.dataset.navId);
+      closeSidebar();
     });
   });
 }
 
-function renderNpcDetail() {
-  const npc = NPC_DATA.find(n => n.id === currentNpcId);
-  if (!npc) return;
+/* ---- NPC Views ---- */
 
-  const tags = [
-    `<span class="tag tag-${npc.status === 'alive' ? 'alive' : npc.status === 'dead' ? 'dead' : 'missing'}">${STATUS_LABELS[npc.status]}</span>`
-  ];
-  if (npc.important) {
-    tags.push('<span class="tag tag-important">重要NPC</span>');
+function renderNpcListItem(npc, active) {
+  return `
+    <li class="list-item ${active ? 'active' : ''}"
+        data-nav-section="npcs"
+        data-nav-id="${npc.id}"
+        role="option"
+        aria-selected="${active}">
+      <img class="list-avatar" src="${npcAvatar(npc)}" alt="">
+      <div class="list-item-info">
+        <div class="list-item-name">${escapeHtml(npc.name)}</div>
+        <div class="list-item-sub">${escapeHtml(npc.job)}</div>
+      </div>
+      <span class="list-item-badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span>
+    </li>
+  `;
+}
+
+function renderNpcDetail(npc) {
+  const orgs = (npc.organizationIds || [])
+    .map(id => indexes.orgById.get(id))
+    .filter(Boolean);
+
+  const orgLinks = orgs.length
+    ? orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、')
+    : '—';
+
+  return `
+    <article class="entity-detail">
+      <header class="detail-header">
+        <img class="detail-image" src="${npcImage(npc)}" alt="${escapeHtml(npc.name)}">
+        <div class="detail-header-body">
+          <h1 class="detail-title">${escapeHtml(npc.name)}</h1>
+          <p class="detail-furigana">${escapeHtml(npc.furigana || '')}</p>
+          <dl class="info-grid">
+            <div class="info-row"><dt>生年月日</dt><dd>${escapeHtml(npc.birthdate || '—')}</dd></div>
+            <div class="info-row"><dt>年齢</dt><dd>${escapeHtml(String(npc.age ?? '—'))}</dd></div>
+            <div class="info-row"><dt>国籍</dt><dd>${escapeHtml(npc.nationality || '—')}</dd></div>
+            <div class="info-row"><dt>出身地</dt><dd>${escapeHtml(npc.origin || '—')}</dd></div>
+            <div class="info-row"><dt>職業</dt><dd>${escapeHtml(npc.job || '—')}</dd></div>
+            <div class="info-row"><dt>所属組織</dt><dd>${orgLinks}</dd></div>
+            <div class="info-row"><dt>状態</dt><dd><span class="badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span></dd></div>
+          </dl>
+        </div>
+      </header>
+
+      <section class="detail-section">
+        <h2 class="section-heading">人物紹介</h2>
+        <div class="prose">
+          ${(npc.bio || []).map(p => `<p>${escapeHtml(p)}</p>`).join('') || renderEmpty()}
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">人物</h2>
+        <dl class="info-grid info-grid--compact">
+          <div class="info-row"><dt>家族</dt><dd>${escapeHtml(npc.person?.family || '—')}</dd></div>
+          <div class="info-row"><dt>ペット</dt><dd>${escapeHtml(npc.person?.pet || '—')}</dd></div>
+          <div class="info-row"><dt>特徴</dt><dd>${escapeHtml(npc.person?.traits || '—')}</dd></div>
+          <div class="info-row"><dt>性格</dt><dd>${escapeHtml(npc.person?.personality || '—')}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">エピソード</h2>
+        ${npc.episodes?.length ? `
+          <div class="episode-list">
+            ${npc.episodes.map(ep => `
+              <div class="episode-item">
+                <span class="episode-icon">${ep.icon || '📌'}</span>
+                <div class="episode-body">
+                  <h3>${escapeHtml(ep.title)}</h3>
+                  <p>${escapeHtml(ep.desc)}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : renderEmpty()}
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">連絡可能PC</h2>
+        ${npc.contactablePcIds?.length ? `
+          <ul class="link-list">
+            ${npc.contactablePcIds.map(pcId => {
+              const pc = indexes.pcById.get(pcId);
+              return pc ? `<li>${renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)}</li>` : '';
+            }).join('')}
+          </ul>
+        ` : renderEmpty()}
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">関連情報</h2>
+        <div class="related-grid">
+          <div class="related-block">
+            <h3>登場シナリオ</h3>
+            ${npc.scenarioIds?.length ? `
+              <ul class="link-list">
+                ${npc.scenarioIds.map(id => {
+                  const sc = indexes.scenarioById.get(id);
+                  return sc ? `<li>${renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)}</li>` : '';
+                }).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>関連NPC</h3>
+            ${npc.relatedNpcIds?.length ? `
+              <ul class="link-list">
+                ${npc.relatedNpcIds.map(r => {
+                  const rel = indexes.npcById.get(r.npcId);
+                  return rel ? `<li>${renderLink(`#npcs/${rel.id}`, rel.name, r.relation)}</li>` : '';
+                }).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>所属組織</h3>
+            ${orgs.length ? `
+              <ul class="link-list">
+                ${orgs.map(o => `<li>${renderLink(`#organizations/${o.id}`, o.name)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>関連場所</h3>
+            ${npc.locationIds?.length ? `
+              <ul class="link-list">
+                ${npc.locationIds.map(id => {
+                  const loc = indexes.locationById.get(id);
+                  return loc ? `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>` : '';
+                }).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+        </div>
+      </section>
+    </article>
+  `;
+}
+
+function renderNpcsView() {
+  const query = getSearchQuery();
+  const filtered = filterNpcs(query);
+  const activeId = route.id || filtered[0]?.id;
+  if (activeId && route.id !== activeId && filtered.some(n => n.id === activeId)) {
+    route.id = activeId;
+  }
+  const activeNpc = activeId ? indexes.npcById.get(activeId) : null;
+
+  const listHtml = `
+    <div class="panel-header">
+      <h2 class="panel-title">NPC</h2>
+      <span class="panel-count">${filtered.length} 件</span>
+    </div>
+    <ul class="entity-list" role="listbox">
+      ${filtered.map(npc => renderNpcListItem(npc, npc.id === activeId)).join('')}
+    </ul>
+  `;
+
+  const detailHtml = activeNpc
+    ? renderNpcDetail(activeNpc)
+    : `<div class="detail-empty"><p>NPCが見つかりません</p></div>`;
+
+  contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
+  bindListItems();
+}
+
+/* ---- Organization Views ---- */
+
+function renderOrgListItem(org, active) {
+  const memberCount = (indexes.npcsByOrgId.get(org.id) || []).length;
+  return `
+    <li class="list-item ${active ? 'active' : ''}"
+        data-nav-section="organizations"
+        data-nav-id="${org.id}"
+        role="option">
+      <span class="list-icon">${org.icon || '🏛️'}</span>
+      <div class="list-item-info">
+        <div class="list-item-name">${escapeHtml(org.name)}</div>
+        <div class="list-item-sub">所属NPC ${memberCount} 名</div>
+      </div>
+    </li>
+  `;
+}
+
+function renderOrgDetail(org) {
+  const members = indexes.npcsByOrgId.get(org.id) || [];
+  const scenarios = (org.scenarioIds || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+  const location = org.locationId ? indexes.locationById.get(org.locationId) : null;
+
+  return `
+    <article class="entity-detail">
+      <header class="detail-header detail-header--compact">
+        <span class="detail-org-icon">${org.icon || '🏛️'}</span>
+        <div class="detail-header-body">
+          <h1 class="detail-title">${escapeHtml(org.name)}</h1>
+          <p class="detail-summary">${escapeHtml(org.summary || '')}</p>
+        </div>
+      </header>
+
+      <section class="detail-section">
+        <h2 class="section-heading">概要</h2>
+        <div class="prose">
+          ${(org.description || []).map(p => `<p>${escapeHtml(p)}</p>`).join('') || renderEmpty()}
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">所在地</h2>
+        <p>${location ? `${location.icon || '📍'} ${escapeHtml(location.name)}` : '—'}</p>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">関連情報</h2>
+        <div class="related-grid">
+          <div class="related-block">
+            <h3>所属NPC</h3>
+            ${members.length ? `
+              <ul class="link-list">
+                ${members.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>関連シナリオ</h3>
+            ${scenarios.length ? `
+              <ul class="link-list">
+                ${scenarios.map(sc => `<li>${renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+        </div>
+      </section>
+    </article>
+  `;
+}
+
+function renderOrganizationsView() {
+  const query = getSearchQuery();
+  const filtered = filterOrganizations(query);
+  const activeId = route.id || filtered[0]?.id;
+  const activeOrg = activeId ? indexes.orgById.get(activeId) : null;
+
+  const listHtml = `
+    <div class="panel-header">
+      <h2 class="panel-title">組織</h2>
+      <span class="panel-count">${filtered.length} 件</span>
+    </div>
+    <ul class="entity-list">
+      ${filtered.map(org => renderOrgListItem(org, org.id === activeId)).join('')}
+    </ul>
+  `;
+
+  const detailHtml = activeOrg
+    ? renderOrgDetail(activeOrg)
+    : `<div class="detail-empty"><p>組織が見つかりません</p></div>`;
+
+  contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
+  bindListItems();
+}
+
+/* ---- Scenario Views ---- */
+
+function renderScenarioListItem(sc, active) {
+  return `
+    <li class="list-item ${active ? 'active' : ''}"
+        data-nav-section="scenarios"
+        data-nav-id="${sc.id}"
+        role="option">
+      <span class="list-icon">📜</span>
+      <div class="list-item-info">
+        <div class="list-item-name">${escapeHtml(sc.title)}</div>
+        <div class="list-item-sub">${escapeHtml(sc.era || '')}</div>
+      </div>
+    </li>
+  `;
+}
+
+function renderScenarioDetail(sc) {
+  const npcs = (sc.npcIds || []).map(id => indexes.npcById.get(id)).filter(Boolean);
+  const orgs = (sc.organizationIds || []).map(id => indexes.orgById.get(id)).filter(Boolean);
+  const related = (sc.relatedScenarioIds || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+
+  return `
+    <article class="entity-detail">
+      <header class="detail-header detail-header--compact">
+        <span class="detail-org-icon">📜</span>
+        <div class="detail-header-body">
+          <h1 class="detail-title">${escapeHtml(sc.title)}</h1>
+          <p class="detail-meta">年代：${escapeHtml(sc.era || '—')}</p>
+        </div>
+      </header>
+
+      <section class="detail-section">
+        <h2 class="section-heading">概要</h2>
+        <div class="prose"><p>${escapeHtml(sc.summary || '—')}</p></div>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">関連情報</h2>
+        <div class="related-grid">
+          <div class="related-block">
+            <h3>登場NPC</h3>
+            ${npcs.length ? `
+              <ul class="link-list">
+                ${npcs.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>登場組織</h3>
+            ${orgs.length ? `
+              <ul class="link-list">
+                ${orgs.map(o => `<li>${renderLink(`#organizations/${o.id}`, o.name)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+          <div class="related-block">
+            <h3>関連シナリオ</h3>
+            ${related.length ? `
+              <ul class="link-list">
+                ${related.map(r => `<li>${renderLink(`#scenarios/${r.id}`, r.title, r.era)}</li>`).join('')}
+              </ul>
+            ` : renderEmpty()}
+          </div>
+        </div>
+      </section>
+    </article>
+  `;
+}
+
+function renderScenariosView() {
+  const query = getSearchQuery();
+  const filtered = filterScenarios(query);
+  const activeId = route.id || filtered[0]?.id;
+  const activeSc = activeId ? indexes.scenarioById.get(activeId) : null;
+
+  const listHtml = `
+    <div class="panel-header">
+      <h2 class="panel-title">シナリオ</h2>
+      <span class="panel-count">${filtered.length} 件</span>
+    </div>
+    <ul class="entity-list">
+      ${filtered.map(sc => renderScenarioListItem(sc, sc.id === activeId)).join('')}
+    </ul>
+  `;
+
+  const detailHtml = activeSc
+    ? renderScenarioDetail(activeSc)
+    : `<div class="detail-empty"><p>シナリオが見つかりません</p></div>`;
+
+  contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
+  bindListItems();
+}
+
+/* ---- PC Views ---- */
+
+function renderPcListItem(pc, active) {
+  return `
+    <li class="list-item ${active ? 'active' : ''}"
+        data-nav-section="pcs"
+        data-nav-id="${pc.id}"
+        role="option">
+      <span class="list-icon">👤</span>
+      <div class="list-item-info">
+        <div class="list-item-name">${escapeHtml(pc.name)}</div>
+        <div class="list-item-sub">${escapeHtml(pc.playerName || '')}</div>
+      </div>
+    </li>
+  `;
+}
+
+function renderPcDetail(pc) {
+  const relatedNpcs = (pc.relatedNpcIds || []).map(id => indexes.npcById.get(id)).filter(Boolean);
+
+  return `
+    <article class="entity-detail">
+      <header class="detail-header detail-header--compact">
+        <span class="detail-org-icon">👤</span>
+        <div class="detail-header-body">
+          <h1 class="detail-title">${escapeHtml(pc.name)}</h1>
+          <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
+        </div>
+      </header>
+
+      <section class="detail-section">
+        <h2 class="section-heading">基本情報</h2>
+        <dl class="info-grid info-grid--compact">
+          <div class="info-row"><dt>所属</dt><dd>${escapeHtml(pc.affiliation || '—')}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">関連NPC</h2>
+        ${relatedNpcs.length ? `
+          <ul class="link-list">
+            ${relatedNpcs.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
+          </ul>
+        ` : renderEmpty()}
+      </section>
+    </article>
+  `;
+}
+
+function renderPcsView() {
+  const query = getSearchQuery();
+  const filtered = filterPcs(query);
+  const activeId = route.id || filtered[0]?.id;
+  const activePc = activeId ? indexes.pcById.get(activeId) : null;
+
+  const listHtml = `
+    <div class="panel-header">
+      <h2 class="panel-title">PC</h2>
+      <span class="panel-count">${filtered.length} 件</span>
+    </div>
+    <ul class="entity-list">
+      ${filtered.map(pc => renderPcListItem(pc, pc.id === activeId)).join('')}
+    </ul>
+  `;
+
+  const detailHtml = activePc
+    ? renderPcDetail(activePc)
+    : `<div class="detail-empty"><p>PCが見つかりません</p></div>`;
+
+  contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
+  bindListItems();
+}
+
+/* ---- Main Render ---- */
+
+function render() {
+  switch (route.section) {
+    case 'organizations':
+      renderOrganizationsView();
+      break;
+    case 'scenarios':
+      renderScenariosView();
+      break;
+    case 'pcs':
+      renderPcsView();
+      break;
+    case 'npcs':
+    default:
+      renderNpcsView();
+      break;
   }
 
-  npcDetailEl.innerHTML = `
-    <div class="profile-card">
-      <div class="profile-header">
-        <img class="profile-image" src="${npc.image}" alt="${npc.name}">
-        <div class="profile-info">
-          <div class="profile-name-row">
-            <h1 class="profile-name">${npc.name}</h1>
-            <div class="profile-tags">${tags.join('')}</div>
-            <div class="profile-actions">
-              <button class="btn-edit">編集（KPのみ）</button>
-              <button class="btn-more" aria-label="その他">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div class="profile-meta-grid">
-            <div class="meta-item">
-              <span class="meta-icon">📅</span>
-              <span class="meta-label">生年月日</span>
-              <span class="meta-value">${npc.birthdate}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-icon">📍</span>
-              <span class="meta-label">出身</span>
-              <span class="meta-value">${npc.origin}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-icon">💼</span>
-              <span class="meta-label">職業</span>
-              <span class="meta-value">${npc.job}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-icon">🏛️</span>
-              <span class="meta-label">所属</span>
-              <span class="meta-value">${npc.affiliation}</span>
-            </div>
-            ${npc.pet !== 'なし' ? `
-            <div class="meta-item">
-              <span class="meta-icon">🐾</span>
-              <span class="meta-label">ペット</span>
-              <span class="meta-value">${npc.pet}</span>
-            </div>` : ''}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <nav class="tab-nav" role="tablist">
-      <button class="tab-btn ${activeTab === 'summary' ? 'active' : ''}" data-tab="summary" role="tab">概要</button>
-      <button class="tab-btn ${activeTab === 'detail' ? 'active' : ''}" data-tab="detail" role="tab">詳細情報</button>
-      <button class="tab-btn ${activeTab === 'episodes' ? 'active' : ''}" data-tab="episodes" role="tab">エピソード</button>
-      <button class="tab-btn ${activeTab === 'related' ? 'active' : ''}" data-tab="related" role="tab">関連情報</button>
-      <button class="tab-btn ${activeTab === 'memo' ? 'active' : ''}" data-tab="memo" role="tab">メモ（KPのみ）</button>
-    </nav>
-
-    <div class="tab-content ${activeTab === 'summary' ? 'active' : ''}" id="tab-summary" role="tabpanel">
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">📖</span>人物紹介</h2>
-        <div class="bio-text">
-          ${npc.bio.map(p => `<p>${p}</p>`).join('')}
-        </div>
-      </section>
-
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">⚡</span>エピソード</h2>
-        <div class="episode-list">
-          ${npc.episodes.map(ep => `
-            <div class="episode-item">
-              <div class="episode-icon">${ep.icon}</div>
-              <div class="episode-body">
-                <h4>${ep.title}</h4>
-                <p>${ep.desc}</p>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">📊</span>基本データ</h2>
-        <div class="data-grid">
-          <div class="data-group">
-            <h4>プロフィール</h4>
-            <dl>
-              <div class="data-row"><dt>年齢</dt><dd>${npc.age}</dd></div>
-              <div class="data-row"><dt>性別</dt><dd>${npc.gender}</dd></div>
-              <div class="data-row"><dt>国籍</dt><dd>${npc.nationality}</dd></div>
-              <div class="data-row"><dt>言語</dt><dd>${npc.language}</dd></div>
-            </dl>
-          </div>
-          <div class="data-group">
-            <h4>TRPGデータ</h4>
-            <dl>
-              <div class="data-row"><dt>SAN値</dt><dd>${npc.san}</dd></div>
-              <div class="data-row"><dt>技能</dt><dd>${npc.skills}</dd></div>
-              <div class="data-row"><dt>特記事項</dt><dd>${npc.notes}</dd></div>
-            </dl>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="tab-content ${activeTab === 'detail' ? 'active' : ''}" id="tab-detail" role="tabpanel">
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">📋</span>詳細情報</h2>
-        <div class="data-grid">
-          <div class="data-group">
-            <h4>基本情報</h4>
-            <dl>
-              <div class="data-row"><dt>英語名</dt><dd>${npc.nameEn}</dd></div>
-              <div class="data-row"><dt>生年月日</dt><dd>${npc.birthdate}</dd></div>
-              <div class="data-row"><dt>出身地</dt><dd>${npc.origin}</dd></div>
-              <div class="data-row"><dt>職業</dt><dd>${npc.job}</dd></div>
-              <div class="data-row"><dt>所属</dt><dd>${npc.affiliation}</dd></div>
-            </dl>
-          </div>
-          <div class="data-group">
-            <h4>ゲーム情報</h4>
-            <dl>
-              <div class="data-row"><dt>状態</dt><dd>${STATUS_LABELS[npc.status]}</dd></div>
-              <div class="data-row"><dt>重要NPC</dt><dd>${npc.important ? 'はい' : 'いいえ'}</dd></div>
-              <div class="data-row"><dt>SAN値</dt><dd>${npc.san}</dd></div>
-              <div class="data-row"><dt>技能</dt><dd>${npc.skills}</dd></div>
-              <div class="data-row"><dt>特記事項</dt><dd>${npc.notes}</dd></div>
-            </dl>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="tab-content ${activeTab === 'episodes' ? 'active' : ''}" id="tab-episodes" role="tabpanel">
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">⚡</span>エピソード一覧</h2>
-        <div class="episode-list">
-          ${npc.episodes.map(ep => `
-            <div class="episode-item">
-              <div class="episode-icon">${ep.icon}</div>
-              <div class="episode-body">
-                <h4>${ep.title}</h4>
-                <p>${ep.desc}</p>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    </div>
-
-    <div class="tab-content ${activeTab === 'related' ? 'active' : ''}" id="tab-related" role="tabpanel">
-      ${renderRelatedTabContent(npc)}
-    </div>
-
-    <div class="tab-content ${activeTab === 'memo' ? 'active' : ''}" id="tab-memo" role="tabpanel">
-      <section class="section-card">
-        <h2 class="section-title"><span class="section-title-icon">🔒</span>メモ（KPのみ）</h2>
-        <div class="kp-memo-locked">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          KPモードでログインすると閲覧・編集が可能です
-        </div>
-      </section>
-    </div>
-  `;
-
-  npcDetailEl.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeTab = btn.dataset.tab;
-      renderNpcDetail();
-    });
-  });
+  document.title = route.id
+    ? `TRPG World Archive — ${route.section}`
+    : 'TRPG World Archive';
 }
 
-function renderRelatedTabContent(npc) {
-  return `
-    <section class="section-card">
-      <h2 class="section-title"><span class="section-title-icon">📜</span>登場シナリオ</h2>
-      <ul class="meta-list">
-        ${npc.scenarios.map(s => `
-          <li class="meta-list-item">
-            <a href="#">${s.title}</a>
-            <span class="meta-date">${s.date}</span>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </section>
-    <section class="section-card">
-      <h2 class="section-title"><span class="section-title-icon">👥</span>関連NPC</h2>
-      <ul class="meta-list">
-        ${npc.relatedNpcs.map(r => `
-          <li class="meta-list-item">
-            <div class="related-npc">
-              <img class="related-avatar" src="${r.avatar}" alt="${r.name}">
-              <div class="related-info">
-                <div class="related-name">${r.name}</div>
-                <div class="related-relation">${r.relation}</div>
-              </div>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </section>
-    <section class="section-card">
-      <h2 class="section-title"><span class="section-title-icon">🏛️</span>所属組織</h2>
-      <ul class="meta-list">
-        ${npc.organizations.map(o => `
-          <li class="meta-list-item">
-            <div class="org-item">
-              <span class="org-icon">${o.icon}</span>
-              <div>
-                <div class="org-name">${o.name}</div>
-                <div class="org-role">${o.role}</div>
-              </div>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </section>
-    <section class="section-card">
-      <h2 class="section-title"><span class="section-title-icon">🗺️</span>関連場所</h2>
-      <ul class="meta-list">
-        ${npc.locations.map(l => `
-          <li class="meta-list-item">
-            <div class="location-item">
-              <span class="location-icon">${l.icon}</span>
-              <span>${l.name}</span>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </section>
-  `;
-}
+/* ---- Mobile Sidebar ---- */
 
-function renderNpcMeta() {
-  const npc = NPC_DATA.find(n => n.id === currentNpcId);
-  if (!npc) return;
-
-  npcMetaEl.innerHTML = `
-    <div class="meta-card">
-      <h3 class="meta-card-title">登場シナリオ</h3>
-      <ul class="meta-list">
-        ${npc.scenarios.map(s => `
-          <li class="meta-list-item">
-            <a href="#">${s.title}</a>
-            <span class="meta-date">${s.date}</span>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </div>
-
-    <div class="meta-card">
-      <h3 class="meta-card-title">関連NPC</h3>
-      <ul class="meta-list">
-        ${npc.relatedNpcs.map(r => `
-          <li class="meta-list-item">
-            <div class="related-npc">
-              <img class="related-avatar" src="${r.avatar}" alt="${r.name}">
-              <div class="related-info">
-                <div class="related-name">${r.name}</div>
-                <div class="related-relation">${r.relation}</div>
-              </div>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </div>
-
-    <div class="meta-card">
-      <h3 class="meta-card-title">所属組織</h3>
-      <ul class="meta-list">
-        ${npc.organizations.map(o => `
-          <li class="meta-list-item">
-            <div class="org-item">
-              <span class="org-icon">${o.icon}</span>
-              <div>
-                <div class="org-name">${o.name}</div>
-                <div class="org-role">${o.role}</div>
-              </div>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </div>
-
-    <div class="meta-card">
-      <h3 class="meta-card-title">関連場所</h3>
-      <ul class="meta-list">
-        ${npc.locations.map(l => `
-          <li class="meta-list-item">
-            <div class="location-item">
-              <span class="location-icon">${l.icon}</span>
-              <span>${l.name}</span>
-            </div>
-          </li>
-        `).join('') || '<li class="meta-list-item" style="color:var(--text-muted)">なし</li>'}
-      </ul>
-    </div>
-
-    <div class="meta-card">
-      <h3 class="meta-card-title">メモ（KPのみ）</h3>
-      <div class="kp-memo-locked">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        KPモードで閲覧可能
-      </div>
-    </div>
-  `;
-}
-
-/* ---- Mobile Menu ---- */
 function openSidebar() {
   sidebar.classList.add('open');
   overlay.classList.add('active');
@@ -745,11 +701,39 @@ menuToggle.addEventListener('click', openSidebar);
 sidebarClose.addEventListener('click', closeSidebar);
 overlay.addEventListener('click', closeSidebar);
 
-/* ---- Search & Filter ---- */
-npcSearchEl.addEventListener('input', renderNpcList);
-npcFilterEl.addEventListener('change', renderNpcList);
+globalSearch.addEventListener('input', () => {
+  render();
+});
+
+navMenu.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    closeSidebar();
+  });
+});
+
+window.addEventListener('hashchange', onHashChange);
 
 /* ---- Init ---- */
-renderNpcList();
-renderNpcDetail();
-renderNpcMeta();
+
+async function init() {
+  try {
+    await loadData();
+    route = parseHash();
+    if (!route.id && route.section === 'npcs') {
+      route.id = 'phil-miller';
+      location.replace('#npcs/phil-miller');
+    }
+    updateNavActive();
+    render();
+  } catch (err) {
+    contentArea.innerHTML = `
+      <div class="error-panel">
+        <h2>データの読み込みに失敗しました</h2>
+        <p>ローカルで確認する場合は HTTP サーバー経由で開いてください。</p>
+        <pre>${escapeHtml(err.message)}</pre>
+      </div>
+    `;
+  }
+}
+
+init();
