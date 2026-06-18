@@ -290,6 +290,96 @@ function renderEmpty(message = 'なし') {
   return `<p class="empty-note">${message}</p>`;
 }
 
+function isPresent(value) {
+  if (value == null) return false;
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t !== '' && t !== '—' && t !== 'なし';
+  }
+  if (Array.isArray(value)) return value.length > 0;
+  return Boolean(value);
+}
+
+function renderDetailSection(heading, bodyHtml) {
+  if (!bodyHtml || !String(bodyHtml).trim()) return '';
+  return `
+    <section class="detail-section">
+      <h2 class="section-heading">${escapeHtml(heading)}</h2>
+      ${bodyHtml}
+    </section>
+  `;
+}
+
+function renderInfoRow(label, valueHtml) {
+  if (!isPresent(valueHtml)) return '';
+  return `<div class="info-row"><dt>${escapeHtml(label)}</dt><dd>${valueHtml}</dd></div>`;
+}
+
+function renderLinkListIfAny(items) {
+  const list = items.filter(Boolean);
+  if (!list.length) return '';
+  return renderLinkList(list);
+}
+
+function renderRelatedBlock(title, innerHtml) {
+  if (!innerHtml || !String(innerHtml).trim()) return '';
+  return `<div class="related-block"><h3>${escapeHtml(title)}</h3>${innerHtml}</div>`;
+}
+
+function renderNpcOrgListContent(npc) {
+  const orgs = resolveOrgs(npc.organizationIds);
+  if (!orgs.length) return '';
+  return renderLinkList(orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)));
+}
+
+function hasNpcOrgInfo(npc) {
+  return resolveOrgs(npc.organizationIds).length > 0 || isPresent(npc.organizationNames);
+}
+
+function renderNpcPersonSection(npc) {
+  const p = npc.person || {};
+  const rows = [
+    renderInfoRow('家族', escapeHtml(p.family || '')),
+    renderInfoRow('ペット', escapeHtml(p.pet || '')),
+    renderInfoRow('特徴', escapeHtml(p.traits || '')),
+    renderInfoRow('性格', escapeHtml(p.personality || ''))
+  ].filter(Boolean);
+
+  if (!rows.length) return '';
+  return renderDetailSection('人物', `<dl class="info-grid info-grid--compact">${rows.join('')}</dl>`);
+}
+
+function renderNpcRelatedSection(npc) {
+  const scenarioLinks = renderLinkListIfAny(
+    resolveScenarios(npc.scenarioIds).map(sc =>
+      renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)
+    )
+  );
+  const npcLinks = renderLinkListIfAny(
+    (npc.relatedNpcIds || []).map(r => {
+      const rel = indexes.npcById.get(r.npcId);
+      return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
+    })
+  );
+  const orgContent = renderNpcOrgListContent(npc);
+  const locations = resolveLocations(npc.locationIds);
+  const locationHtml = locations.length
+    ? `<ul class="link-list">${locations.map(loc =>
+        `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>`
+      ).join('')}</ul>`
+    : '';
+
+  const blocks = [
+    renderRelatedBlock('登場シナリオ', scenarioLinks),
+    renderRelatedBlock('関連NPC', npcLinks),
+    renderRelatedBlock('所属組織', orgContent),
+    renderRelatedBlock('関連場所', locationHtml)
+  ].filter(Boolean).join('');
+
+  if (!blocks) return '';
+  return renderDetailSection('関連情報', `<div class="related-grid">${blocks}</div>`);
+}
+
 function renderListLayout(listHtml, detailHtml) {
   return `
     <div class="list-panel">${listHtml}</div>
@@ -307,21 +397,10 @@ function renderNpcOrgDisplay(npc) {
   if (orgs.length) {
     return orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、');
   }
-  if (npc.organizationNames) {
+  if (isPresent(npc.organizationNames)) {
     return escapeHtml(npc.organizationNames);
   }
-  return '—';
-}
-
-function renderNpcOrgList(npc) {
-  const orgs = resolveOrgs(npc.organizationIds);
-  if (orgs.length) {
-    return renderLinkList(orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)));
-  }
-  if (npc.organizationNames) {
-    return `<p class="org-names-text">${escapeHtml(npc.organizationNames)}</p>`;
-  }
-  return renderEmpty();
+  return '';
 }
 
 function renderNpcMemberRow(npc) {
@@ -379,6 +458,38 @@ function renderNpcListItem(npc, active) {
 
 function renderNpcDetail(npc) {
   const orgLinks = renderNpcOrgDisplay(npc);
+  const contactablePcs = resolvePcs(npc.contactablePcIds);
+  const bioHtml = (npc.bio || []).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+
+  const headerRows = [
+    renderInfoRow('生年月日', escapeHtml(npc.birthdate || '')),
+    renderInfoRow('年齢', escapeHtml(String(npc.age ?? ''))),
+    renderInfoRow('国籍', escapeHtml(npc.nationality || '')),
+    renderInfoRow('出身地', escapeHtml(npc.origin || '')),
+    renderInfoRow('職業', escapeHtml(npc.job || '')),
+    hasNpcOrgInfo(npc) ? renderInfoRow('所属組織', `<span class="info-links">${orgLinks}</span>`) : '',
+    renderInfoRow('状態', `<span class="badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span>`)
+  ].filter(Boolean).join('');
+
+  const episodesHtml = npc.episodes?.length ? `
+    <div class="episode-list">
+      ${npc.episodes.map(ep => `
+        <div class="episode-item">
+          <span class="episode-icon">${ep.icon || '📌'}</span>
+          <div class="episode-body">
+            <h3>${escapeHtml(ep.title)}</h3>
+            <p>${escapeHtml(ep.desc)}</p>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const contactableHtml = contactablePcs.length
+    ? renderLinkList(contactablePcs.map(pc =>
+        renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)
+      ))
+    : '';
 
   return `
     <article class="entity-detail">
@@ -386,98 +497,16 @@ function renderNpcDetail(npc) {
         ${npcPortraitImg(npc)}
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(npc.name)}</h1>
-          <p class="detail-furigana">${escapeHtml(npc.furigana || '')}</p>
-          <dl class="info-grid">
-            <div class="info-row"><dt>生年月日</dt><dd>${escapeHtml(npc.birthdate || '—')}</dd></div>
-            <div class="info-row"><dt>年齢</dt><dd>${escapeHtml(String(npc.age ?? '—'))}</dd></div>
-            <div class="info-row"><dt>国籍</dt><dd>${escapeHtml(npc.nationality || '—')}</dd></div>
-            <div class="info-row"><dt>出身地</dt><dd>${escapeHtml(npc.origin || '—')}</dd></div>
-            <div class="info-row"><dt>職業</dt><dd>${escapeHtml(npc.job || '—')}</dd></div>
-            <div class="info-row"><dt>所属組織</dt><dd class="info-links">${orgLinks}</dd></div>
-            <div class="info-row"><dt>状態</dt><dd><span class="badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span></dd></div>
-          </dl>
+          ${isPresent(npc.furigana) ? `<p class="detail-furigana">${escapeHtml(npc.furigana)}</p>` : ''}
+          <dl class="info-grid">${headerRows}</dl>
         </div>
       </header>
 
-      <section class="detail-section">
-        <h2 class="section-heading">人物紹介</h2>
-        <div class="prose">
-          ${(npc.bio || []).map(p => `<p>${escapeHtml(p)}</p>`).join('') || renderEmpty()}
-        </div>
-      </section>
-
-      <section class="detail-section">
-        <h2 class="section-heading">人物</h2>
-        <dl class="info-grid info-grid--compact">
-          <div class="info-row"><dt>家族</dt><dd>${escapeHtml(npc.person?.family || '—')}</dd></div>
-          <div class="info-row"><dt>ペット</dt><dd>${escapeHtml(npc.person?.pet || '—')}</dd></div>
-          <div class="info-row"><dt>特徴</dt><dd>${escapeHtml(npc.person?.traits || '—')}</dd></div>
-          <div class="info-row"><dt>性格</dt><dd>${escapeHtml(npc.person?.personality || '—')}</dd></div>
-        </dl>
-      </section>
-
-      <section class="detail-section">
-        <h2 class="section-heading">エピソード</h2>
-        ${npc.episodes?.length ? `
-          <div class="episode-list">
-            ${npc.episodes.map(ep => `
-              <div class="episode-item">
-                <span class="episode-icon">${ep.icon || '📌'}</span>
-                <div class="episode-body">
-                  <h3>${escapeHtml(ep.title)}</h3>
-                  <p>${escapeHtml(ep.desc)}</p>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        ` : renderEmpty()}
-      </section>
-
-      <section class="detail-section">
-        <h2 class="section-heading">連絡可能PC</h2>
-        ${renderLinkList(
-          resolvePcs(npc.contactablePcIds).map(pc =>
-            renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)
-          )
-        )}
-      </section>
-
-      <section class="detail-section">
-        <h2 class="section-heading">関連情報</h2>
-        <div class="related-grid">
-          <div class="related-block">
-            <h3>登場シナリオ</h3>
-            ${renderLinkList(
-              resolveScenarios(npc.scenarioIds).map(sc =>
-                renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)
-              )
-            )}
-          </div>
-          <div class="related-block">
-            <h3>関連NPC</h3>
-            ${renderLinkList(
-              (npc.relatedNpcIds || []).map(r => {
-                const rel = indexes.npcById.get(r.npcId);
-                return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
-              }).filter(Boolean)
-            )}
-          </div>
-          <div class="related-block">
-            <h3>所属組織</h3>
-            ${renderNpcOrgList(npc)}
-          </div>
-          <div class="related-block">
-            <h3>関連場所</h3>
-            ${resolveLocations(npc.locationIds).length ? `
-              <ul class="link-list">
-                ${resolveLocations(npc.locationIds).map(loc =>
-                  `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>`
-                ).join('')}
-              </ul>
-            ` : renderEmpty()}
-          </div>
-        </div>
-      </section>
+      ${renderDetailSection('人物紹介', bioHtml ? `<div class="prose">${bioHtml}</div>` : '')}
+      ${renderNpcPersonSection(npc)}
+      ${renderDetailSection('エピソード', episodesHtml)}
+      ${renderDetailSection('連絡可能PC', contactableHtml)}
+      ${renderNpcRelatedSection(npc)}
     </article>
   `;
 }
