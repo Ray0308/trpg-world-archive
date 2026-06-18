@@ -103,24 +103,52 @@ function npcAvatarFallback(npc) {
   return generateAvatar(npc.name);
 }
 
-function renderImg(src, fallback, { className = '', alt = '' } = {}) {
-  const safeAlt = escapeHtml(alt);
-  const safeClass = escapeHtml(className);
-  const safeSrc = escapeHtml(src);
-  const safeFallback = escapeHtml(fallback);
-  return `<img class="${safeClass}" src="${safeSrc}" alt="${safeAlt}" loading="lazy" onerror="this.onerror=null;this.src='${safeFallback}'">`;
+window.handleArchiveImgError = function (img) {
+  let fallbacks = [];
+  try {
+    fallbacks = JSON.parse(decodeURIComponent(img.dataset.fallbacks || '%5B%5D'));
+  } catch (e) {
+    fallbacks = [];
+  }
+  if (fallbacks.length > 0) {
+    img.src = fallbacks.shift();
+    img.dataset.fallbacks = encodeURIComponent(JSON.stringify(fallbacks));
+    return;
+  }
+  img.onerror = null;
+  try {
+    const svg = decodeURIComponent(img.dataset.svgFallback || '');
+    if (svg) img.src = svg;
+  } catch (e) {
+    /* ignore */
+  }
+};
+
+function renderImg(url, svgFallback, { className = '', alt = '' } = {}) {
+  const utils = window.ImageUtils;
+  const { src, fallbacks } = utils
+    ? utils.buildImgAttrs(url, svgFallback)
+    : { src: url || svgFallback, fallbacks: [] };
+
+  return `<img class="${escapeHtml(className)}"` +
+    ` src="${escapeHtml(src)}"` +
+    ` alt="${escapeHtml(alt)}"` +
+    ` loading="lazy"` +
+    ` decoding="async"` +
+    ` referrerpolicy="no-referrer"` +
+    ` data-fallbacks="${encodeURIComponent(JSON.stringify(fallbacks))}"` +
+    ` data-svg-fallback="${encodeURIComponent(svgFallback)}"` +
+    ` onerror="handleArchiveImgError(this)">`;
 }
 
 function npcPortraitImg(npc) {
-  const src = npc.image || npcPortraitFallback(npc);
-  const fallback = npcPortraitFallback(npc);
-  return renderImg(src, fallback, { className: 'detail-image', alt: npc.name });
+  const svg = npcPortraitFallback(npc);
+  return renderImg(npc.image || '', svg, { className: 'detail-image', alt: npc.name });
 }
 
 function npcAvatarImg(npc) {
-  const src = npc.avatar || npc.image || npcAvatarFallback(npc);
-  const fallback = npcAvatarFallback(npc);
-  return renderImg(src, fallback, { className: 'list-avatar', alt: npc.name });
+  const svg = npcAvatarFallback(npc);
+  return renderImg(npc.avatar || npc.image || '', svg, { className: 'list-avatar', alt: npc.name });
 }
 
 /* ---- Entity Resolution ---- */
