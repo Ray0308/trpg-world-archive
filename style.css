@@ -966,6 +966,130 @@ input {
   margin-top: 0.15rem;
 }
 
+/* ---- KP Page ---- */
+
+.app--kp .main-wrapper--full {
+  margin-left: 0;
+  width: 100%;
+}
+
+.header-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  margin-left: auto;
+}
+
+.kp-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.kp-intro {
+  margin-bottom: 2rem;
+}
+
+.kp-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.kp-lead {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.kp-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.kp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: border-color 0.15s;
+}
+
+.kp-card:hover {
+  border-color: var(--border-light);
+}
+
+.kp-card-icon {
+  font-size: 1.75rem;
+}
+
+.kp-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.kp-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.kp-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  background: var(--accent-dim);
+  border: 1px solid rgba(74, 158, 255, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+.kp-card-btn:hover {
+  background: rgba(74, 158, 255, 0.25);
+  border-color: var(--accent);
+  text-decoration: none;
+  color: var(--accent-hover);
+}
+
+.kp-card-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kp-card-btn--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .kp-main {
+    padding: 1.25rem 1rem;
+  }
+
+  .kp-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Overlay ---- */
 
 .overlay {

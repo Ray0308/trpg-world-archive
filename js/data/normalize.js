@@ -1,8 +1,22 @@
 /**
  * スプレッドシート行 / JSON をサイト共通モデルへ正規化
- * Googleフォーム → シート → 本モジュール → UI
+ * PL向け表示用 — 管理フィールドは除外
  */
 window.ArchiveNormalize = (function () {
+  const ADMIN_FIELD_KEYS = new Set([
+    'edit_url', 'editUrl', 'form_response_id', 'formResponseId',
+    'created_at', 'createdAt', 'updated_at', 'updatedAt',
+    'memo', 'spreadsheet_url', 'spreadsheetUrl', 'gas_url', 'gasUrl',
+    'drive_url', 'driveUrl', 'callback'
+  ]);
+
+  function stripAdminFields(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+    const clean = { ...raw };
+    ADMIN_FIELD_KEYS.forEach(key => delete clean[key]);
+    return clean;
+  }
+
   const STATUS_MAP = {
     '生存': 'alive',
     '死亡': 'dead',
@@ -106,8 +120,9 @@ window.ArchiveNormalize = (function () {
       raw.profile !== undefined;
   }
 
-  /** Apps Script API → 内部モデル（edit_url / memo 等は含めない） */
+  /** Apps Script API → 内部モデル（管理フィールドは含めない） */
   function normalizeNpcFromApi(raw) {
+    raw = stripAdminFields(raw);
     const person = parsePersonField(raw.person || raw['人物']);
     const personality = raw.personality || raw['性格'] || '';
     if (personality && !person.personality) {
@@ -141,6 +156,7 @@ window.ArchiveNormalize = (function () {
 
   /** スプレッドシート NPC 行 → 内部モデル */
   function normalizeNpcRow(row) {
+    row = stripAdminFields(row);
     return {
       id: row.id,
       name: row['名前'] || row.name || '',
@@ -168,6 +184,7 @@ window.ArchiveNormalize = (function () {
 
   /** JSON / シート / API 双方 — 形式を自動判別 */
   function normalizeNpc(raw) {
+    raw = stripAdminFields(raw);
     if (isApiNpcFormat(raw)) {
       return normalizeNpcFromApi(raw);
     }
@@ -216,6 +233,7 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizeOrganization(raw) {
+    raw = stripAdminFields(raw);
     if (raw['名称']) return normalizeOrganizationRow(raw);
     return {
       id: raw.id,
@@ -244,6 +262,7 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizeScenario(raw) {
+    raw = stripAdminFields(raw);
     if (raw['名称'] && !raw.title) return normalizeScenarioRow(raw);
     return {
       id: raw.id,
@@ -269,6 +288,7 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizePc(raw) {
+    raw = stripAdminFields(raw);
     if (raw['プレイヤー名'] !== undefined || raw['説明'] !== undefined) {
       return normalizePcRow(raw);
     }

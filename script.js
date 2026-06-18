@@ -855,13 +855,11 @@ function render() {
   updateDocumentTitle();
 }
 
-/* ---- Notices & Errors ---- */
+/* ---- Notices & Errors (PL向け — 管理情報は表示しない) ---- */
 
 function renderNoticeBanner() {
   const existing = document.getElementById('noticeBanner');
   if (existing) existing.remove();
-
-  updateFooterSource();
 
   if (!loadMeta.notices?.length) return;
 
@@ -869,91 +867,38 @@ function renderNoticeBanner() {
   banner.id = 'noticeBanner';
   banner.className = 'notice-banner';
 
-  banner.innerHTML = loadMeta.notices.map(notice => {
-    const level = notice.level || 'warning';
-    const detailsHtml = notice.details && Object.keys(notice.details).length
-      ? `<details class="notice-details"><summary>詳細</summary><pre>${escapeHtml(JSON.stringify(notice.details, null, 2))}</pre></details>`
-      : '';
-    const fallbackHtml = notice.fallback
-      ? `<p class="notice-fallback">${escapeHtml(notice.fallback)}</p>`
-      : '';
-    const sourceLabel = loadMeta.npcSource === 'api'
-      ? 'スプレッドシート'
-      : loadMeta.npcSource === 'json-fallback'
-        ? 'ローカル JSON（フォールバック）'
-        : 'ローカル JSON';
+  banner.innerHTML = loadMeta.notices.map(() => {
+    const isFallback = loadMeta.npcSource === 'json-fallback';
+    const title = isFallback
+      ? '最新データを読み込めませんでした'
+      : 'お知らせ';
+    const message = isFallback
+      ? '表示されている NPC 情報が最新でない場合があります。しばらくしてから再度お試しください。'
+      : 'データの読み込みに問題が発生しました。';
 
     return `
-      <div class="notice-item notice-${level}">
-        <p class="notice-title">${escapeHtml(notice.title)}</p>
-        <p class="notice-message">${escapeHtml(notice.message)}</p>
-        ${fallbackHtml}
-        ${detailsHtml}
-        <p class="notice-source">NPC データソース: ${escapeHtml(sourceLabel)}</p>
+      <div class="notice-item notice-warning">
+        <p class="notice-title">${escapeHtml(title)}</p>
+        <p class="notice-message">${escapeHtml(message)}</p>
       </div>
     `;
   }).join('');
 
-  const mainWrapper = document.querySelector('.main-wrapper');
   const header = document.querySelector('.header');
-  if (mainWrapper && header) {
+  if (header) {
     header.insertAdjacentElement('afterend', banner);
   }
 }
 
-function updateFooterSource() {
-  const el = document.getElementById('footerSource');
-  if (!el) return;
-
-  const labels = {
-    api: 'NPC: スプレッドシート',
-    'json-fallback': 'NPC: ローカル JSON（API 失敗）',
-    json: 'NPC: ローカル JSON'
-  };
-  el.textContent = labels[loadMeta.npcSource] || '';
-}
-
 function renderFatalError(err) {
-  const isArchiveError = err.name === 'ArchiveLoadError' || err.title;
-  const title = err.title || 'データの読み込みに失敗しました';
-  const message = err.message || '不明なエラーが発生しました。';
-
-  let detailsHtml = '';
-  if (err.details) {
-    if (err.details.api || err.details.json) {
-      detailsHtml = '<div class="error-details">';
-      if (err.details.api) {
-        detailsHtml += `
-          <h3>スプレッドシート API</h3>
-          <p><strong>${escapeHtml(err.details.api.title || '')}</strong></p>
-          <p>${escapeHtml(err.details.api.message || '')}</p>
-        `;
-      }
-      if (err.details.json) {
-        detailsHtml += `
-          <h3>ローカル JSON</h3>
-          <p><strong>${escapeHtml(err.details.json.title || '')}</strong></p>
-          <p>${escapeHtml(err.details.json.message || '')}</p>
-        `;
-      }
-      detailsHtml += '</div>';
-    } else {
-      detailsHtml = `<pre class="error-pre">${escapeHtml(JSON.stringify(err.details, null, 2))}</pre>`;
-    }
-  }
-
-  const hint = isArchiveError
-    ? '<p class="error-hint">スプレッドシートの Apps Script が「ウェブアプリとして導入」されているか、アクセス権限が「全員」になっているか確認してください。</p>'
-    : '<p class="error-hint">ローカルで確認する場合は HTTP サーバー（Live Server 等）経由で開いてください。file:// では JSON を読み込めません。</p>';
-
   contentArea.innerHTML = `
     <div class="error-panel">
-      <h2>${escapeHtml(title)}</h2>
-      <p class="error-message">${escapeHtml(message)}</p>
-      ${detailsHtml}
-      ${hint}
+      <h2>データの読み込みに失敗しました</h2>
+      <p class="error-message">世界観データを表示できません。しばらくしてからページを再読み込みしてください。</p>
+      <p class="error-hint">問題が続く場合は KP にお問い合わせください。</p>
     </div>
   `;
+  console.error('[TRPG Archive]', err);
 }
 
 /* ---- Mobile Sidebar ---- */
@@ -1009,8 +954,7 @@ async function init() {
       contentArea.innerHTML = `
         <div class="error-panel">
           <h2>NPC データがありません</h2>
-          <p class="error-message">スプレッドシートに NPC が登録されていないか、データの取得に問題があります。</p>
-          <p class="error-hint">Googleフォームから NPC を登録し、Apps Script API が正しく動作しているか確認してください。</p>
+          <p class="error-message">登録されている NPC がまだありません。</p>
         </div>
       `;
       return;

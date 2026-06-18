@@ -12,6 +12,15 @@
 
 サイト内に管理画面はありません。
 
+## ページ構成
+
+| ページ | 対象 | URL |
+|--------|------|-----|
+| PL（閲覧） | プレイヤー | `index.html` |
+| KP（入力） | キーパー | `kp.html`（メニュー非表示・noindex） |
+
+フォーム URL は `js/links.js` の `AppLinks` で管理。スプレッドシート・GAS 管理 URL は載せない。
+
 ## Ver1（現在）
 
 - **NPC**: [Apps Script Webアプリ](https://script.google.com/macros/s/AKfycbzpuz_aIieBUVLJye3RLmWsBJt6bbfOqaZaxRlqrhHWxcneXCupPergOHY9bDsmo_n2/exec?type=npcs) から取得
