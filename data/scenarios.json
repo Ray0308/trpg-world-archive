@@ -7,6 +7,7 @@
       "summary": "京都の地下遺跡調査をきっかけに、失われた古代文明の痕跡に迫る。フィル・ミラーと田中雪が共同で調査に参加した。",
       "npcIds": ["phil-miller", "yuki-tanaka"],
       "organizationIds": ["org-miskatonic-univ", "org-japan-archaeology"],
+      "pcIds": ["pc-takahashi", "pc-kanzaki"],
       "relatedScenarioIds": ["scn-black-tide"]
     },
     {
@@ -16,6 +17,7 @@
       "summary": "アーカム総合病院を舞台に、原因不明の患者が続出する怪事件が発生。エレナ・ヴァンス院長の失踪もこの事件に関連している。",
       "npcIds": ["phil-miller", "yuki-tanaka", "elena-vance", "old-man-jenkins"],
       "organizationIds": [],
+      "pcIds": ["pc-takahashi", "pc-kanzaki"],
       "relatedScenarioIds": ["scn-lost-city", "scn-yellow-invite"]
     },
     {
@@ -25,6 +27,7 @@
       "summary": "ミスカトニック大学で催された講演会に、謎の招待状が届く。フィル・ミラー、タティス・ミラー博士、ジェームズ・ブラックウッドが関わる。",
       "npcIds": ["phil-miller", "tatis-miller", "james-blackwood"],
       "organizationIds": ["org-miskatonic-univ"],
+      "pcIds": ["pc-takahashi", "pc-tanaka"],
       "relatedScenarioIds": ["scn-black-tide"]
     }
   ]

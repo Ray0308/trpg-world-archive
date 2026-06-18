@@ -1,5 +1,5 @@
 /* ========================================
-   TRPG World Archive v0.1
+   TRPG World Archive v0.2
    ======================================== */
 
 const STATUS_LABELS = {
@@ -34,6 +34,7 @@ const indexes = {
 };
 
 let route = { section: 'npcs', id: null };
+let loadMeta = { npcSource: '', notices: [] };
 
 const contentArea = document.getElementById('contentArea');
 const globalSearch = document.getElementById('globalSearch');
@@ -43,51 +44,27 @@ const overlay = document.getElementById('overlay');
 const menuToggle = document.getElementById('menuToggle');
 const sidebarClose = document.getElementById('sidebarClose');
 
-/* ---- Data Loading ---- */
+/* ---- Data Loading (provider 経由) ---- */
 
 async function loadData() {
-  const [npcs, organizations, scenarios, pcs, locations] = await Promise.all([
-    fetch('data/npcs.json').then(r => r.json()),
-    fetch('data/organizations.json').then(r => r.json()),
-    fetch('data/scenarios.json').then(r => r.json()),
-    fetch('data/pcs.json').then(r => r.json()),
-    fetch('data/locations.json').then(r => r.json())
-  ]);
+  const { data, indexes: built, meta } = await window.loadArchiveData();
+  store.npcs = data.npcs;
+  store.organizations = data.organizations;
+  store.scenarios = data.scenarios;
+  store.pcs = data.pcs;
+  store.locations = data.locations;
 
-  store.npcs = npcs.npcs;
-  store.organizations = organizations.organizations;
-  store.scenarios = scenarios.scenarios;
-  store.pcs = pcs.pcs;
-  store.locations = locations.locations;
+  indexes.npcById = built.npcById;
+  indexes.orgById = built.orgById;
+  indexes.scenarioById = built.scenarioById;
+  indexes.pcById = built.pcById;
+  indexes.locationById = built.locationById;
+  indexes.npcsByOrgId = built.npcsByOrgId;
 
-  buildIndexes();
+  loadMeta = meta || { npcSource: '', notices: [] };
 }
 
-function buildIndexes() {
-  indexes.npcById.clear();
-  indexes.orgById.clear();
-  indexes.scenarioById.clear();
-  indexes.pcById.clear();
-  indexes.locationById.clear();
-  indexes.npcsByOrgId.clear();
-
-  store.npcs.forEach(npc => indexes.npcById.set(npc.id, npc));
-  store.organizations.forEach(org => indexes.orgById.set(org.id, org));
-  store.scenarios.forEach(sc => indexes.scenarioById.set(sc.id, sc));
-  store.pcs.forEach(pc => indexes.pcById.set(pc.id, pc));
-  store.locations.forEach(loc => indexes.locationById.set(loc.id, loc));
-
-  store.npcs.forEach(npc => {
-    (npc.organizationIds || []).forEach(orgId => {
-      if (!indexes.npcsByOrgId.has(orgId)) {
-        indexes.npcsByOrgId.set(orgId, []);
-      }
-      indexes.npcsByOrgId.get(orgId).push(npc);
-    });
-  });
-}
-
-/* ---- Avatar Generator ---- */
+/* ---- Image Helpers ---- */
 
 function generatePortrait(name, bg = '#1a3a2a', accent = '#c9a84c') {
   const initial = name.charAt(0);
@@ -118,12 +95,58 @@ function generateAvatar(name, bg = '#2d5a3d', accent = '#4a9eff') {
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
-function npcImage(npc) {
-  return npc.image || generatePortrait(npc.name);
+function npcPortraitFallback(npc) {
+  return generatePortrait(npc.name);
 }
 
-function npcAvatar(npc) {
-  return npc.avatar || generateAvatar(npc.name);
+function npcAvatarFallback(npc) {
+  return generateAvatar(npc.name);
+}
+
+function renderImg(src, fallback, { className = '', alt = '' } = {}) {
+  const safeAlt = escapeHtml(alt);
+  const safeClass = escapeHtml(className);
+  const safeSrc = escapeHtml(src);
+  const safeFallback = escapeHtml(fallback);
+  return `<img class="${safeClass}" src="${safeSrc}" alt="${safeAlt}" loading="lazy" onerror="this.onerror=null;this.src='${safeFallback}'">`;
+}
+
+function npcPortraitImg(npc) {
+  const src = npc.image || npcPortraitFallback(npc);
+  const fallback = npcPortraitFallback(npc);
+  return renderImg(src, fallback, { className: 'detail-image', alt: npc.name });
+}
+
+function npcAvatarImg(npc) {
+  const src = npc.avatar || npc.image || npcAvatarFallback(npc);
+  const fallback = npcAvatarFallback(npc);
+  return renderImg(src, fallback, { className: 'list-avatar', alt: npc.name });
+}
+
+/* ---- Entity Resolution ---- */
+
+function resolveNpcs(ids) {
+  return (ids || []).map(id => indexes.npcById.get(id)).filter(Boolean);
+}
+
+function resolveOrgs(ids) {
+  return (ids || []).map(id => indexes.orgById.get(id)).filter(Boolean);
+}
+
+function resolveScenarios(ids) {
+  return (ids || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+}
+
+function resolvePcs(ids) {
+  return (ids || []).map(id => indexes.pcById.get(id)).filter(Boolean);
+}
+
+function resolveLocations(ids) {
+  return (ids || []).map(id => indexes.locationById.get(id)).filter(Boolean);
+}
+
+function orgMembers(orgId) {
+  return indexes.npcsByOrgId.get(orgId) || [];
 }
 
 /* ---- Routing ---- */
@@ -148,12 +171,36 @@ function onHashChange() {
   route = parseHash();
   updateNavActive();
   render();
+  scrollDetailToTop();
 }
 
 function updateNavActive() {
   navMenu.querySelectorAll('.nav-link').forEach(link => {
     link.classList.toggle('active', link.dataset.section === route.section);
   });
+}
+
+function scrollDetailToTop() {
+  const panel = contentArea.querySelector('.detail-panel');
+  if (panel) panel.scrollTop = 0;
+}
+
+function updateDocumentTitle() {
+  const entity = getActiveEntity();
+  document.title = entity
+    ? `${entity.name} — TRPG World Archive`
+    : 'TRPG World Archive';
+}
+
+function getActiveEntity() {
+  if (!route.id) return null;
+  switch (route.section) {
+    case 'npcs': return indexes.npcById.get(route.id);
+    case 'organizations': return indexes.orgById.get(route.id);
+    case 'scenarios': return indexes.scenarioById.get(route.id);
+    case 'pcs': return indexes.pcById.get(route.id);
+    default: return null;
+  }
 }
 
 /* ---- Search ---- */
@@ -177,21 +224,24 @@ function filterNpcs(query) {
 function filterOrganizations(query) {
   return store.organizations.filter(org =>
     matchesQuery(org.name, query) ||
-    matchesQuery(org.summary, query)
+    matchesQuery(org.summary, query) ||
+    (org.description || []).some(d => matchesQuery(d, query))
   );
 }
 
 function filterScenarios(query) {
   return store.scenarios.filter(sc =>
     matchesQuery(sc.title, query) ||
-    matchesQuery(sc.summary, query)
+    matchesQuery(sc.summary, query) ||
+    matchesQuery(sc.era, query)
   );
 }
 
 function filterPcs(query) {
   return store.pcs.filter(pc =>
     matchesQuery(pc.name, query) ||
-    matchesQuery(pc.playerName, query)
+    matchesQuery(pc.playerName, query) ||
+    matchesQuery(pc.affiliation, query)
   );
 }
 
@@ -199,7 +249,7 @@ function filterPcs(query) {
 
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = str ?? '';
   return div.innerHTML;
 }
 
@@ -218,7 +268,47 @@ function renderListLayout(listHtml, detailHtml) {
   `;
 }
 
-function bindListItems() {
+function renderLinkList(items) {
+  if (!items.length) return renderEmpty();
+  return `<ul class="link-list">${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+}
+
+function renderNpcOrgDisplay(npc) {
+  const orgs = resolveOrgs(npc.organizationIds);
+  if (orgs.length) {
+    return orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、');
+  }
+  if (npc.organizationNames) {
+    return escapeHtml(npc.organizationNames);
+  }
+  return '—';
+}
+
+function renderNpcOrgList(npc) {
+  const orgs = resolveOrgs(npc.organizationIds);
+  if (orgs.length) {
+    return renderLinkList(orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)));
+  }
+  if (npc.organizationNames) {
+    return `<p class="org-names-text">${escapeHtml(npc.organizationNames)}</p>`;
+  }
+  return renderEmpty();
+}
+
+function renderNpcMemberRow(npc) {
+  return `
+    <li class="member-row" data-nav-section="npcs" data-nav-id="${npc.id}">
+      ${npcAvatarImg(npc)}
+      <div class="member-info">
+        <span class="member-name">${escapeHtml(npc.name)}</span>
+        <span class="member-sub">${escapeHtml(npc.job)}</span>
+      </div>
+      <span class="list-item-badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span>
+    </li>
+  `;
+}
+
+function bindNavigation() {
   contentArea.querySelectorAll('[data-nav-section]').forEach(el => {
     el.addEventListener('click', e => {
       e.preventDefault();
@@ -226,6 +316,13 @@ function bindListItems() {
       closeSidebar();
     });
   });
+}
+
+function getActiveId(filtered, fallbackId) {
+  if (route.id && filtered.some(item => item.id === route.id)) {
+    return route.id;
+  }
+  return fallbackId || filtered[0]?.id || null;
 }
 
 /* ---- NPC Views ---- */
@@ -237,7 +334,7 @@ function renderNpcListItem(npc, active) {
         data-nav-id="${npc.id}"
         role="option"
         aria-selected="${active}">
-      <img class="list-avatar" src="${npcAvatar(npc)}" alt="">
+      ${npcAvatarImg(npc)}
       <div class="list-item-info">
         <div class="list-item-name">${escapeHtml(npc.name)}</div>
         <div class="list-item-sub">${escapeHtml(npc.job)}</div>
@@ -248,18 +345,12 @@ function renderNpcListItem(npc, active) {
 }
 
 function renderNpcDetail(npc) {
-  const orgs = (npc.organizationIds || [])
-    .map(id => indexes.orgById.get(id))
-    .filter(Boolean);
-
-  const orgLinks = orgs.length
-    ? orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、')
-    : '—';
+  const orgLinks = renderNpcOrgDisplay(npc);
 
   return `
     <article class="entity-detail">
       <header class="detail-header">
-        <img class="detail-image" src="${npcImage(npc)}" alt="${escapeHtml(npc.name)}">
+        ${npcPortraitImg(npc)}
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(npc.name)}</h1>
           <p class="detail-furigana">${escapeHtml(npc.furigana || '')}</p>
@@ -269,7 +360,7 @@ function renderNpcDetail(npc) {
             <div class="info-row"><dt>国籍</dt><dd>${escapeHtml(npc.nationality || '—')}</dd></div>
             <div class="info-row"><dt>出身地</dt><dd>${escapeHtml(npc.origin || '—')}</dd></div>
             <div class="info-row"><dt>職業</dt><dd>${escapeHtml(npc.job || '—')}</dd></div>
-            <div class="info-row"><dt>所属組織</dt><dd>${orgLinks}</dd></div>
+            <div class="info-row"><dt>所属組織</dt><dd class="info-links">${orgLinks}</dd></div>
             <div class="info-row"><dt>状態</dt><dd><span class="badge ${STATUS_CLASSES[npc.status]}">${STATUS_LABELS[npc.status]}</span></dd></div>
           </dl>
         </div>
@@ -311,14 +402,11 @@ function renderNpcDetail(npc) {
 
       <section class="detail-section">
         <h2 class="section-heading">連絡可能PC</h2>
-        ${npc.contactablePcIds?.length ? `
-          <ul class="link-list">
-            ${npc.contactablePcIds.map(pcId => {
-              const pc = indexes.pcById.get(pcId);
-              return pc ? `<li>${renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)}</li>` : '';
-            }).join('')}
-          </ul>
-        ` : renderEmpty()}
+        ${renderLinkList(
+          resolvePcs(npc.contactablePcIds).map(pc =>
+            renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)
+          )
+        )}
       </section>
 
       <section class="detail-section">
@@ -326,42 +414,32 @@ function renderNpcDetail(npc) {
         <div class="related-grid">
           <div class="related-block">
             <h3>登場シナリオ</h3>
-            ${npc.scenarioIds?.length ? `
-              <ul class="link-list">
-                ${npc.scenarioIds.map(id => {
-                  const sc = indexes.scenarioById.get(id);
-                  return sc ? `<li>${renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)}</li>` : '';
-                }).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderLinkList(
+              resolveScenarios(npc.scenarioIds).map(sc =>
+                renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)
+              )
+            )}
           </div>
           <div class="related-block">
             <h3>関連NPC</h3>
-            ${npc.relatedNpcIds?.length ? `
-              <ul class="link-list">
-                ${npc.relatedNpcIds.map(r => {
-                  const rel = indexes.npcById.get(r.npcId);
-                  return rel ? `<li>${renderLink(`#npcs/${rel.id}`, rel.name, r.relation)}</li>` : '';
-                }).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderLinkList(
+              (npc.relatedNpcIds || []).map(r => {
+                const rel = indexes.npcById.get(r.npcId);
+                return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
+              }).filter(Boolean)
+            )}
           </div>
           <div class="related-block">
             <h3>所属組織</h3>
-            ${orgs.length ? `
-              <ul class="link-list">
-                ${orgs.map(o => `<li>${renderLink(`#organizations/${o.id}`, o.name)}</li>`).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderNpcOrgList(npc)}
           </div>
           <div class="related-block">
             <h3>関連場所</h3>
-            ${npc.locationIds?.length ? `
+            ${resolveLocations(npc.locationIds).length ? `
               <ul class="link-list">
-                ${npc.locationIds.map(id => {
-                  const loc = indexes.locationById.get(id);
-                  return loc ? `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>` : '';
-                }).join('')}
+                ${resolveLocations(npc.locationIds).map(loc =>
+                  `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>`
+                ).join('')}
               </ul>
             ` : renderEmpty()}
           </div>
@@ -374,10 +452,7 @@ function renderNpcDetail(npc) {
 function renderNpcsView() {
   const query = getSearchQuery();
   const filtered = filterNpcs(query);
-  const activeId = route.id || filtered[0]?.id;
-  if (activeId && route.id !== activeId && filtered.some(n => n.id === activeId)) {
-    route.id = activeId;
-  }
+  const activeId = getActiveId(filtered);
   const activeNpc = activeId ? indexes.npcById.get(activeId) : null;
 
   const listHtml = `
@@ -395,30 +470,29 @@ function renderNpcsView() {
     : `<div class="detail-empty"><p>NPCが見つかりません</p></div>`;
 
   contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
-  bindListItems();
+  bindNavigation();
 }
 
 /* ---- Organization Views ---- */
 
-function renderOrgListItem(org, active) {
-  const memberCount = (indexes.npcsByOrgId.get(org.id) || []).length;
+function renderOrgCard(org, active) {
+  const members = orgMembers(org.id);
+  const preview = members.slice(0, 3).map(n => escapeHtml(n.name)).join('、');
   return `
-    <li class="list-item ${active ? 'active' : ''}"
-        data-nav-section="organizations"
-        data-nav-id="${org.id}"
-        role="option">
-      <span class="list-icon">${org.icon || '🏛️'}</span>
-      <div class="list-item-info">
-        <div class="list-item-name">${escapeHtml(org.name)}</div>
-        <div class="list-item-sub">所属NPC ${memberCount} 名</div>
-      </div>
-    </li>
+    <article class="org-card ${active ? 'active' : ''}"
+             data-nav-section="organizations"
+             data-nav-id="${org.id}">
+      <span class="org-card-icon">${org.icon || '🏛️'}</span>
+      <h3 class="org-card-name">${escapeHtml(org.name)}</h3>
+      <p class="org-card-summary">${escapeHtml(org.summary || '')}</p>
+      <p class="org-card-meta">所属NPC ${members.length} 名${preview ? ` — ${preview}` : ''}</p>
+    </article>
   `;
 }
 
 function renderOrgDetail(org) {
-  const members = indexes.npcsByOrgId.get(org.id) || [];
-  const scenarios = (org.scenarioIds || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+  const members = orgMembers(org.id);
+  const scenarios = resolveScenarios(org.scenarioIds);
   const location = org.locationId ? indexes.locationById.get(org.locationId) : null;
 
   return `
@@ -427,40 +501,43 @@ function renderOrgDetail(org) {
         <span class="detail-org-icon">${org.icon || '🏛️'}</span>
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(org.name)}</h1>
-          <p class="detail-summary">${escapeHtml(org.summary || '')}</p>
+          ${org.nameEn ? `<p class="detail-meta">${escapeHtml(org.nameEn)}</p>` : ''}
         </div>
       </header>
 
       <section class="detail-section">
-        <h2 class="section-heading">概要</h2>
+        <h2 class="section-heading">説明</h2>
         <div class="prose">
-          ${(org.description || []).map(p => `<p>${escapeHtml(p)}</p>`).join('') || renderEmpty()}
+          ${org.summary ? `<p>${escapeHtml(org.summary)}</p>` : ''}
+          ${(org.description || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
+          ${!org.summary && !(org.description || []).length ? renderEmpty() : ''}
         </div>
       </section>
 
+      ${location ? `
       <section class="detail-section">
         <h2 class="section-heading">所在地</h2>
-        <p>${location ? `${location.icon || '📍'} ${escapeHtml(location.name)}` : '—'}</p>
+        <p class="location-item">${location.icon || '📍'} ${escapeHtml(location.name)}</p>
+      </section>
+      ` : ''}
+
+      <section class="detail-section">
+        <h2 class="section-heading">所属NPC</h2>
+        ${members.length ? `
+          <ul class="member-list">
+            ${members.map(npc => renderNpcMemberRow(npc)).join('')}
+          </ul>
+        ` : renderEmpty('所属NPCは登録されていません')}
       </section>
 
       <section class="detail-section">
         <h2 class="section-heading">関連情報</h2>
         <div class="related-grid">
           <div class="related-block">
-            <h3>所属NPC</h3>
-            ${members.length ? `
-              <ul class="link-list">
-                ${members.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
-              </ul>
-            ` : renderEmpty()}
-          </div>
-          <div class="related-block">
             <h3>関連シナリオ</h3>
-            ${scenarios.length ? `
-              <ul class="link-list">
-                ${scenarios.map(sc => `<li>${renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)}</li>`).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderLinkList(
+              scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
+            )}
           </div>
         </div>
       </section>
@@ -471,7 +548,7 @@ function renderOrgDetail(org) {
 function renderOrganizationsView() {
   const query = getSearchQuery();
   const filtered = filterOrganizations(query);
-  const activeId = route.id || filtered[0]?.id;
+  const activeId = getActiveId(filtered);
   const activeOrg = activeId ? indexes.orgById.get(activeId) : null;
 
   const listHtml = `
@@ -479,9 +556,9 @@ function renderOrganizationsView() {
       <h2 class="panel-title">組織</h2>
       <span class="panel-count">${filtered.length} 件</span>
     </div>
-    <ul class="entity-list">
-      ${filtered.map(org => renderOrgListItem(org, org.id === activeId)).join('')}
-    </ul>
+    <div class="org-card-list">
+      ${filtered.map(org => renderOrgCard(org, org.id === activeId)).join('')}
+    </div>
   `;
 
   const detailHtml = activeOrg
@@ -489,12 +566,13 @@ function renderOrganizationsView() {
     : `<div class="detail-empty"><p>組織が見つかりません</p></div>`;
 
   contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
-  bindListItems();
+  bindNavigation();
 }
 
 /* ---- Scenario Views ---- */
 
 function renderScenarioListItem(sc, active) {
+  const npcCount = (sc.npcIds || []).length;
   return `
     <li class="list-item ${active ? 'active' : ''}"
         data-nav-section="scenarios"
@@ -503,16 +581,17 @@ function renderScenarioListItem(sc, active) {
       <span class="list-icon">📜</span>
       <div class="list-item-info">
         <div class="list-item-name">${escapeHtml(sc.title)}</div>
-        <div class="list-item-sub">${escapeHtml(sc.era || '')}</div>
+        <div class="list-item-sub">${escapeHtml(sc.era || '')} · NPC ${npcCount} 名</div>
       </div>
     </li>
   `;
 }
 
 function renderScenarioDetail(sc) {
-  const npcs = (sc.npcIds || []).map(id => indexes.npcById.get(id)).filter(Boolean);
-  const orgs = (sc.organizationIds || []).map(id => indexes.orgById.get(id)).filter(Boolean);
-  const related = (sc.relatedScenarioIds || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+  const npcs = resolveNpcs(sc.npcIds);
+  const orgs = resolveOrgs(sc.organizationIds);
+  const pcs = resolvePcs(sc.pcIds);
+  const related = resolveScenarios(sc.relatedScenarioIds);
 
   return `
     <article class="entity-detail">
@@ -535,26 +614,28 @@ function renderScenarioDetail(sc) {
           <div class="related-block">
             <h3>登場NPC</h3>
             ${npcs.length ? `
-              <ul class="link-list">
-                ${npcs.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
+              <ul class="member-list member-list--compact">
+                ${npcs.map(npc => renderNpcMemberRow(npc)).join('')}
               </ul>
             ` : renderEmpty()}
           </div>
           <div class="related-block">
             <h3>登場組織</h3>
-            ${orgs.length ? `
-              <ul class="link-list">
-                ${orgs.map(o => `<li>${renderLink(`#organizations/${o.id}`, o.name)}</li>`).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderLinkList(
+              orgs.map(o => renderLink(`#organizations/${o.id}`, o.name))
+            )}
+          </div>
+          <div class="related-block">
+            <h3>関連PC</h3>
+            ${renderLinkList(
+              pcs.map(pc => renderLink(`#pcs/${pc.id}`, pc.name, pc.affiliation))
+            )}
           </div>
           <div class="related-block">
             <h3>関連シナリオ</h3>
-            ${related.length ? `
-              <ul class="link-list">
-                ${related.map(r => `<li>${renderLink(`#scenarios/${r.id}`, r.title, r.era)}</li>`).join('')}
-              </ul>
-            ` : renderEmpty()}
+            ${renderLinkList(
+              related.map(r => renderLink(`#scenarios/${r.id}`, r.title, r.era))
+            )}
           </div>
         </div>
       </section>
@@ -565,7 +646,7 @@ function renderScenarioDetail(sc) {
 function renderScenariosView() {
   const query = getSearchQuery();
   const filtered = filterScenarios(query);
-  const activeId = route.id || filtered[0]?.id;
+  const activeId = getActiveId(filtered);
   const activeSc = activeId ? indexes.scenarioById.get(activeId) : null;
 
   const listHtml = `
@@ -583,7 +664,7 @@ function renderScenariosView() {
     : `<div class="detail-empty"><p>シナリオが見つかりません</p></div>`;
 
   contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
-  bindListItems();
+  bindNavigation();
 }
 
 /* ---- PC Views ---- */
@@ -604,7 +685,10 @@ function renderPcListItem(pc, active) {
 }
 
 function renderPcDetail(pc) {
-  const relatedNpcs = (pc.relatedNpcIds || []).map(id => indexes.npcById.get(id)).filter(Boolean);
+  const relatedNpcs = resolveNpcs(pc.relatedNpcIds);
+  const scenarios = store.scenarios.filter(sc =>
+    (sc.pcIds || []).includes(pc.id)
+  );
 
   return `
     <article class="entity-detail">
@@ -619,17 +703,32 @@ function renderPcDetail(pc) {
       <section class="detail-section">
         <h2 class="section-heading">基本情報</h2>
         <dl class="info-grid info-grid--compact">
+          <div class="info-row"><dt>プレイヤー名</dt><dd>${escapeHtml(pc.playerName || '—')}</dd></div>
           <div class="info-row"><dt>所属</dt><dd>${escapeHtml(pc.affiliation || '—')}</dd></div>
         </dl>
       </section>
 
+      ${pc.description ? `
+      <section class="detail-section">
+        <h2 class="section-heading">説明</h2>
+        <div class="prose"><p>${escapeHtml(pc.description)}</p></div>
+      </section>
+      ` : ''}
+
       <section class="detail-section">
         <h2 class="section-heading">関連NPC</h2>
         ${relatedNpcs.length ? `
-          <ul class="link-list">
-            ${relatedNpcs.map(npc => `<li>${renderLink(`#npcs/${npc.id}`, npc.name, npc.job)}</li>`).join('')}
+          <ul class="member-list member-list--compact">
+            ${relatedNpcs.map(npc => renderNpcMemberRow(npc)).join('')}
           </ul>
         ` : renderEmpty()}
+      </section>
+
+      <section class="detail-section">
+        <h2 class="section-heading">関連シナリオ</h2>
+        ${renderLinkList(
+          scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
+        )}
       </section>
     </article>
   `;
@@ -638,7 +737,7 @@ function renderPcDetail(pc) {
 function renderPcsView() {
   const query = getSearchQuery();
   const filtered = filterPcs(query);
-  const activeId = route.id || filtered[0]?.id;
+  const activeId = getActiveId(filtered);
   const activePc = activeId ? indexes.pcById.get(activeId) : null;
 
   const listHtml = `
@@ -656,12 +755,82 @@ function renderPcsView() {
     : `<div class="detail-empty"><p>PCが見つかりません</p></div>`;
 
   contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
-  bindListItems();
+  bindNavigation();
+}
+
+/* ---- Global Search Results ---- */
+
+function renderGlobalSearchResults() {
+  const query = getSearchQuery();
+  if (!query) {
+    render();
+    return;
+  }
+
+  const results = {
+    npcs: filterNpcs(query),
+    organizations: filterOrganizations(query),
+    scenarios: filterScenarios(query),
+    pcs: filterPcs(query)
+  };
+
+  const total = results.npcs.length + results.organizations.length +
+    results.scenarios.length + results.pcs.length;
+
+  const section = (title, items, sectionName, renderItem) => {
+    if (!items.length) return '';
+    return `
+      <section class="search-section">
+        <h2 class="section-heading">${title}（${items.length}）</h2>
+        <ul class="search-results">${items.map(item => renderItem(item)).join('')}</ul>
+      </section>
+    `;
+  };
+
+  contentArea.innerHTML = `
+    <div class="search-results-panel">
+      <h1 class="search-results-title">「${escapeHtml(query)}」の検索結果</h1>
+      <p class="search-results-count">${total} 件</p>
+      ${section('NPC', results.npcs, 'npcs', npc => `
+        <li class="search-result-item" data-nav-section="npcs" data-nav-id="${npc.id}">
+          ${npcAvatarImg(npc)}
+          <div><strong>${escapeHtml(npc.name)}</strong><span>${escapeHtml(npc.job)}</span></div>
+        </li>
+      `)}
+      ${section('組織', results.organizations, 'organizations', org => `
+        <li class="search-result-item" data-nav-section="organizations" data-nav-id="${org.id}">
+          <span class="list-icon">${org.icon || '🏛️'}</span>
+          <div><strong>${escapeHtml(org.name)}</strong><span>${escapeHtml(org.summary || '')}</span></div>
+        </li>
+      `)}
+      ${section('シナリオ', results.scenarios, 'scenarios', sc => `
+        <li class="search-result-item" data-nav-section="scenarios" data-nav-id="${sc.id}">
+          <span class="list-icon">📜</span>
+          <div><strong>${escapeHtml(sc.title)}</strong><span>${escapeHtml(sc.era || '')}</span></div>
+        </li>
+      `)}
+      ${section('PC', results.pcs, 'pcs', pc => `
+        <li class="search-result-item" data-nav-section="pcs" data-nav-id="${pc.id}">
+          <span class="list-icon">👤</span>
+          <div><strong>${escapeHtml(pc.name)}</strong><span>${escapeHtml(pc.playerName || '')}</span></div>
+        </li>
+      `)}
+      ${total === 0 ? renderEmpty('該当する項目がありません') : ''}
+    </div>
+  `;
+
+  bindNavigation();
+  updateDocumentTitle();
 }
 
 /* ---- Main Render ---- */
 
 function render() {
+  if (getSearchQuery()) {
+    renderGlobalSearchResults();
+    return;
+  }
+
   switch (route.section) {
     case 'organizations':
       renderOrganizationsView();
@@ -678,9 +847,94 @@ function render() {
       break;
   }
 
-  document.title = route.id
-    ? `TRPG World Archive — ${route.section}`
-    : 'TRPG World Archive';
+  updateDocumentTitle();
+}
+
+/* ---- Notices & Errors ---- */
+
+function renderNoticeBanner() {
+  const existing = document.getElementById('noticeBanner');
+  if (existing) existing.remove();
+
+  if (!loadMeta.notices?.length) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'noticeBanner';
+  banner.className = 'notice-banner';
+
+  banner.innerHTML = loadMeta.notices.map(notice => {
+    const level = notice.level || 'warning';
+    const detailsHtml = notice.details && Object.keys(notice.details).length
+      ? `<details class="notice-details"><summary>詳細</summary><pre>${escapeHtml(JSON.stringify(notice.details, null, 2))}</pre></details>`
+      : '';
+    const fallbackHtml = notice.fallback
+      ? `<p class="notice-fallback">${escapeHtml(notice.fallback)}</p>`
+      : '';
+    const sourceLabel = loadMeta.npcSource === 'api'
+      ? 'スプレッドシート'
+      : loadMeta.npcSource === 'json-fallback'
+        ? 'ローカル JSON（フォールバック）'
+        : 'ローカル JSON';
+
+    return `
+      <div class="notice-item notice-${level}">
+        <p class="notice-title">${escapeHtml(notice.title)}</p>
+        <p class="notice-message">${escapeHtml(notice.message)}</p>
+        ${fallbackHtml}
+        ${detailsHtml}
+        <p class="notice-source">NPC データソース: ${escapeHtml(sourceLabel)}</p>
+      </div>
+    `;
+  }).join('');
+
+  const mainWrapper = document.querySelector('.main-wrapper');
+  const header = document.querySelector('.header');
+  if (mainWrapper && header) {
+    header.insertAdjacentElement('afterend', banner);
+  }
+}
+
+function renderFatalError(err) {
+  const isArchiveError = err.name === 'ArchiveLoadError' || err.title;
+  const title = err.title || 'データの読み込みに失敗しました';
+  const message = err.message || '不明なエラーが発生しました。';
+
+  let detailsHtml = '';
+  if (err.details) {
+    if (err.details.api || err.details.json) {
+      detailsHtml = '<div class="error-details">';
+      if (err.details.api) {
+        detailsHtml += `
+          <h3>スプレッドシート API</h3>
+          <p><strong>${escapeHtml(err.details.api.title || '')}</strong></p>
+          <p>${escapeHtml(err.details.api.message || '')}</p>
+        `;
+      }
+      if (err.details.json) {
+        detailsHtml += `
+          <h3>ローカル JSON</h3>
+          <p><strong>${escapeHtml(err.details.json.title || '')}</strong></p>
+          <p>${escapeHtml(err.details.json.message || '')}</p>
+        `;
+      }
+      detailsHtml += '</div>';
+    } else {
+      detailsHtml = `<pre class="error-pre">${escapeHtml(JSON.stringify(err.details, null, 2))}</pre>`;
+    }
+  }
+
+  const hint = isArchiveError
+    ? '<p class="error-hint">スプレッドシートの Apps Script が「ウェブアプリとして導入」されているか、アクセス権限が「全員」になっているか確認してください。</p>'
+    : '<p class="error-hint">ローカルで確認する場合は HTTP サーバー（Live Server 等）経由で開いてください。file:// では JSON を読み込めません。</p>';
+
+  contentArea.innerHTML = `
+    <div class="error-panel">
+      <h2>${escapeHtml(title)}</h2>
+      <p class="error-message">${escapeHtml(message)}</p>
+      ${detailsHtml}
+      ${hint}
+    </div>
+  `;
 }
 
 /* ---- Mobile Sidebar ---- */
@@ -705,8 +959,16 @@ globalSearch.addEventListener('input', () => {
   render();
 });
 
+globalSearch.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    globalSearch.value = '';
+    render();
+  }
+});
+
 navMenu.querySelectorAll('.nav-link').forEach(link => {
   link.addEventListener('click', () => {
+    globalSearch.value = '';
     closeSidebar();
   });
 });
@@ -719,20 +981,26 @@ async function init() {
   try {
     await loadData();
     route = parseHash();
-    if (!route.id && route.section === 'npcs') {
-      route.id = 'phil-miller';
-      location.replace('#npcs/phil-miller');
+    renderNoticeBanner();
+    if (!route.id && route.section === 'npcs' && store.npcs.length > 0) {
+      location.replace(`#npcs/${store.npcs[0].id}`);
+      return;
+    }
+    if (route.section === 'npcs' && store.npcs.length === 0) {
+      contentArea.innerHTML = `
+        <div class="error-panel">
+          <h2>NPC データがありません</h2>
+          <p class="error-message">スプレッドシートに NPC が登録されていないか、データの取得に問題があります。</p>
+          <p class="error-hint">Googleフォームから NPC を登録し、Apps Script API が正しく動作しているか確認してください。</p>
+        </div>
+      `;
+      return;
     }
     updateNavActive();
     render();
   } catch (err) {
-    contentArea.innerHTML = `
-      <div class="error-panel">
-        <h2>データの読み込みに失敗しました</h2>
-        <p>ローカルで確認する場合は HTTP サーバー経由で開いてください。</p>
-        <pre>${escapeHtml(err.message)}</pre>
-      </div>
-    `;
+    console.error('[TRPG Archive]', err);
+    renderFatalError(err);
   }
 }
 

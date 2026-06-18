@@ -5,6 +5,8 @@
       "name": "フィル・ミラー",
       "furigana": "ふぃる・みらー",
       "nameEn": "Phil Miller",
+      "image": "data/images/phil-miller.jpg",
+      "avatar": "data/images/phil-miller-thumb.jpg",
       "birthdate": "1892/03/15",
       "age": 58,
       "nationality": "アメリカ合衆国",
@@ -100,7 +102,7 @@
       "nationality": "日本",
       "origin": "日本・京都府",
       "job": "民俗学者",
-      "organizationIds": [],
+      "organizationIds": ["org-miskatonic-univ"],
       "status": "alive",
       "bio": ["京都出身の民俗学者。フィル・ミラーと共同調査を行っている。"],
       "person": {
