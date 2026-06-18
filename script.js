@@ -106,23 +106,31 @@ function npcAvatarFallback(npc) {
 window.handleArchiveImgError = function (img) {
   let fallbacks = [];
   try {
-    fallbacks = JSON.parse(decodeURIComponent(img.dataset.fallbacks || '%5B%5D'));
+    const raw = img.getAttribute('data-fallbacks') || '%5B%5D';
+    fallbacks = JSON.parse(decodeURIComponent(raw));
   } catch (e) {
     fallbacks = [];
   }
   if (fallbacks.length > 0) {
     img.src = fallbacks.shift();
-    img.dataset.fallbacks = encodeURIComponent(JSON.stringify(fallbacks));
+    img.setAttribute('data-fallbacks', encodeURIComponent(JSON.stringify(fallbacks)));
     return;
   }
   img.onerror = null;
   try {
-    const svg = decodeURIComponent(img.dataset.svgFallback || '');
+    const svg = decodeURIComponent(img.getAttribute('data-svg-fallback') || '');
     if (svg) img.src = svg;
   } catch (e) {
     /* ignore */
   }
 };
+
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
 
 function renderImg(url, svgFallback, { className = '', alt = '' } = {}) {
   const utils = window.ImageUtils;
@@ -130,14 +138,17 @@ function renderImg(url, svgFallback, { className = '', alt = '' } = {}) {
     ? utils.buildImgAttrs(url, svgFallback)
     : { src: url || svgFallback, fallbacks: [] };
 
+  const fallbacksEncoded = encodeURIComponent(JSON.stringify(fallbacks));
+  const svgEncoded = encodeURIComponent(svgFallback);
+
   return `<img class="${escapeHtml(className)}"` +
-    ` src="${escapeHtml(src)}"` +
+    ` src="${escapeAttr(src)}"` +
     ` alt="${escapeHtml(alt)}"` +
-    ` loading="lazy"` +
+    ` loading="eager"` +
     ` decoding="async"` +
     ` referrerpolicy="no-referrer"` +
-    ` data-fallbacks="${encodeURIComponent(JSON.stringify(fallbacks))}"` +
-    ` data-svg-fallback="${encodeURIComponent(svgFallback)}"` +
+    ` data-fallbacks="${fallbacksEncoded}"` +
+    ` data-svg-fallback="${svgEncoded}"` +
     ` onerror="handleArchiveImgError(this)">`;
 }
 

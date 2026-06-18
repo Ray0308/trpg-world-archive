@@ -17,11 +17,16 @@ window.ImageUtils = (function () {
   }
 
   function googleDriveCandidates(fileId) {
+    const thumb = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    const view = `https://drive.google.com/uc?export=view&id=${fileId}`;
     return [
-      `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
-      `https://drive.google.com/uc?export=view&id=${fileId}`,
+      // 画像プロキシ経由（GitHub Pages 等の外部サイトから Drive を表示する定番手段）
+      `https://wsrv.nl/?url=${encodeURIComponent(thumb)}&w=800&fit=inside&we`,
+      `https://wsrv.nl/?url=${encodeURIComponent(view)}&w=800&fit=inside&we`,
+      thumb,
+      view,
       `https://drive.google.com/uc?export=download&id=${fileId}`,
-      `https://lh3.googleusercontent.com/d/${fileId}=w1000`
+      `https://lh3.googleusercontent.com/d/${fileId}=w1000-rw`
     ];
   }
 
