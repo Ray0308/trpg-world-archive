@@ -961,6 +961,11 @@ input {
   background: var(--bg-sidebar);
 }
 
+.footer-source {
+  color: var(--status-missing);
+  margin-top: 0.15rem;
+}
+
 /* ---- Overlay ---- */
 
 .overlay {

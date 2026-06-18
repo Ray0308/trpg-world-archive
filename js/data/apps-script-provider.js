@@ -10,48 +10,157 @@ window.AppsScriptProvider = {
     return `${url}${separator}type=npcs`;
   },
 
-  async fetchNpcs(baseUrl) {
-    const url = this.buildNpcUrl(baseUrl);
-    let res;
+  parseNpcJson(text) {
+    const trimmed = (text || '').trim();
+    if (!trimmed) {
+      throw new ArchiveLoadError(
+        'スプレッドシート API の応答が空です',
+        'Apps Script が空のレスポンスを返しました。'
+      );
+    }
+    if (trimmed.startsWith('<')) {
+      throw new ArchiveLoadError(
+        'スプレッドシート API の応答が不正です',
+        'HTML が返されました。ウェブアプリの公開設定（アクセス: 全員）を確認してください。',
+        { preview: trimmed.slice(0, 120) }
+      );
+    }
+    try {
+      const data = JSON.parse(trimmed);
+      if (!Array.isArray(data)) {
+        throw new ArchiveLoadError(
+          'スプレッドシート API の応答が不正です',
+          'NPC データは配列形式である必要があります。',
+          { receivedType: typeof data }
+        );
+      }
+      return data;
+    } catch (err) {
+      if (err instanceof ArchiveLoadError) throw err;
+      throw new ArchiveLoadError(
+        'スプレッドシート API の応答が不正です',
+        'JSON として解析できませんでした。',
+        { cause: err.message, preview: trimmed.slice(0, 120) }
+      );
+    }
+  },
+
+  fetchNpcsJsonp(url, timeoutMs = 30000) {
+    return new Promise((resolve, reject) => {
+      const callbackName = `_gasNpcCb_${Date.now()}`;
+      const separator = url.includes('?') ? '&' : '?';
+      const script = document.createElement('script');
+      let timer;
+
+      function cleanup() {
+        clearTimeout(timer);
+        delete window[callbackName];
+        script.remove();
+      }
+
+      window[callbackName] = (data) => {
+        cleanup();
+        try {
+          if (!Array.isArray(data)) {
+            reject(new ArchiveLoadError(
+              'スプレッドシート API の応答が不正です',
+              'JSONP 応答が配列ではありません。'
+            ));
+            return;
+          }
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      script.onerror = () => {
+        cleanup();
+        reject(new ArchiveLoadError(
+          'スプレッドシート API（JSONP）に接続できません',
+          'JSONP 読み込みに失敗しました。Apps Script に callback 対応が必要な場合があります。',
+          { url }
+        ));
+      };
+
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new ArchiveLoadError(
+          'スプレッドシート API がタイムアウトしました',
+          `${timeoutMs / 1000} 秒以内に応答がありませんでした。`,
+          { url }
+        ));
+      }, timeoutMs);
+
+      script.src = `${url}${separator}callback=${callbackName}`;
+      document.head.appendChild(script);
+    });
+  },
+
+  async fetchNpcsDirect(url, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      res = await fetch(url);
-    } catch (networkErr) {
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+
+      if (!res.ok) {
+        throw new ArchiveLoadError(
+          'スプレッドシート API がエラーを返しました',
+          `HTTP ${res.status}: ${res.statusText}`,
+          { url, status: res.status }
+        );
+      }
+
+      const text = await res.text();
+      return this.parseNpcJson(text);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new ArchiveLoadError(
+          'スプレッドシート API がタイムアウトしました',
+          `${timeoutMs / 1000} 秒以内に応答がありませんでした。`,
+          { url }
+        );
+      }
+      if (err instanceof ArchiveLoadError) throw err;
       throw new ArchiveLoadError(
         'スプレッドシート API に接続できません',
-        'ネットワークエラーが発生しました。インターネット接続と API URL を確認してください。',
-        { url, cause: networkErr.message }
+        'ブラウザから API に接続できませんでした（CORS またはネットワークエラー）。',
+        { url, cause: err.message }
       );
+    } finally {
+      clearTimeout(timer);
     }
+  },
 
-    if (!res.ok) {
-      throw new ArchiveLoadError(
-        'スプレッドシート API がエラーを返しました',
-        `HTTP ${res.status}: ${res.statusText}`,
-        { url, status: res.status }
-      );
-    }
+  async fetchNpcs(baseUrl) {
+    const url = this.buildNpcUrl(baseUrl);
+    const timeoutMs = window.AppConfig?.api?.timeoutMs || 30000;
 
-    let data;
     try {
-      data = await res.json();
-    } catch (parseErr) {
-      throw new ArchiveLoadError(
-        'スプレッドシート API の応答が不正です',
-        'JSON として解析できませんでした。Apps Script の出力形式を確認してください。',
-        { url, cause: parseErr.message }
-      );
+      return await this.fetchNpcsDirect(url, timeoutMs);
+    } catch (fetchErr) {
+      try {
+        const data = await this.fetchNpcsJsonp(url, timeoutMs);
+        return data;
+      } catch (jsonpErr) {
+        throw new ArchiveLoadError(
+          fetchErr.title || 'スプレッドシートから NPC を取得できませんでした',
+          fetchErr.message,
+          {
+            url,
+            fetch: { message: fetchErr.message, details: fetchErr.details },
+            jsonp: { message: jsonpErr.message, details: jsonpErr.details },
+            hint: 'Apps Script の doGet に callback パラメータ対応を追加してください（docs/gas-doget.md 参照）。'
+          }
+        );
+      }
     }
-
-    if (!Array.isArray(data)) {
-      throw new ArchiveLoadError(
-        'スプレッドシート API の応答が不正です',
-        'NPC データは配列形式である必要があります。',
-        { url, receivedType: typeof data }
-      );
-    }
-
-    return data;
   },
 
   async loadNpcsFromJson(jsonConfig) {
@@ -60,7 +169,7 @@ window.AppsScriptProvider = {
     let res;
 
     try {
-      res = await fetch(url);
+      res = await fetch(url, { cache: 'no-store' });
     } catch (networkErr) {
       throw new ArchiveLoadError(
         'ローカル NPC データに接続できません',
@@ -81,9 +190,6 @@ window.AppsScriptProvider = {
     return data.npcs || [];
   },
 
-  /**
-   * @returns {{ npcs: Array, source: string, notice: object|null }}
-   */
   async loadNpcs(apiConfig, jsonConfig) {
     if (!apiConfig?.baseUrl) {
       const npcs = await this.loadNpcsFromJson(jsonConfig);

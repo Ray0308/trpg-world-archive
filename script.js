@@ -171,6 +171,7 @@ function onHashChange() {
   route = parseHash();
   updateNavActive();
   render();
+  renderNoticeBanner();
   scrollDetailToTop();
 }
 
@@ -321,6 +322,10 @@ function bindNavigation() {
 function getActiveId(filtered, fallbackId) {
   if (route.id && filtered.some(item => item.id === route.id)) {
     return route.id;
+  }
+  // URL に古い ID（ローカル JSON の phil-miller 等）が残っている場合は先頭へ
+  if (route.id && filtered.length > 0) {
+    return filtered[0].id;
   }
   return fallbackId || filtered[0]?.id || null;
 }
@@ -856,6 +861,8 @@ function renderNoticeBanner() {
   const existing = document.getElementById('noticeBanner');
   if (existing) existing.remove();
 
+  updateFooterSource();
+
   if (!loadMeta.notices?.length) return;
 
   const banner = document.createElement('div');
@@ -892,6 +899,18 @@ function renderNoticeBanner() {
   if (mainWrapper && header) {
     header.insertAdjacentElement('afterend', banner);
   }
+}
+
+function updateFooterSource() {
+  const el = document.getElementById('footerSource');
+  if (!el) return;
+
+  const labels = {
+    api: 'NPC: スプレッドシート',
+    'json-fallback': 'NPC: ローカル JSON（API 失敗）',
+    json: 'NPC: ローカル JSON'
+  };
+  el.textContent = labels[loadMeta.npcSource] || '';
 }
 
 function renderFatalError(err) {
