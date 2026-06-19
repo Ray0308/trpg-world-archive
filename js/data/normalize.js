@@ -7,7 +7,7 @@ window.ArchiveNormalize = (function () {
     'edit_url', 'editUrl', 'form_response_id', 'formResponseId',
     'created_at', 'createdAt', 'updated_at', 'updatedAt',
     'memo', 'spreadsheet_url', 'spreadsheetUrl', 'gas_url', 'gasUrl',
-    'drive_url', 'driveUrl', 'callback'
+    'drive_url', 'driveUrl', 'callback', 'pl_hidden', 'plHidden'
   ]);
 
   function stripAdminFields(raw) {

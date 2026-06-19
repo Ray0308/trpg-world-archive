@@ -42,6 +42,7 @@ function getNpcHeaders_() {
     'contactable_pc_ids',
     'location_ids',
     'memo',
+    'pl_hidden',
     'edit_url',
     'form_response_id',
     'created_at',
@@ -130,6 +131,7 @@ function buildNpcRowFromAnswers_(answers, sheet, response) {
     contactable_pc_ids: pickAnswer_(answers, '連絡可能PC'),
     location_ids: pickAnswer_(answers, '関連場所'),
     memo: pickAnswer_(answers, '備考'),
+    pl_hidden: '',
     edit_url: response.getEditResponseUrl(),
     form_response_id: response.getId(),
     created_at: now,
@@ -161,7 +163,7 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2025-06-19-kp' }, callback);
+    return jsonResponse_({ api_version: '2026-06-16-visibility' }, callback);
   }
 
   if (type === 'npcs') {
@@ -169,7 +171,55 @@ function doGet(e) {
     return jsonResponse_(data, callback);
   }
 
+  if (type === 'npc-visibility') {
+    const id = String((e.parameter && e.parameter.id) || '').trim();
+    const hiddenParam = e.parameter && e.parameter.hidden;
+    if (!id) {
+      return jsonResponse_({ error: 'missing id' }, callback);
+    }
+    const hidden = hiddenParam === '1' || hiddenParam === 'true';
+    try {
+      const result = setNpcPlHidden_(ss, id, hidden);
+      return jsonResponse_(result, callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
   return jsonResponse_({ error: 'unknown type', type: type }, callback);
+}
+
+function isPlHidden_(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'はい' || v === 'yes' ||
+    v === '✓' || v === '非表示' || v === 'hidden';
+}
+
+function plHiddenCellValue_(hidden) {
+  return hidden ? 'TRUE' : '';
+}
+
+function setNpcPlHidden_(ss, npcId, hidden) {
+  const sheet = ss.getSheetByName('NPCS');
+  if (!sheet) throw new Error('NPCS シートがありません');
+
+  const headers = ensureNpcHeader_(sheet);
+  const idCol = headers.indexOf('id') + 1;
+  const hiddenCol = headers.indexOf('pl_hidden') + 1;
+  if (idCol < 1 || hiddenCol < 1) throw new Error('pl_hidden 列がありません');
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol - 1]).trim() === String(npcId).trim()) {
+      sheet.getRange(i + 1, hiddenCol).setValue(plHiddenCellValue_(hidden));
+      const updatedCol = headers.indexOf('updated_at') + 1;
+      if (updatedCol > 0) {
+        sheet.getRange(i + 1, updatedCol).setValue(new Date());
+      }
+      return { ok: true, id: npcId, pl_hidden: hidden };
+    }
+  }
+  throw new Error('NPC が見つかりません: ' + npcId);
 }
 
 /** KPページ用 — 編集リンク付きの最小NPC一覧 */
@@ -196,6 +246,7 @@ function getKpNpcs_(ss) {
         occupation: record.occupation || '',
         status: record.status || '',
         image_url: record.image_url || '',
+        pl_hidden: isPlHidden_(record.pl_hidden),
         edit_url: record.edit_url || ''
       };
     })
@@ -211,7 +262,7 @@ function getPublicNpcs_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo'
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
   ]);
 
   return values.slice(1)
@@ -221,9 +272,11 @@ function getPublicNpcs_(ss) {
       headers.forEach((header, index) => {
         if (header) record[header] = row[index];
       });
+      if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       return record;
-    });
+    })
+    .filter(Boolean);
 }
 
 function jsonResponse_(data, callback) {

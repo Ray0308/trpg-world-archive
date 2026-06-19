@@ -8,7 +8,8 @@
       icon: '🧑‍🤝‍🧑',
       name: 'NPC登録フォーム',
       description: 'NPCの名前、画像、人物紹介、エピソード、関連情報を登録するフォーム。',
-      editable: true
+      editable: true,
+      visibilityControl: true
     },
     {
       linkKey: 'organizationForm',
@@ -50,6 +51,18 @@
     if (!base) return '';
     const sep = base.includes('?') ? '&' : '?';
     return `${base}${sep}type=npcs${kp ? '&kp=1' : ''}`;
+  }
+
+  function buildVisibilityApiUrl(npcId, hidden) {
+    const base = window.AppConfig?.api?.baseUrl || '';
+    if (!base) return '';
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}type=npc-visibility&id=${encodeURIComponent(npcId)}&hidden=${hidden ? '1' : '0'}`;
+  }
+
+  function invalidateNpcCache() {
+    npcCache = null;
+    npcLoadError = null;
   }
 
   function fetchJsonp(url) {
@@ -99,8 +112,23 @@
     );
     return kpNpcs.map(npc => ({
       ...npc,
-      image_url: npc.image_url || imageById.get(npc.id) || ''
+      image_url: npc.image_url || imageById.get(npc.id) || '',
+      pl_hidden: Boolean(npc.pl_hidden)
     }));
+  }
+
+  async function setNpcPlHidden(npcId, hidden) {
+    const url = buildVisibilityApiUrl(npcId, hidden);
+    if (!url) throw new Error('API URL が未設定です（js/config.js）');
+
+    const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.ok) throw new Error('更新に失敗しました');
+
+    invalidateNpcCache();
+    return data;
   }
 
   async function loadKpNpcs() {
@@ -142,6 +170,7 @@
       <div class="kp-card-actions">
         ${newBtn}
         <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-edit-npc>編集</button>
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-visibility-npc>表示設定</button>
       </div>
     `;
   }
@@ -165,6 +194,7 @@
     }).join('');
 
     grid.querySelector('[data-kp-edit-npc]')?.addEventListener('click', openNpcPicker);
+    grid.querySelector('[data-kp-visibility-npc]')?.addEventListener('click', openNpcVisibility);
   }
 
   function statusBadgeClass(status) {
@@ -285,13 +315,91 @@
     });
   }
 
+  function renderNpcVisibilityList(npcs) {
+    const body = document.getElementById('kpNpcVisibilityBody');
+    if (!npcs.length) {
+      body.innerHTML = '<p class="kp-modal-empty">登録済みの NPC がありません。</p>';
+      return;
+    }
+
+    body.innerHTML = `
+      <ul class="kp-picker-list" role="list">
+        ${npcs.map(npc => {
+          const hidden = Boolean(npc.pl_hidden);
+          const rowClass = hidden ? ' kp-visibility-row--hidden' : '';
+          return `
+            <li>
+              <div class="kp-picker-item kp-visibility-row${rowClass}" data-npc-id="${escapeAttr(npc.id)}">
+                ${renderPickerAvatar(npc)}
+                <span class="kp-picker-body">
+                  <span class="kp-picker-name">${escapeHtml(npc.name)}</span>
+                  ${npc.furigana ? `<span class="kp-picker-sub">${escapeHtml(npc.furigana)}</span>` : ''}
+                  <span class="kp-picker-meta">
+                    ${hidden ? '<span class="kp-visibility-label kp-visibility-label--off">PL非表示</span>' : '<span class="kp-visibility-label">PL表示中</span>'}
+                  </span>
+                </span>
+                <label class="kp-visibility-toggle" title="PLサイトで表示">
+                  <input type="checkbox" class="kp-visibility-input" data-npc-id="${escapeAttr(npc.id)}"${hidden ? '' : ' checked'}>
+                  <span class="kp-visibility-switch" aria-hidden="true"></span>
+                  <span class="kp-visibility-toggle-text">表示</span>
+                </label>
+              </div>
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    `;
+
+    body.querySelectorAll('.kp-visibility-input').forEach(input => {
+      input.addEventListener('change', async () => {
+        const npcId = input.dataset.npcId;
+        const visible = input.checked;
+        const row = input.closest('.kp-visibility-row');
+        const label = row?.querySelector('.kp-visibility-label');
+        input.disabled = true;
+
+        try {
+          await setNpcPlHidden(npcId, !visible);
+          if (row) {
+            row.classList.toggle('kp-visibility-row--hidden', !visible);
+          }
+          if (label) {
+            label.textContent = visible ? 'PL表示中' : 'PL非表示';
+            label.classList.toggle('kp-visibility-label--off', !visible);
+          }
+        } catch (err) {
+          input.checked = !visible;
+          alert(`表示設定の更新に失敗しました。\n${err.message || 'エラー'}`);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
+  }
+
+  async function openNpcVisibility() {
+    const body = document.getElementById('kpNpcVisibilityBody');
+    const search = document.getElementById('kpNpcVisibilitySearch');
+
+    openModal('kpNpcVisibility');
+    body.innerHTML = '<p class="kp-modal-status">NPC一覧を読み込んでいます...</p>';
+    search.value = '';
+
+    try {
+      const npcs = await loadKpNpcs();
+      renderNpcVisibilityList(npcs);
+      search.oninput = () => renderNpcVisibilityList(filterNpcs(npcs, search.value));
+      search.focus();
+    } catch (err) {
+      body.innerHTML = `<p class="kp-modal-error">NPC一覧を取得できませんでした。<br>${escapeHtml(err.message || 'エラー')}</p>`;
+    }
+  }
+
   async function openNpcPicker() {
-    const modal = document.getElementById('kpNpcPicker');
     const body = document.getElementById('kpNpcPickerBody');
     const search = document.getElementById('kpNpcSearch');
 
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden', 'false');
+    openModal('kpNpcPicker');
     body.innerHTML = '<p class="kp-modal-status">NPC一覧を読み込んでいます...</p>';
     search.value = '';
 
@@ -305,21 +413,39 @@
     }
   }
 
-  function closeNpcPicker() {
-    const modal = document.getElementById('kpNpcPicker');
+  function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
   }
 
+  function closeNpcPicker() {
+    closeModal('kpNpcPicker');
+  }
+
+  function closeNpcVisibility() {
+    closeModal('kpNpcVisibility');
+  }
+
   function bindModal() {
     document.querySelectorAll('[data-kp-close]').forEach(el => {
-      el.addEventListener('click', closeNpcPicker);
+      el.addEventListener('click', () => {
+        const modalId = el.getAttribute('data-kp-close');
+        if (modalId === 'kpNpcVisibility') closeNpcVisibility();
+        else closeNpcPicker();
+      });
     });
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !document.getElementById('kpNpcPicker').hidden) {
-        closeNpcPicker();
-      }
+      if (e.key !== 'Escape') return;
+      if (!document.getElementById('kpNpcPicker').hidden) closeNpcPicker();
+      if (!document.getElementById('kpNpcVisibility').hidden) closeNpcVisibility();
     });
   }
 

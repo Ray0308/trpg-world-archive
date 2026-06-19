@@ -14,7 +14,7 @@
   <div class="app app--kp">
     <div class="main-wrapper main-wrapper--full">
       <header class="header">
-        <a href="index.html" class="site-title">TRPG World Archive</a>
+        <a href="index.html" class="site-title" target="_blank" rel="noopener noreferrer">TRPG World Archive</a>
         <span class="header-badge">KP</span>
       </header>
 
@@ -27,11 +27,11 @@
       </main>
 
       <div class="kp-modal" id="kpNpcPicker" hidden aria-hidden="true">
-        <div class="kp-modal-backdrop" data-kp-close></div>
+        <div class="kp-modal-backdrop" data-kp-close="kpNpcPicker"></div>
         <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpNpcPickerTitle">
           <header class="kp-modal-header">
             <h2 class="kp-modal-title" id="kpNpcPickerTitle">NPCを編集</h2>
-            <button type="button" class="kp-modal-close" data-kp-close aria-label="閉じる">
+            <button type="button" class="kp-modal-close" data-kp-close="kpNpcPicker" aria-label="閉じる">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
@@ -46,8 +46,33 @@
         </div>
       </div>
 
+      <div class="kp-modal" id="kpNpcVisibility" hidden aria-hidden="true">
+        <div class="kp-modal-backdrop" data-kp-close="kpNpcVisibility"></div>
+        <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpNpcVisibilityTitle">
+          <header class="kp-modal-header">
+            <h2 class="kp-modal-title" id="kpNpcVisibilityTitle">PLサイトの表示設定</h2>
+            <button type="button" class="kp-modal-close" data-kp-close="kpNpcVisibility" aria-label="閉じる">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </header>
+          <p class="kp-modal-hint">オフにした NPC は PL サイト（閲覧ページ）に表示されません。</p>
+          <div class="kp-modal-search">
+            <input type="search" id="kpNpcVisibilitySearch" placeholder="名前・ふりがなで検索..." aria-label="NPC検索">
+          </div>
+          <div class="kp-modal-body" id="kpNpcVisibilityBody">
+            <p class="kp-modal-status">読み込み中...</p>
+          </div>
+        </div>
+      </div>
+
       <footer class="footer">
-        <p>© 2025 TRPG World Archive — KP</p>
+        <div class="footer-brand">
+          <img src="images/yokofolia-logo.png" alt="" class="footer-logo" width="48" height="48" decoding="async">
+          <span class="footer-name">YOKOFOLIA</span>
+        </div>
+        <p class="footer-copy">© 2026- yokofolia</p>
       </footer>
     </div>
   </div>
