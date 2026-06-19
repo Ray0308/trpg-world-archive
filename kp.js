@@ -45,11 +45,11 @@
     return escapeHtml(str).replace(/"/g, '&quot;');
   }
 
-  function buildNpcApiUrl() {
+  function buildNpcApiUrl({ kp = false } = {}) {
     const base = window.AppConfig?.api?.baseUrl || '';
     if (!base) return '';
     const sep = base.includes('?') ? '&' : '?';
-    return `${base}${sep}type=npcs&kp=1`;
+    return `${base}${sep}type=npcs${kp ? '&kp=1' : ''}`;
   }
 
   function fetchJsonp(url) {
@@ -80,32 +80,50 @@
     });
   }
 
-  async function loadKpNpcs() {
-    if (npcCache) return npcCache;
-    if (npcLoadError) throw npcLoadError;
-
-    const url = buildNpcApiUrl();
-    if (!url) {
-      npcLoadError = new Error('API URL が未設定です（js/config.js）');
-      throw npcLoadError;
-    }
-
+  async function fetchNpcArray(url) {
     try {
       const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const data = JSON.parse(text);
       if (!Array.isArray(data)) throw new Error('配列ではありません');
-      npcCache = data;
+      return data;
+    } catch (err) {
+      return fetchJsonp(url);
+    }
+  }
+
+  function mergeNpcImages(kpNpcs, publicNpcs) {
+    const imageById = new Map(
+      (publicNpcs || []).map(npc => [npc.id, npc.image_url || npc.imageUrl || npc.image || ''])
+    );
+    return kpNpcs.map(npc => ({
+      ...npc,
+      image_url: npc.image_url || imageById.get(npc.id) || ''
+    }));
+  }
+
+  async function loadKpNpcs() {
+    if (npcCache) return npcCache;
+    if (npcLoadError) throw npcLoadError;
+
+    const kpUrl = buildNpcApiUrl({ kp: true });
+    const publicUrl = buildNpcApiUrl({ kp: false });
+    if (!kpUrl) {
+      npcLoadError = new Error('API URL が未設定です（js/config.js）');
+      throw npcLoadError;
+    }
+
+    try {
+      const [kpNpcs, publicNpcs] = await Promise.all([
+        fetchNpcArray(kpUrl),
+        fetchNpcArray(publicUrl).catch(() => [])
+      ]);
+      npcCache = mergeNpcImages(kpNpcs, publicNpcs);
       return npcCache;
     } catch (err) {
-      try {
-        npcCache = await fetchJsonp(url);
-        return npcCache;
-      } catch (jsonpErr) {
-        npcLoadError = err;
-        throw err;
-      }
+      npcLoadError = err;
+      throw err;
     }
   }
 
