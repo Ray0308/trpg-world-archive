@@ -160,6 +160,10 @@ function doGet(e) {
   const callback = e && e.parameter && e.parameter.callback;
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
+  if (type === 'version') {
+    return jsonResponse_({ api_version: '2025-06-19-kp' }, callback);
+  }
+
   if (type === 'npcs') {
     const data = kpMode ? getKpNpcs_(ss) : getPublicNpcs_(ss);
     return jsonResponse_(data, callback);
