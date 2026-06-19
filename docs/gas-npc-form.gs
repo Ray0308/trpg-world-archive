@@ -64,8 +64,9 @@ function ensureNpcHeader_(sheet) {
   const existing = firstRow.map(h => String(h).trim()).filter(Boolean);
   const missing = headers.filter(h => !existing.includes(h));
   if (missing.length) {
-    sheet.getRange(1, existing.length + 1, 1, existing.length + missing.length)
-      .setValues([missing]);
+    const startCol = existing.length + 1;
+    // getRange(row, col, numRows, numColumns) — 終端列番号ではない
+    sheet.getRange(1, startCol, 1, missing.length).setValues([missing]);
     return existing.concat(missing);
   }
   return existing;
@@ -163,7 +164,7 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-16-visibility' }, callback);
+    return jsonResponse_({ api_version: '2026-06-16-visibility-fix' }, callback);
   }
 
   if (type === 'npcs') {
