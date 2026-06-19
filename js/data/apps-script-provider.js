@@ -156,7 +156,7 @@ window.AppsScriptProvider = {
             url,
             fetch: { message: fetchErr.message, details: fetchErr.details },
             jsonp: { message: jsonpErr.message, details: jsonpErr.details },
-            hint: 'Apps Script の doGet に callback パラメータ対応を追加してください（docs/gas-doget.md 参照）。'
+            hint: 'Apps Script の doGet を docs/gas-npc-form.gs に合わせて再デプロイしてください。'
           }
         );
       }

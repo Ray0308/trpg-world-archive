@@ -1,5 +1,5 @@
 /**
- * TRPG World Archive — NPC フォーム → NPCS シート → 公開 API
+ * YOKOFOLIA — NPC フォーム → NPCS シート → 公開 API
  *
  * トリガー設定: フォーム送信時 → onNpcFormSubmit
  * 本番初期化（1回のみ）: resetNpcSheetForProduction

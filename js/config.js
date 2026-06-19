@@ -1,8 +1,7 @@
 /**
- * TRPG World Archive — アプリ設定
+ * YOKOFOLIA ふわっと住民台帳 — アプリ設定
  * GitHub Pages（/trpg-world-archive/）でもローカルでも動作するようパスを自動解決
- */
-(function () {
+ */(function () {
   function getAppRoot() {
     let path = window.location.pathname;
     if (path.endsWith('index.html') || path.endsWith('kp.html')) {

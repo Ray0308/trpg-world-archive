@@ -1,90 +1,74 @@
-# TRPG World Archive
+# YOKOFOLIA ふわっと住民台帳
 
-クトゥルフ神話TRPG向けの世界観アーカイブ（閲覧専用）。
+クトゥルフ神話TRPG向けの世界観アーカイブ（第一弾）。
 
-## データ管理
+- **公開サイト（PL）**: https://ray0308.github.io/trpg-world-archive/
+- **KP入力ページ**: `kp.html`（noindex・URLは共有範囲を限定）
 
-| 役割 | ツール |
-|------|--------|
-| データ入力（KP） | Googleフォーム |
-| データ保存 | Googleスプレッドシート |
-| サイト表示 | GitHub Pages（JSON / 将来スプレッドシート） |
+## 第一弾の範囲
 
-サイト内に管理画面はありません。
+| 機能 | 状態 |
+|------|------|
+| PLサイト（ホーム・NPC・組織・シナリオ・PC） | ✅ |
+| NPC登録（Googleフォーム → GAS API） | ✅ |
+| KPページ（登録・編集・一覧・PL表示設定） | ✅ |
+| チャウグナー・ラン（オマケゲーム + ランキング） | ✅ |
+| 組織・シナリオ・PCフォーム | 準備中（`data/*.json` で管理） |
 
-## ページ構成
+## データの流れ
 
-| ページ | 対象 | URL |
-|--------|------|-----|
-| PL（閲覧） | プレイヤー | `index.html` |
-| KP（入力） | キーパー | `kp.html`（メニュー非表示・noindex） |
+```
+NPC:  Googleフォーム → GAS → NPCSシート → API → サイト
+他:   data/*.json を GitHub に push → サイト
+ゲーム: chaugner-run.js → 同じ GAS → CHAUGNER_SCORES シート
+```
 
-フォーム URL は `js/links.js` の `AppLinks` で管理。スプレッドシート・GAS 管理 URL は載せない。
+## 設定ファイル
 
-## Ver1（現在）
+| ファイル | 内容 |
+|---------|------|
+| `js/config.js` | GAS API URL |
+| `js/links.js` | フォーム・外部リンク（Discord 等） |
 
-- **NPC**: [Apps Script Webアプリ](https://script.google.com/macros/s/AKfycbzpuz_aIieBUVLJye3RLmWsBJt6bbfOqaZaxRlqrhHWxcneXCupPergOHY9bDsmo_n2/exec?type=npcs) から取得
-- **フォールバック**: API 失敗時は `data/npcs.json`
-- **その他**: `data/*.json`（組織・シナリオ・PC）
-- 設定: `js/config.js` → `api.baseUrl`
+GAS の正本コード: `docs/gas-npc-form.gs`
 
-## Ver2（予定）
+## ローカル確認
 
-- データソース: Googleスプレッドシート
-- 設定: `js/config.js` → `dataProvider: 'sheets'`
-- 実装: `js/data/sheets-provider.js`
+静的ファイルのため HTTP サーバー経由で開いてください（Live Server 等）。
+
+```powershell
+# 例: Python
+python -m http.server 8080
+```
+
+## ドキュメント
+
+| ファイル | 内容 |
+|---------|------|
+| `docs/production-setup.md` | 本番セットアップ・確認チェックリスト |
+| `docs/chaugner-run-setup.md` | チャウグナー・ランのランキング設定 |
+| `docs/gas-npc-export.md` | GAS / シート列の参考 |
 
 ## ファイル構成
 
 ```
+index.html          … PLサイト
+kp.html / kp.js     … KP入力ページ
+script.js / style.css
+games/chaugner-run.* … オマケゲーム
 js/
-  config.js              … プロバイダ切替
+  config.js / links.js / image-utils.js
   data/
-    provider.js          … loadArchiveData() 統一入口
-    json-provider.js     … Ver1
-    sheets-provider.js   … Ver2（スタブ）
-    normalize.js         … シート列 → 内部モデル
+    provider.js           … データ取得の入口
+    apps-script-provider.js … NPC API
+    json-provider.js        … 組織・シナリオ・PC JSON
+    normalize.js
 data/
-  npcs.json
+  npcs.json             … NPC API 失敗時のフォールバック
   organizations.json
   scenarios.json
   pcs.json
   locations.json
-script.js                … UI（閲覧専用）
+docs/
+  gas-npc-form.gs       … GAS 正本（NPC + ランキング + 表示設定）
 ```
-
-## スプレッドシート列（参考）
-
-### NPC（現在のスプレッドシート列）
-
-```
-id, name, furigana, birth_date, age, nationality, birth_place, occupation, status,
-organization_names, organization_ids, image_url, profile, personality, memo, edit_url
-```
-
-| 列 | サイト表示 |
-|----|-----------|
-| `name` 〜 `status` | 基本情報 |
-| `organization_names` / `organization_ids` | 所属組織 |
-| `image_url` | 画像 |
-| `profile` | 人物紹介 |
-| `personality` | 性格 |
-| `memo`, `edit_url` | 非表示（管理用） |
-
-将来列を追加した場合（`person`, `episodes`, `contactable_pc_ids` 等）はサイト側も対応済み。
-
-### 組織
-
-id, 名称, 説明, 所在地, 概要
-
-### シナリオ
-
-id, 名称, 概要, 年代
-
-### PC
-
-id, 名前, プレイヤー名, 説明
-
-## ローカル確認
-
-JSON は HTTP サーバー経由で開いてください（Live Server 等）。

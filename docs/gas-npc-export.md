@@ -1,50 +1,46 @@
-# Apps Script — NPC 全項目エクスポート
+# Apps Script — NPC 全項目エクスポート（参考）
 
-サイトが NPC 詳細で表示する項目のうち、**人物（家族・ペット・特徴）・エピソード・連絡可能PC・関連情報** は、API レスポンスに含まれている必要があります。
+> **第一弾の正本は `docs/gas-npc-form.gs` です。**  
+> フォーム送信・NPC API・KP用一覧・PL表示切替・チャウグナーランキングがすべて含まれます。  
+> 以下は列設計とカスタム `getNpcData()` を書く場合の参考です。
 
-現状の API は基本項目と `profile` / `personality` のみ返している例があります。スプレッドシートに列があっても **GAS の `getNpcData()` が出力していなければサイトに出ません**。
+サイトが NPC 詳細で表示する項目のうち、**人物・エピソード・連絡可能PC・関連情報** は API レスポンスに含まれている必要があります。`gas-npc-form.gs` では対応済みです。
 
 ## Googleフォーム → スプレッドシート対応表
 
-フォーム項目（実環境）と、シート列・API キーの対応です。
+| フォーム項目 | シート列 | API キー |
+|-------------|---------|----------|
+| NPC名 | `name` | `name` |
+| ふりがな | `furigana` | `furigana` |
+| 生年月日 | `birth_date` | `birth_date` |
+| 年齢 | `age` | `age` |
+| 国籍 | `nationality` | `nationality` |
+| 出身地 | `birth_place` | `birth_place` |
+| 職業 | `occupation` | `occupation` |
+| 状態 | `status` | `status` |
+| 所属組織 | `organization_names` / `organization_ids` | 同上 |
+| NPC画像 | `image_url` | `image_url` |
+| 人物紹介 | `profile` | `profile` |
+| 人物情報 | `person` | `person` |
+| エピソード | `episodes` | `episodes` |
+| 登場シナリオ | `scenario_ids` | `scenario_ids` |
+| 関連NPC | `related_npc_ids` | `related_npc_ids` |
+| 連絡可能PC | `contactable_pc_ids` | `contactable_pc_ids` |
+| 関連場所 | `location_ids` | `location_ids` |
+| 備考 | `memo` | API非公開 |
+| PL非表示 | `pl_hidden` | KP API のみ（`?kp=1`） |
+| 管理用 | `id`, `edit_url` | KP API のみ |
 
-| フォーム項目 | あるべきシート列 | API キー | いまのシート |
-|-------------|-----------------|----------|-------------|
-| NPC名 | `name` | `name` | ✅ |
-| ふりがな | `furigana` | `furigana` | ✅ |
-| 生年月日 | `birth_date` | `birth_date` | ✅ |
-| 年齢 | `age` | `age` | ✅ |
-| 国籍 | `nationality` | `nationality` | ✅ |
-| 出身地 | `birth_place` | `birth_place` | ✅ |
-| 職業 | `occupation` | `occupation` | ✅ |
-| 状態 | `status` | `status` | ✅ |
-| 所属組織 | `organization_names`（＋任意で `organization_ids`） | 同上 | ✅ |
-| NPC画像 | `image_url` | `image_url` | ✅ |
-| 人物紹介 | `profile` | `profile` | ✅ |
-| **人物情報** | **`person`**（JSON 推奨） | `person` | ❌ → `personality` のみ |
-| エピソード | `episodes` | `episodes` | ❌ 列なし |
-| 登場シナリオ | `scenario_ids` | `scenario_ids` | ❌ 列なし |
-| 関連NPC | `related_npc_ids` | `related_npc_ids` | ❌ 列なし |
-| 連絡可能PC | `contactable_pc_ids` | `contactable_pc_ids` | ❌ 列なし |
-| 関連場所 | `location_ids` | `location_ids` | ❌ 列なし |
-| 備考 | `memo` | `memo`（非表示） | ✅ |
-| （管理用） | `id`, `edit_url` | 同上 | ✅ |
+### 注意
 
-### 転記ミスになっている点
-
-1. **`personality` 列** — フォームに「性格」単独項目はない。**「12. 人物情報」→ `person` 列** が正しい。`personality` だけだと家族・ペット・特徴が入れられない。
-2. **フォーム 13〜17** — エピソード・シナリオ・関連NPC・連絡可能PC・関連場所が **シートに列がない**（フォーム送信時の転記 or シート設計の漏れ）。
-3. **サイトは問題なし** — 列と API にデータがあれば表示できる。欠けているのは **フォーム → スプレッドシート → GAS** の途中。
+- **`personality` 列は使わない** — フォームの「人物情報」は `person` 列（JSON 推奨）
+- サイト側は `normalize.js` で列名のゆらぎを吸収済み
 
 ### 人物情報（`person`）の入力例
-
-フォームで自由記述なら、シートには次の JSON を入れるとサイトで「人物」セクションに展開されます。
 
 ```json
 {"family":"…","pet":"…","traits":"…","personality":"…"}
 ```
-
-性格だけなら `personality` 列でも可（サイトは「性格」セクションに表示）。
 
 ---
 
@@ -247,25 +243,7 @@ function getNpcData() {
 
 ## doGet との組み合わせ
 
-`callback` 対応は [gas-doget.md](./gas-doget.md) を参照。
-
-```javascript
-function doGet(e) {
-  const type = e.parameter.type;
-  let data = [];
-  if (type === 'npcs') data = getNpcData();
-
-  const json = JSON.stringify(data);
-  const callback = e.parameter.callback;
-  if (callback) {
-    return ContentService
-      .createTextOutput(callback + '(' + json + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-  return ContentService.createTextOutput(json)
-    .setMimeType(ContentService.MimeType.JSON);
-}
-```
+`callback` 対応を含む実装は **`docs/gas-npc-form.gs` の `doGet`** を参照してください。
 
 ## デプロイ後の確認
 

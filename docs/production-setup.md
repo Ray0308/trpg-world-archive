@@ -1,86 +1,76 @@
-# 本番セットアップ手順
-
-テスト用の列ずれを残さず、本番運用を始めるためのチェックリストです。
+# 本番セットアップ手順（第一弾）
 
 ## 全体像
 
 ```
-Googleフォーム → GAS (onFormSubmit) → NPCS シート → GAS (doGet) → GitHub Pages
-組織・シナリオ・PC → data/*.json（当面は手動管理）
+NPC:     Googleフォーム → GAS → NPCS シート → API → GitHub Pages
+他:      data/*.json を編集して push
+ゲーム:  chaugner-run.js → 同じ GAS → CHAUGNER_SCORES シート（自動作成）
+KP:      kp.html（フォームリンク・NPC編集・一覧・PL表示設定）
 ```
 
 ---
 
-## 1. スプレッドシートをきれいにする
+## 1. Apps Script
 
-### 推奨：NPCS シートを作り直す
+| 項目 | 内容 |
+|------|------|
+| コード正本 | `docs/gas-npc-form.gs` を `Code.gs` に貼り付け |
+| トリガー | `onNpcFormSubmit` → フォーム送信時 |
+| デプロイ | ウェブアプリ → **新バージョン** → アクセス: **全員** |
+| URL | `js/config.js` の `api.baseUrl` と一致させる |
 
-1. Apps Script に `docs/gas-npc-form.gs` をすべて貼り付け
-2. エディタで **`resetNpcSheetForProduction_`** を選び **実行**（1回のみ）
-3. 結果：
-   - 旧 `NPCS` → `NPCS_archive_2026-06-18` などに退避
-   - 新 `NPCS` → 正しいヘッダーだけの空シート
+### 動作確認 URL
 
-### 新シートのヘッダー（1行目）
+| パラメータ | 期待する結果 |
+|-----------|-------------|
+| `?type=version` | `api_version` が返る |
+| `?type=npcs` | NPC 配列 |
+| `?type=npcs&kp=1` | 編集URL・`pl_hidden` 付き |
+| `?type=chaugner-ranking` | `[]` または記録配列 |
+
+---
+
+## 2. NPCS シート
+
+### 新規セットアップ（推奨）
+
+1. GAS エディタで **`resetNpcSheetForProduction_`** を1回実行
+2. 旧シートは `NPCS_archive_*` に退避、新 `NPCS` が空で作成される
+
+### ヘッダー（1行目）
 
 ```
 id, name, furigana, birth_date, age, nationality, birth_place, occupation, status,
 organization_names, organization_ids, image_url, profile, person, episodes,
 scenario_ids, related_npc_ids, contactable_pc_ids, location_ids, memo, edit_url,
-form_response_id, created_at, updated_at
+form_response_id, created_at, updated_at, pl_hidden
 ```
 
-**含めない列：** `personality`（旧テスト用。本番は `person` を使う）
-
-### 初期データの入れ方
-
-| 方法 | 向いている場合 |
-|------|----------------|
-| **フォームから再登録** | 本番データが少ない（H.P.ラヴクラフト1件など） |
-| **アーカイブから手動コピー** | 列を `personality` → `person` に移して貼り付け |
+- `personality` 列は使わない（`person` を使う）
+- `pl_hidden` … KP の「表示設定」用（`TRUE` で PL 非表示）
+- `CHAUGNER_SCORES` シートはゲーム初回スコア保存時に自動作成
 
 ---
 
-## 2. Apps Script
-
-| 項目 | 内容 |
-|------|------|
-| コード | `docs/gas-npc-form.gs` を反映 |
-| トリガー | `onNpcFormSubmit` → フォーム送信時 |
-| デプロイ | ウェブアプリ → **新バージョン** → アクセス: **全員** |
-| 確認 | `…/exec?type=npcs` で `person`, `episodes` 等が JSON に出るか |
-
-`memo` / `edit_url` は API に出さない設定済み（サイトにも非表示）。
-
----
-
-## 3. GitHub Pages（サイト）
-
-未 push の変更を本番反映：
-
-- NPC 表示を DB 列に合わせた整理（`profile` / `person` / `personality`）
-- 画像プロキシ（Google Drive）
-- ドキュメント類
+## 3. GitHub Pages
 
 ```powershell
-cd "c:\Users\開発用\Desktop\TRPG"
-git add -A
-git commit -m "Align NPC display with spreadsheet schema and add production GAS docs"
 git push origin main
 ```
 
-反映後: https://ray0308.github.io/trpg-world-archive/
+反映先: https://ray0308.github.io/trpg-world-archive/
 
 ---
 
 ## 4. 本番確認チェックリスト
 
-- [ ] API に H.P.ラヴクラフト（または登録 NPC）が返る
-- [ ] 画像が表示される
-- [ ] 人物紹介・性格（人物情報）が表示される
-- [ ] フォーム送信 → NPCS シートに全列が入る
-- [ ] サイトに新規 NPC が出る（キャッシュクリア or Ctrl+Shift+R）
-- [ ] `kp.html` のフォームリンクが正しい
+- [ ] PLサイトで NPC が表示される
+- [ ] 画像（Google Drive URL）が表示される
+- [ ] 人物紹介・人物情報・エピソードが表示される
+- [ ] フォーム送信 → NPCS に行が追加される
+- [ ] `kp.html` で NPC 一覧・編集・表示設定が動く
+- [ ] チャウグナー・ランでスコアが保存される（`docs/chaugner-run-setup.md`）
 
 ---
 
@@ -88,8 +78,8 @@ git push origin main
 
 | データ | 入力 | 公開 |
 |--------|------|------|
-| NPC | Googleフォーム | API 自動 |
-| 組織・シナリオ・PC | 当面 JSON 編集 + push | GitHub Pages |
-| 組織リンク | `organization_ids` に `org-miskatonic-univ` 等形式 | サイト側 JSON の id と一致させる |
+| NPC | Googleフォーム + KP表示設定 | GAS API |
+| 組織・シナリオ・PC | `data/*.json` 編集 + push | GitHub Pages |
+| ゲームランキング | プレイヤーが自動送信 | `CHAUGNER_SCORES` シート |
 
-列を増やしたら `getNpcHeaders_()` と `buildNpcRowFromAnswers_()` も更新し、再デプロイしてください。
+列を増やしたら `getNpcHeaders_()` と `buildNpcRowFromAnswers_()` を更新し、GAS を再デプロイしてください。
