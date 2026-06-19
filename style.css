@@ -2008,6 +2008,135 @@ input {
   color: var(--status-alive);
 }
 
+.kp-modal-panel--wide {
+  width: min(920px, 96vw);
+  max-height: min(88vh, 900px);
+}
+
+.kp-modal-body--list {
+  max-height: min(52vh, 520px);
+}
+
+.kp-modal-search--inline {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+.kp-npc-list-summary {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0 1.25rem 0.5rem;
+}
+
+.kp-npc-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0 1.25rem 0.75rem;
+}
+
+.kp-npc-list-filters {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.kp-npc-list-filter {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.kp-npc-list-filter.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232, 72, 122, 0.1);
+}
+
+.kp-npc-list-wrap {
+  overflow-x: auto;
+}
+
+.kp-npc-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.kp-npc-list th,
+.kp-npc-list td {
+  padding: 0.55rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.kp-npc-list th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kp-npc-list-row--hidden {
+  opacity: 0.72;
+}
+
+.kp-npc-list-avatar .kp-picker-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.kp-npc-list-name {
+  min-width: 140px;
+}
+
+.kp-npc-list-title {
+  display: block;
+  font-weight: 600;
+}
+
+.kp-npc-list-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kp-npc-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 120px;
+}
+
+.kp-npc-list-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.kp-npc-list-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.kp-npc-list-btn--link {
+  display: inline-block;
+}
+
 .kp-visibility-label--off {
   color: var(--text-muted);
 }

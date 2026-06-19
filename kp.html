@@ -57,6 +57,35 @@
         </div>
       </div>
 
+      <div class="kp-modal" id="kpNpcList" hidden aria-hidden="true">
+        <div class="kp-modal-backdrop" data-kp-close="kpNpcList"></div>
+        <div class="kp-modal-panel kp-modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="kpNpcListTitle">
+          <header class="kp-modal-header">
+            <h2 class="kp-modal-title" id="kpNpcListTitle">NPC一覧（KP用）</h2>
+            <button type="button" class="kp-modal-close" data-kp-close="kpNpcList" aria-label="閉じる">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </header>
+          <p class="kp-modal-hint">非表示の NPC も含めてすべて表示します。PLサイトに出すかどうかは「表示設定」で変更できます。</p>
+          <p class="kp-npc-list-summary" id="kpNpcListSummary"></p>
+          <div class="kp-npc-list-toolbar">
+            <div class="kp-npc-list-filters" role="tablist" aria-label="表示フィルター">
+              <button type="button" class="kp-npc-list-filter is-active" data-kp-list-filter="all" role="tab" aria-selected="true">すべて</button>
+              <button type="button" class="kp-npc-list-filter" data-kp-list-filter="visible" role="tab" aria-selected="false">PL表示</button>
+              <button type="button" class="kp-npc-list-filter" data-kp-list-filter="hidden" role="tab" aria-selected="false">非表示</button>
+            </div>
+            <div class="kp-modal-search kp-modal-search--inline">
+              <input type="search" id="kpNpcListSearch" placeholder="名前・ふりがなで検索..." aria-label="NPC検索">
+            </div>
+          </div>
+          <div class="kp-modal-body kp-modal-body--list" id="kpNpcListBody">
+            <p class="kp-modal-status">読み込み中...</p>
+          </div>
+        </div>
+      </div>
+
       <div class="kp-modal" id="kpNpcVisibility" hidden aria-hidden="true">
         <div class="kp-modal-backdrop" data-kp-close="kpNpcVisibility"></div>
         <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpNpcVisibilityTitle">

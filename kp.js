@@ -170,6 +170,7 @@
       <div class="kp-card-actions">
         ${newBtn}
         <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-edit-npc>編集</button>
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-list-npc>一覧</button>
         <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-visibility-npc>表示設定</button>
       </div>
     `;
@@ -194,6 +195,7 @@
     }).join('');
 
     grid.querySelector('[data-kp-edit-npc]')?.addEventListener('click', openNpcPicker);
+    grid.querySelector('[data-kp-list-npc]')?.addEventListener('click', openNpcList);
     grid.querySelector('[data-kp-visibility-npc]')?.addEventListener('click', openNpcVisibility);
   }
 
@@ -269,6 +271,136 @@
       (npc.furigana || '').toLowerCase().includes(q) ||
       (npc.occupation || '').toLowerCase().includes(q)
     );
+  }
+
+  function buildPlNpcUrl(npcId) {
+    const root = window.AppLinks?.plIndex || 'index.html';
+    const base = root.includes('#') ? root.split('#')[0] : root;
+    return `${base}#npcs/${encodeURIComponent(npcId)}`;
+  }
+
+  function renderNpcListSummary(npcs) {
+    const visible = npcs.filter(npc => !npc.pl_hidden).length;
+    const hidden = npcs.length - visible;
+    return `全 ${npcs.length} 件（PL表示 ${visible} / 非表示 ${hidden}）`;
+  }
+
+  function renderNpcList(npcs, filter) {
+    const body = document.getElementById('kpNpcListBody');
+
+    let rows = npcs;
+    if (filter === 'visible') rows = npcs.filter(npc => !npc.pl_hidden);
+    if (filter === 'hidden') rows = npcs.filter(npc => npc.pl_hidden);
+
+    if (!rows.length) {
+      body.innerHTML = '<p class="kp-modal-empty">該当する NPC がありません。</p>';
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="kp-npc-list-wrap">
+        <table class="kp-npc-list">
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col">名前</th>
+              <th scope="col">職業</th>
+              <th scope="col">状態</th>
+              <th scope="col">PL表示</th>
+              <th scope="col">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(npc => {
+              const hidden = Boolean(npc.pl_hidden);
+              const rowClass = hidden ? ' kp-npc-list-row--hidden' : '';
+              const hasEdit = Boolean(npc.edit_url);
+              const plUrl = buildPlNpcUrl(npc.id);
+              return `
+                <tr class="kp-npc-list-row${rowClass}">
+                  <td class="kp-npc-list-avatar">${renderPickerAvatar(npc)}</td>
+                  <td class="kp-npc-list-name">
+                    <span class="kp-npc-list-title">${escapeHtml(npc.name)}</span>
+                    ${npc.furigana ? `<span class="kp-npc-list-sub">${escapeHtml(npc.furigana)}</span>` : ''}
+                  </td>
+                  <td>${escapeHtml(npc.occupation || '—')}</td>
+                  <td>${npc.status ? `<span class="list-item-badge ${statusBadgeClass(npc.status)}">${escapeHtml(npc.status)}</span>` : '—'}</td>
+                  <td>
+                    <span class="kp-visibility-label${hidden ? ' kp-visibility-label--off' : ''}">
+                      ${hidden ? '非表示' : '表示中'}
+                    </span>
+                  </td>
+                  <td class="kp-npc-list-actions">
+                    ${hasEdit
+                      ? `<button type="button" class="kp-npc-list-btn" data-edit-url="${escapeAttr(npc.edit_url)}">編集</button>`
+                      : '<span class="kp-picker-note">編集URLなし</span>'}
+                    ${hidden
+                      ? '<span class="kp-picker-note">PL未掲載</span>'
+                      : `<a href="${escapeAttr(plUrl)}" class="kp-npc-list-btn kp-npc-list-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    body.querySelectorAll('[data-edit-url]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.open(btn.dataset.editUrl, '_blank', 'noopener,noreferrer');
+      });
+    });
+  }
+
+  function bindNpcListFilters(npcs) {
+    const search = document.getElementById('kpNpcListSearch');
+    const tabs = document.querySelectorAll('[data-kp-list-filter]');
+    let activeFilter = 'all';
+
+    function refresh() {
+      const summary = document.getElementById('kpNpcListSummary');
+      if (summary) summary.textContent = renderNpcListSummary(npcs);
+      const filtered = filterNpcs(npcs, search.value);
+      renderNpcList(filtered, activeFilter);
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        activeFilter = tab.dataset.kpListFilter || 'all';
+        tabs.forEach(t => t.classList.toggle('is-active', t === tab));
+        refresh();
+      });
+    });
+
+    search.oninput = refresh;
+    refresh();
+  }
+
+  async function openNpcList() {
+    const body = document.getElementById('kpNpcListBody');
+    const search = document.getElementById('kpNpcListSearch');
+    const summary = document.getElementById('kpNpcListSummary');
+
+    openModal('kpNpcList');
+    body.innerHTML = '<p class="kp-modal-status">NPC一覧を読み込んでいます...</p>';
+    if (summary) summary.textContent = '';
+    search.value = '';
+    document.querySelectorAll('[data-kp-list-filter]').forEach((tab, i) => {
+      tab.classList.toggle('is-active', i === 0);
+    });
+
+    try {
+      const npcs = await loadKpNpcs();
+      bindNpcListFilters(npcs);
+      search.focus();
+    } catch (err) {
+      body.innerHTML = `<p class="kp-modal-error">NPC一覧を取得できませんでした。<br>${escapeHtml(err.message || 'エラー')}</p>`;
+    }
+  }
+
+  function closeNpcList() {
+    closeModal('kpNpcList');
   }
 
   function renderNpcPickerList(npcs) {
@@ -438,6 +570,7 @@
       el.addEventListener('click', () => {
         const modalId = el.getAttribute('data-kp-close');
         if (modalId === 'kpNpcVisibility') closeNpcVisibility();
+        else if (modalId === 'kpNpcList') closeNpcList();
         else closeNpcPicker();
       });
     });
@@ -446,6 +579,7 @@
       if (e.key !== 'Escape') return;
       if (!document.getElementById('kpNpcPicker').hidden) closeNpcPicker();
       if (!document.getElementById('kpNpcVisibility').hidden) closeNpcVisibility();
+      if (!document.getElementById('kpNpcList').hidden) closeNpcList();
     });
   }
 
