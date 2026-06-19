@@ -17,7 +17,7 @@
   const LIFT_VELOCITY = -11;
   const MAX_FLOAT_Y = 100;
   const FLOAT_MAX_MS = 1000;
-  const FLOAT_COOLDOWN_MS = 400;
+  const FLOAT_COOLDOWN_MS = 250;
   const BASE_SPEED = 4.5;
   const MAX_SPEED = 12;
   const OBSTACLE_MIN_GAP = 210;
@@ -207,16 +207,18 @@
     scoreValue.textContent = formatMeters(scoreMeters);
   }
 
+  function tryLaunchFromGround() {
+    if (floatCooldownMs > 0 || !player.grounded) return false;
+    player.grounded = false;
+    player.vy = LIFT_VELOCITY;
+    floatBudgetMs = FLOAT_MAX_MS;
+    return true;
+  }
+
   function floatStart() {
     if (state !== 'playing') return;
-    if (floatCooldownMs > 0) return;
-    if (!player.grounded && floatBudgetMs <= 0) return;
     floatHeld = true;
-    if (player.grounded) {
-      player.grounded = false;
-      player.vy = LIFT_VELOCITY;
-      floatBudgetMs = FLOAT_MAX_MS;
-    }
+    tryLaunchFromGround();
   }
 
   function floatEnd() {
@@ -402,7 +404,9 @@
     if (!player.grounded) {
       if (isFloating) {
         floatBudgetMs = Math.max(0, floatBudgetMs - dt);
-        if (player.vy > FLOAT_VELOCITY) {
+        if (player.vy < FLOAT_VELOCITY) {
+          player.vy += GRAVITY * 0.35;
+        } else if (player.vy > FLOAT_VELOCITY) {
           player.vy = Math.max(FLOAT_VELOCITY, player.vy - 1.1);
         } else {
           player.vy = FLOAT_VELOCITY;
@@ -410,6 +414,8 @@
       } else {
         player.vy += GRAVITY;
       }
+    } else if (floatHeld) {
+      tryLaunchFromGround();
     }
     player.y += player.vy;
 
@@ -556,7 +562,6 @@
   });
 
   canvas.addEventListener('pointercancel', floatEnd);
-  canvas.addEventListener('pointerleave', floatEnd);
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;
