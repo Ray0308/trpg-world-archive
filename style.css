@@ -2009,132 +2009,264 @@ input {
 }
 
 .kp-modal-panel--wide {
-  width: min(920px, 96vw);
+  width: min(720px, 96vw);
   max-height: min(88vh, 900px);
 }
 
 .kp-modal-body--list {
-  max-height: min(52vh, 520px);
+  max-height: min(56vh, 560px);
+  padding-top: 0.25rem;
 }
 
-.kp-modal-search--inline {
-  flex: 1;
-  min-width: 200px;
+.kp-modal-search--list {
   margin: 0;
+  padding: 0;
+}
+
+.kp-npc-list-head {
+  padding: 0 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .kp-npc-list-summary {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  padding: 0 1.25rem 0.5rem;
-}
-
-.kp-npc-list-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.kp-npc-stat {
+  display: inline-flex;
   align-items: center;
-  padding: 0 1.25rem 0.75rem;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.kp-npc-stat strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.kp-npc-stat--on {
+  border-color: rgba(74, 222, 128, 0.35);
+  color: var(--status-alive);
+}
+
+.kp-npc-stat--off {
+  border-color: rgba(248, 113, 113, 0.25);
+  color: var(--text-muted);
 }
 
 .kp-npc-list-filters {
   display: flex;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .kp-npc-list-filter {
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text-muted);
-  font-size: 0.75rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.kp-npc-list-filter:hover {
+  border-color: var(--border-light);
+  color: var(--text-primary);
 }
 
 .kp-npc-list-filter.is-active {
   border-color: var(--accent);
   color: var(--accent);
-  background: rgba(232, 72, 122, 0.1);
+  background: rgba(232, 72, 122, 0.12);
 }
 
-.kp-npc-list-wrap {
-  overflow-x: auto;
+.kp-npc-cards {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.kp-npc-list {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+.kp-npc-card {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
-.kp-npc-list th,
-.kp-npc-list td {
-  padding: 0.55rem 0.5rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
+.kp-npc-card--hidden {
+  opacity: 0.82;
+  border-style: dashed;
 }
 
-.kp-npc-list th {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.kp-npc-card .kp-picker-avatar {
+  width: 52px;
+  height: 52px;
 }
 
-.kp-npc-list-row--hidden {
-  opacity: 0.72;
+.kp-npc-card-main {
+  min-width: 0;
 }
 
-.kp-npc-list-avatar .kp-picker-avatar {
-  width: 40px;
-  height: 40px;
+.kp-npc-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
-.kp-npc-list-name {
-  min-width: 140px;
+.kp-npc-card-name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
-.kp-npc-list-title {
-  display: block;
-  font-weight: 600;
-}
-
-.kp-npc-list-sub {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.kp-npc-list-actions {
+.kp-npc-card-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  align-items: center;
-  min-width: 120px;
 }
 
-.kp-npc-list-btn {
+.kp-npc-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.kp-npc-badge--status.status-alive {
+  color: var(--status-alive);
+  background: var(--status-alive-bg);
+}
+
+.kp-npc-badge--status.status-dead {
+  color: var(--status-dead);
+  background: var(--status-dead-bg);
+}
+
+.kp-npc-badge--status.status-missing {
+  color: var(--status-missing);
+  background: var(--status-missing-bg);
+}
+
+.kp-npc-badge--status.status-unknown {
+  color: var(--status-unknown);
+  background: var(--status-unknown-bg);
+}
+
+.kp-npc-badge--pl {
+  color: var(--status-alive);
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.kp-npc-badge--pl.is-off {
+  color: var(--text-muted);
+  background: var(--bg-input);
   border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text);
-  font-size: 0.75rem;
-  padding: 0.3rem 0.55rem;
-  border-radius: 6px;
+}
+
+.kp-npc-card-furi {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.kp-npc-card-job {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.kp-npc-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  min-width: 88px;
+}
+
+.kp-npc-card-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
   cursor: pointer;
   text-decoration: none;
+  text-align: center;
   white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.kp-npc-list-btn:hover {
+.kp-npc-card-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.kp-npc-list-btn--link {
-  display: inline-block;
+.kp-npc-card-btn--link {
+  display: block;
+}
+
+.kp-npc-card-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .kp-npc-card {
+    grid-template-columns: 44px 1fr;
+    grid-template-areas:
+      "avatar main"
+      "actions actions";
+  }
+
+  .kp-npc-card .kp-picker-avatar {
+    grid-area: avatar;
+    width: 44px;
+    height: 44px;
+  }
+
+  .kp-npc-card-main {
+    grid-area: main;
+  }
+
+  .kp-npc-card-actions {
+    grid-area: actions;
+    flex-direction: row;
+    min-width: 0;
+  }
+
+  .kp-npc-card-btn,
+  .kp-npc-card-note {
+    flex: 1;
+  }
 }
 
 .kp-visibility-label--off {

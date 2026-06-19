@@ -282,7 +282,11 @@
   function renderNpcListSummary(npcs) {
     const visible = npcs.filter(npc => !npc.pl_hidden).length;
     const hidden = npcs.length - visible;
-    return `全 ${npcs.length} 件（PL表示 ${visible} / 非表示 ${hidden}）`;
+    return `
+      <span class="kp-npc-stat">全 <strong>${npcs.length}</strong> 件</span>
+      <span class="kp-npc-stat kp-npc-stat--on">PL表示 <strong>${visible}</strong></span>
+      <span class="kp-npc-stat kp-npc-stat--off">非表示 <strong>${hidden}</strong></span>
+    `;
   }
 
   function renderNpcList(npcs, filter) {
@@ -298,52 +302,37 @@
     }
 
     body.innerHTML = `
-      <div class="kp-npc-list-wrap">
-        <table class="kp-npc-list">
-          <thead>
-            <tr>
-              <th scope="col"></th>
-              <th scope="col">名前</th>
-              <th scope="col">職業</th>
-              <th scope="col">状態</th>
-              <th scope="col">PL表示</th>
-              <th scope="col">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(npc => {
-              const hidden = Boolean(npc.pl_hidden);
-              const rowClass = hidden ? ' kp-npc-list-row--hidden' : '';
-              const hasEdit = Boolean(npc.edit_url);
-              const plUrl = buildPlNpcUrl(npc.id);
-              return `
-                <tr class="kp-npc-list-row${rowClass}">
-                  <td class="kp-npc-list-avatar">${renderPickerAvatar(npc)}</td>
-                  <td class="kp-npc-list-name">
-                    <span class="kp-npc-list-title">${escapeHtml(npc.name)}</span>
-                    ${npc.furigana ? `<span class="kp-npc-list-sub">${escapeHtml(npc.furigana)}</span>` : ''}
-                  </td>
-                  <td>${escapeHtml(npc.occupation || '—')}</td>
-                  <td>${npc.status ? `<span class="list-item-badge ${statusBadgeClass(npc.status)}">${escapeHtml(npc.status)}</span>` : '—'}</td>
-                  <td>
-                    <span class="kp-visibility-label${hidden ? ' kp-visibility-label--off' : ''}">
-                      ${hidden ? '非表示' : '表示中'}
-                    </span>
-                  </td>
-                  <td class="kp-npc-list-actions">
-                    ${hasEdit
-                      ? `<button type="button" class="kp-npc-list-btn" data-edit-url="${escapeAttr(npc.edit_url)}">編集</button>`
-                      : '<span class="kp-picker-note">編集URLなし</span>'}
-                    ${hidden
-                      ? '<span class="kp-picker-note">PL未掲載</span>'
-                      : `<a href="${escapeAttr(plUrl)}" class="kp-npc-list-btn kp-npc-list-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
+      <ul class="kp-npc-cards">
+        ${rows.map(npc => {
+          const hidden = Boolean(npc.pl_hidden);
+          const hasEdit = Boolean(npc.edit_url);
+          const plUrl = buildPlNpcUrl(npc.id);
+          return `
+            <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+              ${renderPickerAvatar(npc)}
+              <div class="kp-npc-card-main">
+                <div class="kp-npc-card-top">
+                  <p class="kp-npc-card-name">${escapeHtml(npc.name)}</p>
+                  <div class="kp-npc-card-badges">
+                    ${npc.status ? `<span class="kp-npc-badge kp-npc-badge--status ${statusBadgeClass(npc.status)}">${escapeHtml(npc.status)}</span>` : ''}
+                    <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
+                  </div>
+                </div>
+                ${npc.furigana ? `<p class="kp-npc-card-furi">${escapeHtml(npc.furigana)}</p>` : ''}
+                <p class="kp-npc-card-job">${escapeHtml(npc.occupation || '職業未設定')}</p>
+              </div>
+              <div class="kp-npc-card-actions">
+                ${hasEdit
+                  ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(npc.edit_url)}">編集</button>`
+                  : '<span class="kp-npc-card-note">編集URLなし</span>'}
+                ${hidden
+                  ? '<span class="kp-npc-card-note">PL未掲載</span>'
+                  : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
+              </div>
+            </li>
+          `;
+        }).join('')}
+      </ul>
     `;
 
     body.querySelectorAll('[data-edit-url]').forEach(btn => {
@@ -360,7 +349,7 @@
 
     function refresh() {
       const summary = document.getElementById('kpNpcListSummary');
-      if (summary) summary.textContent = renderNpcListSummary(npcs);
+      if (summary) summary.innerHTML = renderNpcListSummary(npcs);
       const filtered = filterNpcs(npcs, search.value);
       renderNpcList(filtered, activeFilter);
     }
