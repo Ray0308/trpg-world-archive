@@ -1,27 +1,27 @@
 /**
  * チャウグナー・ラン — 横スクロールミニゲーム
- * GAS 連携: GAS_ENDPOINT を設定するとランキング保存・取得が有効
+ *
+ * ルール:
+ *  - 押すとジャンプ（地上）/ 浮遊（空中・燃料消費）
+ *  - 離すと落下
+ *  - 着地で燃料全回復。空中の燃料は約0.9秒分
  */
 (function () {
   'use strict';
 
-  /** NPC と同じ GAS（js/config.js の api.baseUrl）を自動利用 */
   const GAS_ENDPOINT = (window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl) || '';
 
   const MASCOT_IMAGE_PATH = '../images/yokofolia-mascot.png';
   const CANVAS_W = 800;
   const CANVAS_H = 320;
   const GROUND_Y = 260;
-  const GRAVITY = 0.85;
-  const FLOAT_VELOCITY = -3.2;
-  const LIFT_VELOCITY = -11;
-  const MAX_FLOAT_Y = 100;
-  const FLOAT_MAX_MS = 1000;
-  const FLOAT_COOLDOWN_MS = 250;
-  const BASE_SPEED = 4.5;
-  const MAX_SPEED = 12;
-  const OBSTACLE_MIN_GAP = 210;
-  const OBSTACLE_MAX_GAP = 380;
+  const CEILING_Y = 88;
+  const GRAVITY = 0.72;
+  const JUMP_VELOCITY = -10;
+  const FLOAT_VELOCITY = -2.6;
+  const FLOAT_FUEL_MAX = 900;
+  const BASE_SPEED = 4.6;
+  const MAX_SPEED = 11;
   const NAME_MAX_LEN = 12;
 
   const canvas = document.getElementById('gameCanvas');
@@ -52,9 +52,8 @@
   let elapsedMs = 0;
   let animId = null;
   let lastTs = 0;
-  let floatHeld = false;
-  let floatBudgetMs = 0;
-  let floatCooldownMs = 0;
+  let inputHeld = false;
+  let nextSpawnIn = 0;
 
   const player = {
     x: 80,
@@ -62,21 +61,71 @@
     w: 44,
     h: 44,
     vy: 0,
-    grounded: true
+    onGround: true,
+    floatFuel: FLOAT_FUEL_MAX
   };
 
   let obstacles = [];
-  let distanceSinceObstacle = 500;
+
+  const OBSTACLE_DEFS = {
+    low: { type: 'low', w: 30, h: 38 },
+    rock: { type: 'rock', w: 34, h: 28 },
+    tall: { type: 'tall', w: 22, h: 50 },
+    air: { type: 'air', w: 40, h: 28 }
+  };
+
+  const SPAWN_PATTERNS = [
+  { id: 'low', weight: 40, spawn(obstacles, x) { addObstacle(obstacles, 'low', x); } },
+  { id: 'rock', weight: 18, spawn(obstacles, x) { addObstacle(obstacles, 'rock', x); } },
+  { id: 'tall', weight: 14, spawn(obstacles, x) { addObstacle(obstacles, 'tall', x); } },
+  { id: 'air', weight: 12, minDiff: 0.15, spawn(obstacles, x) { addObstacle(obstacles, 'air', x); } },
+  { id: 'low_air', weight: 10, minDiff: 0.2, spawn(obstacles, x) {
+    addObstacle(obstacles, 'low', x);
+    addObstacle(obstacles, 'air', x + 70 + Math.random() * 40);
+  } },
+  { id: 'double_low', weight: 6, minDiff: 0.35, spawn(obstacles, x) {
+    addObstacle(obstacles, 'low', x);
+    addObstacle(obstacles, Math.random() < 0.5 ? 'rock' : 'low', x + 50 + Math.random() * 30);
+  } }
+  ];
 
   function difficultyFactor() {
-    return Math.min(1, elapsedMs / 90000);
+    return Math.min(1, elapsedMs / 75000);
   }
 
-  function nextObstacleGap() {
+  function groundTop() {
+    return GROUND_Y + player.h;
+  }
+
+  function addObstacle(list, kind, x) {
+    const def = OBSTACLE_DEFS[kind];
+    const floor = groundTop();
+  let y;
+    if (kind === 'air') {
+      y = 128 + Math.floor(Math.random() * 24);
+    } else {
+      y = floor - def.h;
+    }
+    list.push({ x, y, w: def.w, h: def.h, type: def.type });
+  }
+
+  function pickSpawnPattern() {
     const t = difficultyFactor();
-    const minGap = OBSTACLE_MIN_GAP - t * 50;
-    const maxGap = OBSTACLE_MAX_GAP - t * 90;
-    return minGap + Math.random() * (maxGap - minGap);
+    const pool = SPAWN_PATTERNS.filter(p => (p.minDiff || 0) <= t);
+    const total = pool.reduce((sum, p) => sum + p.weight, 0);
+    let roll = Math.random() * total;
+    for (const pattern of pool) {
+      roll -= pattern.weight;
+      if (roll <= 0) return pattern;
+    }
+    return pool[0];
+  }
+
+  function scheduleNextSpawn() {
+    const t = difficultyFactor();
+    const minGap = 220 - t * 45;
+    const maxGap = 400 - t * 80;
+    nextSpawnIn = minGap + Math.random() * (maxGap - minGap);
   }
 
   function escapeHtml(str) {
@@ -194,12 +243,11 @@
     elapsedMs = 0;
     player.y = GROUND_Y;
     player.vy = 0;
-    player.grounded = true;
+    player.onGround = true;
+    player.floatFuel = FLOAT_FUEL_MAX;
     obstacles = [];
-    distanceSinceObstacle = 320 + Math.random() * 180;
-    floatHeld = false;
-    floatBudgetMs = 0;
-    floatCooldownMs = 0;
+    inputHeld = false;
+    scheduleNextSpawn();
     updateScoreHud();
   }
 
@@ -207,76 +255,46 @@
     scoreValue.textContent = formatMeters(scoreMeters);
   }
 
-  function tryLaunchFromGround() {
-    if (floatCooldownMs > 0 || !player.grounded) return false;
-    player.grounded = false;
-    player.vy = LIFT_VELOCITY;
-    floatBudgetMs = FLOAT_MAX_MS;
-    return true;
-  }
-
-  function floatStart() {
+  function pressStart() {
     if (state !== 'playing') return;
-    floatHeld = true;
-    tryLaunchFromGround();
+    inputHeld = true;
   }
 
-  function floatEnd() {
-    floatHeld = false;
+  function pressEnd() {
+    inputHeld = false;
   }
 
-  function createObstacle(x, lane) {
-    const t = difficultyFactor();
-    const groundBase = GROUND_Y + player.h;
-    let type = 'cactus';
-    let w = 28;
-    let h = 36;
-    let y = groundBase - h;
-
-    if (lane === 'air') {
-      type = 'air';
-      w = 36 + Math.floor(Math.random() * 16);
-      h = 26 + Math.floor(Math.random() * 14);
-      y = 118 + Math.floor(Math.random() * 28);
-    } else if (lane === 'tall') {
-      type = 'tall';
-      w = 20 + Math.floor(Math.random() * 8);
-      h = 48 + Math.floor(Math.random() * 16);
-      y = groundBase - h;
-    } else {
-      const roll = Math.random();
-      if (roll < 0.35 + t * 0.15) {
-        type = 'rock';
-        w = 30 + Math.floor(Math.random() * 12);
-        h = 24 + Math.floor(Math.random() * 10);
-      } else if (roll < 0.55 + t * 0.1) {
-        type = 'tall';
-        w = 20 + Math.floor(Math.random() * 8);
-        h = 44 + Math.floor(Math.random() * 14);
+  function updatePlayer(dt) {
+    if (player.onGround) {
+      player.vy = 0;
+      player.y = GROUND_Y;
+      if (inputHeld) {
+        player.onGround = false;
+        player.vy = JUMP_VELOCITY;
       }
-      y = groundBase - h;
+      return;
     }
 
-    obstacles.push({ x, y, w, h, type, lane });
-  }
-
-  function spawnObstacleWave() {
-    const t = difficultyFactor();
-    const startX = CANVAS_W + 10 + Math.floor(Math.random() * 40);
-    const pattern = Math.random();
-
-    if (pattern < 0.12 + t * 0.12) {
-      createObstacle(startX, 'ground');
-      createObstacle(startX + 42 + Math.floor(Math.random() * 36), 'ground');
-    } else if (pattern < 0.28 + t * 0.14) {
-      createObstacle(startX, 'air');
-    } else if (pattern < 0.42 + t * 0.12) {
-      createObstacle(startX, 'ground');
-      createObstacle(startX + 8 + Math.floor(Math.random() * 24), 'air');
-    } else if (pattern < 0.58 + t * 0.08) {
-      createObstacle(startX, 'tall');
+    const canFloat = inputHeld && player.floatFuel > 0;
+    if (canFloat) {
+      player.floatFuel = Math.max(0, player.floatFuel - dt);
+      player.vy = FLOAT_VELOCITY;
     } else {
-      createObstacle(startX, 'ground');
+      player.vy += GRAVITY;
+    }
+
+    player.y += player.vy;
+
+    if (player.y < CEILING_Y) {
+      player.y = CEILING_Y;
+      if (player.vy < 0) player.vy = 0;
+    }
+
+    if (player.y >= GROUND_Y) {
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
+      player.floatFuel = FLOAT_FUEL_MAX;
     }
   }
 
@@ -299,35 +317,23 @@
     ctx.beginPath();
     ctx.arc(x + w * 0.62, y + h * 0.28, 4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#c9a84c';
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.moveTo(x + w * 0.2 + i * 8, y + h * 0.05);
-      ctx.lineTo(x + w * 0.28 + i * 8, y - 4);
-      ctx.lineTo(x + w * 0.36 + i * 8, y + h * 0.05);
-      ctx.fill();
-    }
-    ctx.strokeStyle = '#2d4a3d';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 2, y + h * 0.35, w - 4, h * 0.63);
   }
 
   function drawObstacle(obs) {
-    ctx.fillStyle = '#5a3d4a';
-    if (obs.type === 'cactus') {
+    if (obs.type === 'low') {
+      ctx.fillStyle = '#5a3d4a';
       ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
       ctx.fillStyle = '#7a5560';
-      ctx.fillRect(obs.x - 6, obs.y + 8, 8, 14);
-      ctx.fillRect(obs.x + obs.w - 2, obs.y + 14, 8, 12);
+      ctx.fillRect(obs.x - 5, obs.y + 8, 7, 12);
     } else if (obs.type === 'tall') {
       ctx.fillStyle = '#4a4a5a';
       ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
       ctx.fillStyle = '#e8487a';
-      ctx.fillRect(obs.x + 4, obs.y + 6, obs.w - 8, 6);
+      ctx.fillRect(obs.x + 3, obs.y + 6, obs.w - 6, 5);
     } else if (obs.type === 'air') {
       ctx.fillStyle = '#6a4a5a';
       ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-      ctx.fillStyle = 'rgba(232, 72, 122, 0.35)';
+      ctx.fillStyle = 'rgba(232, 72, 122, 0.4)';
       ctx.fillRect(obs.x + 3, obs.y + 3, obs.w - 6, obs.h - 6);
     } else {
       ctx.fillStyle = '#555';
@@ -335,6 +341,24 @@
       ctx.ellipse(obs.x + obs.w / 2, obs.y + obs.h / 2, obs.w / 2, obs.h / 2, 0, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  function drawFuelBar() {
+    if (state !== 'playing') return;
+    const ratio = player.floatFuel / FLOAT_FUEL_MAX;
+    const barX = 16;
+    const barY = 14;
+    const barW = 100;
+    const barH = 8;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = ratio > 0.25 ? '#e8487a' : '#c9a84c';
+    ctx.fillRect(barX, barY, barW * ratio, barH);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('FUEL', barX, barY - 3);
   }
 
   function drawScene() {
@@ -351,11 +375,11 @@
     }
 
     ctx.fillStyle = '#2a2a2a';
-    ctx.fillRect(0, GROUND_Y + player.h, CANVAS_W, CANVAS_H - GROUND_Y - player.h);
+    ctx.fillRect(0, groundTop(), CANVAS_W, CANVAS_H - groundTop());
     ctx.strokeStyle = '#444';
     ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y + player.h);
-    ctx.lineTo(CANVAS_W, GROUND_Y + player.h);
+    ctx.moveTo(0, groundTop());
+    ctx.lineTo(CANVAS_W, groundTop());
     ctx.stroke();
 
     for (const obs of obstacles) {
@@ -364,23 +388,18 @@
 
     drawMascot(player.x, player.y, player.w, player.h);
 
-    if (floatHeld && !player.grounded && floatBudgetMs > 0) {
-      ctx.fillStyle = 'rgba(232, 72, 122, 0.2)';
+    if (!player.onGround && inputHeld && player.floatFuel > 0) {
+      ctx.fillStyle = 'rgba(232, 72, 122, 0.18)';
       ctx.beginPath();
-      ctx.ellipse(player.x + player.w / 2, player.y + player.h + 6, player.w * 0.55, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(player.x + player.w / 2, player.y + player.h + 5, player.w * 0.5, 7, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      const barW = player.w;
-      const ratio = floatBudgetMs / FLOAT_MAX_MS;
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(player.x, player.y - 10, barW, 4);
-      ctx.fillStyle = ratio > 0.25 ? '#e8487a' : '#c9a84c';
-      ctx.fillRect(player.x, player.y - 10, barW * ratio, 4);
     }
+
+    drawFuelBar();
   }
 
   function rectsOverlap(a, b) {
-    const pad = 4;
+    const pad = 5;
     return a.x + pad < b.x + b.w - pad &&
       a.x + a.w - pad > b.x + pad &&
       a.y + pad < b.y + b.h - pad &&
@@ -389,59 +408,23 @@
 
   function update(dt) {
     elapsedMs += dt;
-    const speedBoost = Math.min((MAX_SPEED - BASE_SPEED), elapsedMs / 12000);
+    const speedBoost = Math.min(MAX_SPEED - BASE_SPEED, elapsedMs / 14000);
     gameSpeed = BASE_SPEED + speedBoost;
 
     scoreMeters += (gameSpeed * dt) / 60;
     updateScoreHud();
-
-    if (floatCooldownMs > 0) {
-      floatCooldownMs = Math.max(0, floatCooldownMs - dt);
-    }
-
-    const isFloating = floatHeld && floatBudgetMs > 0;
-
-    if (!player.grounded) {
-      if (isFloating) {
-        floatBudgetMs = Math.max(0, floatBudgetMs - dt);
-        if (player.vy < FLOAT_VELOCITY) {
-          player.vy += GRAVITY * 0.35;
-        } else if (player.vy > FLOAT_VELOCITY) {
-          player.vy = Math.max(FLOAT_VELOCITY, player.vy - 1.1);
-        } else {
-          player.vy = FLOAT_VELOCITY;
-        }
-      } else {
-        player.vy += GRAVITY;
-      }
-    } else if (floatHeld) {
-      tryLaunchFromGround();
-    }
-    player.y += player.vy;
-
-    if (player.y < MAX_FLOAT_Y) {
-      player.y = MAX_FLOAT_Y;
-      if (player.vy < 0) player.vy = 0;
-    }
-
-    const floor = GROUND_Y;
-    if (player.y >= floor) {
-      player.y = floor;
-      player.vy = 0;
-      player.grounded = true;
-      floatBudgetMs = 0;
-      floatCooldownMs = FLOAT_COOLDOWN_MS;
-    }
+    updatePlayer(dt);
 
     for (const obs of obstacles) {
       obs.x -= gameSpeed;
     }
-    obstacles = obstacles.filter(o => o.x + o.w > -20);
+    obstacles = obstacles.filter(o => o.x + o.w > -30);
 
-    distanceSinceObstacle += gameSpeed;
-    if (distanceSinceObstacle >= nextObstacleGap()) {
-      spawnObstacleWave();
-      distanceSinceObstacle = 0;
+    nextSpawnIn -= gameSpeed;
+    if (nextSpawnIn <= 0) {
+      const pattern = pickSpawnPattern();
+      pattern.spawn(obstacles, CANVAS_W + 20 + Math.random() * 50);
+      scheduleNextSpawn();
     }
 
     const playerBox = { x: player.x, y: player.y, w: player.w, h: player.h };
@@ -540,28 +523,28 @@
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
-      floatStart();
+      pressStart();
     }
   });
 
   document.addEventListener('keyup', e => {
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
-      floatEnd();
+      pressEnd();
     }
   });
 
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    floatStart();
+    pressStart();
   });
 
   canvas.addEventListener('pointerup', e => {
     e.preventDefault();
-    floatEnd();
+    pressEnd();
   });
 
-  canvas.addEventListener('pointercancel', floatEnd);
+  canvas.addEventListener('pointercancel', pressEnd);
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;

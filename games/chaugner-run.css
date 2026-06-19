@@ -165,6 +165,32 @@ body {
   margin-bottom: 0.35rem;
 }
 
+.cr-rules {
+  list-style: none;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--cr-muted);
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--cr-border);
+  border-radius: 8px;
+}
+
+.cr-rules li {
+  margin-bottom: 0.35rem;
+  line-height: 1.45;
+}
+
+.cr-rules li:last-child {
+  margin-bottom: 0;
+}
+
+.cr-rules strong {
+  color: var(--cr-text);
+  font-weight: 600;
+}
+
 .cr-hint {
   font-size: 0.75rem;
   color: var(--cr-muted);
