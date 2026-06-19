@@ -1,28 +1,34 @@
 /* ========================================
-   YOKOFOLIA ふわっと住民台帳 — Dark Theme
+   YOKOFOLIA ふわっと住民台帳 — Cocofolia-inspired
    ======================================== */
 
 :root {
-  --bg-base: #0d1118;
-  --bg-sidebar: #141a24;
-  --bg-panel: #181f2c;
-  --bg-card: #1c2434;
-  --bg-card-hover: #243044;
-  --bg-input: #121824;
-  --bg-active: #1e3348;
+  --bg-base: #161616;
+  --bg-sidebar: #1a1a1a;
+  --bg-panel: #1e1e1e;
+  --bg-card: #262626;
+  --bg-card-hover: #2e2e2e;
+  --bg-input: #1a1a1a;
+  --bg-active: rgba(232, 72, 122, 0.12);
 
-  --border: #2a3548;
-  --border-light: #38465c;
+  --border: #333333;
+  --border-light: #404040;
 
-  --text-primary: #e8ecf4;
-  --text-secondary: #9aa5be;
-  --text-muted: #6b7894;
+  --text-primary: #ffffff;
+  --text-secondary: #9a9a9a;
+  --text-muted: #6e6e6e;
 
-  --accent: #6ba3e8;
-  --accent-dim: rgba(107, 163, 232, 0.15);
-  --accent-hover: #8bb8f0;
-  --accent-warm: #d98a4a;
-  --accent-warm-dim: rgba(217, 138, 74, 0.14);
+  --accent: #e8487a;
+  --accent-dim: rgba(232, 72, 122, 0.15);
+  --accent-hover: #f06a96;
+  --accent-border: rgba(232, 72, 122, 0.4);
+  --accent-warm: #9a9a9a;
+  --accent-warm-dim: rgba(255, 255, 255, 0.04);
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --grid-size: 32px;
 
   --status-alive: #34d399;
   --status-alive-bg: rgba(52, 211, 153, 0.12);
@@ -33,9 +39,9 @@
   --status-unknown: #9ca3af;
   --status-unknown-bg: rgba(156, 163, 175, 0.12);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 
   --sidebar-width: 200px;
   --list-width: 280px;
@@ -58,8 +64,9 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-base);
   background-image:
-    radial-gradient(ellipse 80% 50% at 15% -10%, rgba(107, 163, 232, 0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 90% 110%, rgba(217, 138, 74, 0.05) 0%, transparent 50%);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
@@ -97,7 +104,7 @@ input {
 
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--bg-sidebar);
+  background: rgba(26, 26, 26, 0.96);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -163,6 +170,7 @@ input {
 .nav-link.active {
   background: var(--accent-dim);
   color: var(--accent);
+  font-weight: 600;
 }
 
 .nav-icon {
@@ -186,7 +194,8 @@ input {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
-  background: var(--bg-sidebar);
+  background: rgba(22, 22, 22, 0.92);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -248,18 +257,19 @@ input {
 
 .site-brand-name {
   font-family: 'Inter', 'Noto Sans JP', sans-serif;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   line-height: 1.15;
   color: var(--text-primary);
+  text-transform: uppercase;
 }
 
 .site-brand-tagline {
   font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--accent-warm);
-  letter-spacing: 0.04em;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -267,7 +277,7 @@ input {
 }
 
 .site-brand:hover .site-brand-name {
-  color: var(--accent-hover);
+  color: var(--accent);
 }
 
 .site-title:hover {
@@ -456,8 +466,11 @@ input {
 }
 
 .panel-title {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 .panel-count {
@@ -488,18 +501,21 @@ input {
   padding: 0.65rem 0.75rem;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
-  margin-bottom: 0.2rem;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+  margin-bottom: 0.25rem;
   border: 1px solid transparent;
+  background: transparent;
 }
 
 .list-item:hover {
   background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .list-item.active {
-  background: var(--bg-active);
-  border-color: rgba(74, 158, 255, 0.3);
+  background: var(--bg-card);
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .list-avatar {
@@ -650,7 +666,7 @@ input {
 }
 
 .detail-title {
-  font-size: 1.75rem;
+  font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -726,18 +742,20 @@ input {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 
 .org-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-light);
+  transform: translateY(-1px);
 }
 
 .org-card.active {
-  background: var(--bg-active);
-  border-color: rgba(74, 158, 255, 0.35);
+  background: var(--bg-card-hover);
+  border-color: var(--accent-border);
 }
 
 .org-card-icon {
@@ -1028,7 +1046,7 @@ input {
 .footer {
   padding: 1.25rem 1.5rem 1.5rem;
   border-top: 1px solid var(--border);
-  background: var(--bg-sidebar);
+  background: rgba(26, 26, 26, 0.96);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1069,9 +1087,9 @@ input {
 
 .footer-tagline {
   font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--accent-warm);
-  letter-spacing: 0.03em;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .footer-copy {
@@ -1149,16 +1167,18 @@ input {
 .kp-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, transform 0.15s;
 }
 
 .kp-card:hover {
   border-color: var(--border-light);
+  transform: translateY(-1px);
 }
 
 .kp-card-icon {
@@ -1189,15 +1209,15 @@ input {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.55rem 1rem;
-  background: var(--accent-dim);
-  border: 1px solid rgba(74, 158, 255, 0.35);
+  padding: 0.6rem 1.1rem;
+  background: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
-  color: var(--accent);
+  color: #ffffff;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   align-self: flex-start;
   cursor: pointer;
   font-family: inherit;
@@ -1207,6 +1227,7 @@ input {
   background: transparent;
   border-color: var(--border-light);
   color: var(--text-secondary);
+  font-weight: 600;
 }
 
 .kp-card-btn--secondary:hover {
@@ -1216,10 +1237,10 @@ input {
 }
 
 .kp-card-btn:hover {
-  background: rgba(74, 158, 255, 0.25);
-  border-color: var(--accent);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   text-decoration: none;
-  color: var(--accent-hover);
+  color: #ffffff;
 }
 
 .kp-card-btn svg {
@@ -1258,12 +1279,12 @@ input {
   position: relative;
   width: min(480px, 100%);
   max-height: min(80vh, 640px);
-  background: var(--bg-panel);
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
 }
 
 .kp-modal-header {
@@ -1472,7 +1493,7 @@ input {
 }
 
 .kp-visibility-input:checked + .kp-visibility-switch {
-  background: rgba(74, 158, 255, 0.25);
+  background: var(--accent-dim);
   border-color: var(--accent);
 }
 
