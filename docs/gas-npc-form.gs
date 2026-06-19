@@ -61,15 +61,27 @@ function ensureNpcHeader_(sheet) {
     return headers;
   }
 
-  const existing = firstRow.map(h => String(h).trim()).filter(Boolean);
-  const missing = headers.filter(h => !existing.includes(h));
-  if (missing.length) {
-    const startCol = existing.length + 1;
-    // getRange(row, col, numRows, numColumns) — 終端列番号ではない
-    sheet.getRange(1, startCol, 1, missing.length).setValues([missing]);
-    return existing.concat(missing);
-  }
-  return existing;
+  const present = new Set(
+    firstRow.map(h => String(h).trim()).filter(Boolean)
+  );
+
+  // 足りない列は末尾に1列ずつ追加（setValues の列数不一致を避ける）
+  headers.forEach(name => {
+    if (!present.has(name)) {
+      const col = sheet.getLastColumn() + 1;
+      sheet.getRange(1, col).setValue(name);
+      present.add(name);
+    }
+  });
+
+  return readSheetHeaders_(sheet);
+}
+
+function readSheetHeaders_(sheet) {
+  const width = Math.max(sheet.getLastColumn(), 1);
+  return sheet.getRange(1, 1, 1, width).getValues()[0]
+    .map(h => String(h).trim())
+    .filter(Boolean);
 }
 
 function generateNpcId_(sheet) {
@@ -164,7 +176,7 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-16-visibility-fix' }, callback);
+    return jsonResponse_({ api_version: '2026-06-16-visibility-fix2' }, callback);
   }
 
   if (type === 'npcs') {
