@@ -657,6 +657,18 @@ function renderHomeView() {
         </div>
       </section>
 
+      <section class="portal-section">
+        <h2 class="portal-section-label">オマケ</h2>
+        <a href="games/chaugner-run.html" class="portal-minigame-card">
+          <span class="portal-minigame-icon" aria-hidden="true">🏃</span>
+          <span class="portal-minigame-body">
+            <span class="portal-minigame-name">チャウグナー・ラン</span>
+            <span class="portal-minigame-desc">横スクロールミニゲーム。ランキングに名前を残そう。</span>
+          </span>
+          <span class="portal-minigame-go" aria-hidden="true">→</span>
+        </a>
+      </section>
+
       <section class="portal-section portal-section--community">
         <h2 class="portal-community-title">コミュニティ</h2>
         <div class="community-grid">

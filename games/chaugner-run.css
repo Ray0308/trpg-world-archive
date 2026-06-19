@@ -1,0 +1,367 @@
+/* チャウグナー・ラン — YOKOFOLIA ミニゲーム */
+
+:root {
+  --cr-bg: #161616;
+  --cr-panel: #262626;
+  --cr-border: #404040;
+  --cr-text: #ffffff;
+  --cr-muted: #9a9a9a;
+  --cr-accent: #e8487a;
+  --cr-accent-hover: #f06a96;
+  --cr-ground: #333333;
+  --cr-grid: rgba(255, 255, 255, 0.035);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 15px;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  background-color: var(--cr-bg);
+  background-image:
+    linear-gradient(var(--cr-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cr-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--cr-text);
+  min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cr-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.cr-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--cr-border);
+  background: rgba(22, 22, 22, 0.95);
+  flex-wrap: wrap;
+}
+
+.cr-back {
+  font-size: 0.82rem;
+  color: var(--cr-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cr-back:hover {
+  color: var(--cr-accent);
+}
+
+.cr-header-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cr-score-hud {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.cr-score-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--cr-muted);
+}
+
+.cr-score-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cr-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem 2rem;
+}
+
+.cr-stage-wrap {
+  position: relative;
+  width: min(100%, 800px);
+  border: 1px solid var(--cr-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  background: #1a1a1a;
+}
+
+.cr-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 800 / 320;
+  cursor: pointer;
+}
+
+.cr-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+
+.cr-overlay[hidden] {
+  display: none;
+}
+
+.cr-panel {
+  width: min(100%, 400px);
+  padding: 1.5rem;
+  background: var(--cr-panel);
+  border: 1px solid var(--cr-border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.cr-panel--gameover {
+  width: min(100%, 420px);
+}
+
+.cr-kicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--cr-accent);
+  margin-bottom: 0.35rem;
+}
+
+.cr-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.cr-lead {
+  font-size: 0.88rem;
+  color: var(--cr-muted);
+  line-height: 1.6;
+  margin-bottom: 0.35rem;
+}
+
+.cr-hint {
+  font-size: 0.75rem;
+  color: var(--cr-muted);
+  margin-bottom: 1.25rem;
+}
+
+.cr-field {
+  display: block;
+  text-align: left;
+  margin-bottom: 1rem;
+}
+
+.cr-field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cr-muted);
+  margin-bottom: 0.35rem;
+}
+
+.cr-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: #1a1a1a;
+  border: 1px solid var(--cr-border);
+  border-radius: 6px;
+  color: var(--cr-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.cr-input:focus {
+  outline: none;
+  border-color: var(--cr-accent);
+}
+
+.cr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.cr-btn--primary {
+  background: var(--cr-accent);
+  color: #fff;
+}
+
+.cr-btn--primary:hover:not(:disabled) {
+  background: var(--cr-accent-hover);
+}
+
+.cr-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cr-ranking-block {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cr-border);
+  text-align: left;
+}
+
+.cr-ranking-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cr-muted);
+  margin-bottom: 0.65rem;
+}
+
+.cr-ranking-list {
+  min-height: 4.5rem;
+}
+
+.cr-ranking-loading,
+.cr-ranking-empty,
+.cr-ranking-error {
+  font-size: 0.82rem;
+  color: var(--cr-muted);
+}
+
+.cr-ranking-error {
+  color: #f87171;
+}
+
+.cr-ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.cr-ranking-table th,
+.cr-ranking-table td {
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--cr-border);
+  text-align: left;
+}
+
+.cr-ranking-table th {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--cr-muted);
+}
+
+.cr-ranking-table td:last-child,
+.cr-ranking-table th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-ranking-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cr-ranking-rank {
+  width: 2rem;
+  color: var(--cr-accent);
+  font-weight: 700;
+}
+
+.cr-gameover-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--cr-accent);
+  margin-bottom: 1rem;
+}
+
+.cr-result {
+  margin-bottom: 0.75rem;
+}
+
+.cr-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--cr-border);
+  font-size: 0.9rem;
+}
+
+.cr-result-row dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cr-muted);
+}
+
+.cr-result-row dd {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-save-status {
+  font-size: 0.8rem;
+  color: var(--cr-muted);
+  min-height: 1.2em;
+  margin-bottom: 0.25rem;
+}
+
+.cr-save-status--ok {
+  color: #34d399;
+}
+
+.cr-save-status--warn {
+  color: #fbbf24;
+}
+
+.cr-footer {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--cr-muted);
+  border-top: 1px solid var(--cr-border);
+}
+
+@media (max-width: 480px) {
+  .cr-header-title {
+    font-size: 0.85rem;
+  }
+
+  .cr-title {
+    font-size: 1.25rem;
+  }
+
+  .cr-panel {
+    padding: 1.15rem;
+  }
+}

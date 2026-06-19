@@ -657,6 +657,56 @@ input {
   line-height: 1.5;
 }
 
+.portal-minigame-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.portal-minigame-card:hover {
+  border-color: var(--accent-border);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.portal-minigame-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.portal-minigame-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-minigame-name {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.portal-minigame-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.portal-minigame-go {
+  font-size: 1.25rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 .portal-external-note {
   font-size: 0.72rem;
   color: var(--text-muted);

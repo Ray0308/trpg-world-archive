@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>チャウグナー・ラン — YOKOFOLIA</title>
+  <link rel="stylesheet" href="chaugner-run.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="cr-app">
+    <header class="cr-header">
+      <a href="../index.html#home" class="cr-back">← YOKOFOLIA</a>
+      <h1 class="cr-header-title">チャウグナー・ラン</h1>
+      <div class="cr-score-hud" id="scoreHud" hidden>
+        <span class="cr-score-label">DISTANCE</span>
+        <span class="cr-score-value" id="scoreValue">0 m</span>
+      </div>
+    </header>
+
+    <main class="cr-main">
+      <div class="cr-stage-wrap">
+        <canvas id="gameCanvas" class="cr-canvas" width="800" height="320" aria-label="チャウグナー・ラン ゲーム画面"></canvas>
+
+        <!-- 開始画面 -->
+        <div class="cr-overlay" id="startScreen">
+          <div class="cr-panel">
+            <p class="cr-kicker">YOKOFOLIA MINI GAME</p>
+            <h2 class="cr-title">チャウグナー・ラン</h2>
+            <p class="cr-lead">障害物を飛び越えて、どこまで走れるか挑戦しよう。</p>
+            <p class="cr-hint">PC: スペースキー / スマホ: 画面タップでジャンプ</p>
+
+            <label class="cr-field">
+              <span class="cr-field-label">プレイヤー名（12文字まで）</span>
+              <input type="text" id="playerName" class="cr-input" maxlength="12" placeholder="名前を入力" autocomplete="nickname">
+            </label>
+            <button type="button" class="cr-btn cr-btn--primary" id="startBtn" disabled>スタート</button>
+
+            <section class="cr-ranking-block">
+              <h3 class="cr-ranking-title">歴代ランキング TOP3</h3>
+              <div id="startRanking" class="cr-ranking-list">
+                <p class="cr-ranking-loading">読み込み中…</p>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- ゲームオーバー画面 -->
+        <div class="cr-overlay" id="gameOverScreen" hidden>
+          <div class="cr-panel cr-panel--gameover">
+            <h2 class="cr-gameover-title">GAME OVER</h2>
+            <dl class="cr-result">
+              <div class="cr-result-row">
+                <dt>NAME</dt>
+                <dd id="resultName">—</dd>
+              </div>
+              <div class="cr-result-row">
+                <dt>SCORE</dt>
+                <dd id="resultScore">0 m</dd>
+              </div>
+            </dl>
+            <p class="cr-save-status" id="saveStatus"></p>
+
+            <section class="cr-ranking-block">
+              <h3 class="cr-ranking-title">歴代ランキング TOP3</h3>
+              <div id="overRanking" class="cr-ranking-list">
+                <p class="cr-ranking-loading">読み込み中…</p>
+              </div>
+            </section>
+
+            <button type="button" class="cr-btn cr-btn--primary" id="retryBtn">もう一度遊ぶ</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="cr-footer">
+      <p>© 2026- yokofolia — オマケミニゲーム</p>
+    </footer>
+  </div>
+
+  <script src="chaugner-run.js"></script>
+</body>
+</html>
