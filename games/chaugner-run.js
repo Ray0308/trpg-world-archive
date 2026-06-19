@@ -5,24 +5,21 @@
 (function () {
   'use strict';
 
-  /** Google Apps Script Webアプリ URL（未設定ならランキングのみローカル無効） */
-  const GAS_ENDPOINT = '';
-  // 既存 API と同じデプロイを使う場合の例:
-  // const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw20JiLGzzdC2m7uOgP14RecbtwFhbHUBuO-emsrDThF-YRsB8Ux60SQPOlRU5yXquw/exec';
+  /** NPC と同じ GAS（js/config.js の api.baseUrl）を自動利用 */
+  const GAS_ENDPOINT = (window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl) || '';
 
   const MASCOT_IMAGE_PATH = '../images/yokofolia-mascot.png';
   const CANVAS_W = 800;
   const CANVAS_H = 320;
   const GROUND_Y = 260;
-  const GRAVITY_RISE_HELD = 0.22;
-  const GRAVITY_RISE_RELEASE = 0.58;
-  const GRAVITY_FALL = 0.62;
-  const JUMP_VELOCITY = -10.5;
-  const JUMP_VELOCITY_MAX = -16;
-  const BASE_SPEED = 4.5;
+  const GRAVITY = 0.72;
+  const FLOAT_RISE = -3.2;
+  const FLOAT_DURATION_MS = 1000;
+  const TAKEOFF_VELOCITY = -7.5;
+  const BASE_SPEED = 4.2;
   const MAX_SPEED = 13;
-  const OBSTACLE_MIN_GAP = 180;
-  const OBSTACLE_MAX_GAP = 340;
+  const OBSTACLE_MIN_GAP = 200;
+  const OBSTACLE_MAX_GAP = 360;
   const NAME_MAX_LEN = 12;
 
   const canvas = document.getElementById('gameCanvas');
@@ -53,7 +50,7 @@
   let elapsedMs = 0;
   let animId = null;
   let lastTs = 0;
-  let jumpHeld = false;
+  let floatRemainingMs = 0;
 
   const player = {
     x: 80,
@@ -100,7 +97,10 @@
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        if (data.error === 'unknown type') return { ok: false, needsDeploy: true };
+        throw new Error(data.error);
+      }
       if (!Array.isArray(data)) throw new Error('invalid format');
       return { ok: true, data };
     } catch (err) {
@@ -123,7 +123,10 @@
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        if (data.error === 'unknown type') return { ok: false, needsDeploy: true };
+        throw new Error(data.error);
+      }
       return { ok: true, data };
     } catch (err) {
       return { ok: false, error: err.message || 'save failed' };
@@ -131,12 +134,16 @@
   }
 
   function renderRankingList(el, result) {
+    if (result.needsDeploy) {
+      el.innerHTML = '<p class="cr-ranking-empty">ランキングはまだ有効化されていません（KP: GASの再デプロイが必要）</p>';
+      return;
+    }
     if (!result.ok) {
       el.innerHTML = '<p class="cr-ranking-error">ランキング取得に失敗しました</p>';
       return;
     }
     if (result.offline) {
-      el.innerHTML = '<p class="cr-ranking-empty">ランキング未設定（GAS_ENDPOINT を設定すると表示されます）</p>';
+      el.innerHTML = '<p class="cr-ranking-empty">ランキングは準備中です</p>';
       return;
     }
     if (!result.data.length) {
@@ -179,7 +186,7 @@
     player.grounded = true;
     obstacles = [];
     distanceSinceObstacle = 500;
-    jumpHeld = false;
+    floatRemainingMs = 0;
     updateScoreHud();
   }
 
@@ -187,17 +194,12 @@
     scoreValue.textContent = formatMeters(scoreMeters);
   }
 
-  function jumpStart() {
+  function floatStart() {
     if (state !== 'playing') return;
-    jumpHeld = true;
-    if (player.grounded) {
-      player.vy = JUMP_VELOCITY;
-      player.grounded = false;
-    }
-  }
-
-  function jumpEnd() {
-    jumpHeld = false;
+    if (!player.grounded) return;
+    player.grounded = false;
+    player.vy = TAKEOFF_VELOCITY;
+    floatRemainingMs = FLOAT_DURATION_MS;
   }
 
   function spawnObstacle(x) {
@@ -294,6 +296,13 @@
     }
 
     drawMascot(player.x, player.y, player.w, player.h);
+
+    if (floatRemainingMs > 0) {
+      ctx.fillStyle = 'rgba(232, 72, 122, 0.15)';
+      ctx.beginPath();
+      ctx.ellipse(player.x + player.w / 2, player.y + player.h + 6, player.w * 0.55, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function rectsOverlap(a, b) {
@@ -313,14 +322,12 @@
     updateScoreHud();
 
     if (!player.grounded) {
-      let gravity = GRAVITY_FALL;
-      if (player.vy < 0) {
-        gravity = jumpHeld ? GRAVITY_RISE_HELD : GRAVITY_RISE_RELEASE;
-        if (jumpHeld && player.vy > JUMP_VELOCITY_MAX) {
-          player.vy = Math.max(JUMP_VELOCITY_MAX, player.vy - 0.35);
-        }
+      if (floatRemainingMs > 0) {
+        floatRemainingMs = Math.max(0, floatRemainingMs - dt);
+        player.vy = FLOAT_RISE;
+      } else {
+        player.vy += GRAVITY;
       }
-      player.vy += gravity;
     }
     player.y += player.vy;
 
@@ -396,8 +403,11 @@
     if (saveResult.ok) {
       saveStatusEl.textContent = 'ランキングに登録しました';
       saveStatusEl.className = 'cr-save-status cr-save-status--ok';
+    } else if (saveResult.needsDeploy) {
+      saveStatusEl.textContent = 'スコアは保存されませんでした（KP: GASの再デプロイが必要）';
+      saveStatusEl.className = 'cr-save-status cr-save-status--warn';
     } else if (saveResult.offline) {
-      saveStatusEl.textContent = 'ランキング未設定のためスコアは保存されませんでした';
+      saveStatusEl.textContent = 'スコアは記録されませんでした（ランキング準備中）';
       saveStatusEl.className = 'cr-save-status cr-save-status--warn';
     } else {
       saveStatusEl.textContent = 'スコアの保存に失敗しました（ゲームは正常終了）';
@@ -435,29 +445,14 @@
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
-      jumpStart();
-    }
-  });
-
-  document.addEventListener('keyup', e => {
-    if (e.code === 'Space' || e.key === ' ') {
-      e.preventDefault();
-      jumpEnd();
+      floatStart();
     }
   });
 
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    jumpStart();
+    floatStart();
   });
-
-  canvas.addEventListener('pointerup', e => {
-    e.preventDefault();
-    jumpEnd();
-  });
-
-  canvas.addEventListener('pointercancel', jumpEnd);
-  canvas.addEventListener('pointerleave', jumpEnd);
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;
