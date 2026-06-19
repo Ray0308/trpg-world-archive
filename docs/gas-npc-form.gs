@@ -157,12 +157,44 @@ function doGet(e) {
   const form = FormApp.getActiveForm();
   const ss = SpreadsheetApp.openById(form.getDestinationId());
   const type = (e && e.parameter && e.parameter.type) || 'npcs';
+  const callback = e && e.parameter && e.parameter.callback;
+  const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'npcs') {
-    return jsonResponse_(getPublicNpcs_(ss), e && e.parameter && e.parameter.callback);
+    const data = kpMode ? getKpNpcs_(ss) : getPublicNpcs_(ss);
+    return jsonResponse_(data, callback);
   }
 
-  return jsonResponse_({ error: 'unknown type', type: type }, e && e.parameter && e.parameter.callback);
+  return jsonResponse_({ error: 'unknown type', type: type }, callback);
+}
+
+/** KPページ用 — 編集リンク付きの最小NPC一覧 */
+function getKpNpcs_(ss) {
+  const sheet = ss.getSheetByName('NPCS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      return {
+        id: record.id || '',
+        name: record.name || '',
+        furigana: record.furigana || '',
+        occupation: record.occupation || '',
+        status: record.status || '',
+        edit_url: record.edit_url || ''
+      };
+    })
+    .filter(npc => npc.id && npc.name);
 }
 
 function getPublicNpcs_(ss) {

@@ -5,8 +5,8 @@
 (function () {
   function getAppRoot() {
     let path = window.location.pathname;
-    if (path.endsWith('index.html')) {
-      path = path.slice(0, -'index.html'.length);
+    if (path.endsWith('index.html') || path.endsWith('kp.html')) {
+      path = path.replace(/[^/]+$/, '');
     }
     if (!path.endsWith('/')) {
       const slash = path.lastIndexOf('/');

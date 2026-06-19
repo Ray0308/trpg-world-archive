@@ -1044,6 +1044,13 @@ input {
   flex: 1;
 }
 
+.kp-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .kp-card-btn {
   display: inline-flex;
   align-items: center;
@@ -1058,8 +1065,21 @@ input {
   font-weight: 600;
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
-  margin-top: 0.25rem;
   align-self: flex-start;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.kp-card-btn--secondary {
+  background: transparent;
+  border-color: var(--border-light);
+  color: var(--text-secondary);
+}
+
+.kp-card-btn--secondary:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .kp-card-btn:hover {
@@ -1078,6 +1098,168 @@ input {
   opacity: 0.45;
   pointer-events: none;
   cursor: default;
+}
+
+/* KP — NPC編集ピッカー */
+.kp-modal[hidden] {
+  display: none;
+}
+
+.kp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.kp-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.kp-modal-panel {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: min(80vh, 640px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.kp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.kp-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.kp-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.kp-modal-close:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.kp-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kp-modal-search {
+  padding: 0.75rem 1.25rem 0;
+}
+
+.kp-modal-search input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.kp-modal-body {
+  overflow-y: auto;
+  padding: 0.75rem 1.25rem 1.25rem;
+}
+
+.kp-modal-status,
+.kp-modal-empty,
+.kp-modal-error {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 1rem 0;
+}
+
+.kp-modal-error {
+  color: var(--status-dead);
+}
+
+.kp-picker-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kp-picker-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.kp-picker-item:hover:not(.kp-picker-item--disabled) {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.kp-picker-item--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.kp-picker-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.kp-picker-sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.kp-picker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.kp-picker-note {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--status-missing);
 }
 
 @media (max-width: 768px) {
