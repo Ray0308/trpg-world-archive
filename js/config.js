@@ -22,7 +22,7 @@
 
     /** Google Apps Script Webアプリ（スプレッドシート → JSON） */
     api: {
-      baseUrl: 'https://script.google.com/macros/s/AKfycbzt87hRK0TTnxUQRA2FGzndAsN34SBlKM5MQDcpUDgyJDffiw8ZeIJKD91EpTlnmonY/exec'
+      baseUrl: 'https://script.google.com/macros/s/AKfycbw20JiLGzzdC2m7uOgP14RecbtwFhbHUBuO-emsrDThF-YRsB8Ux60SQPOlRU5yXquw/exec'
     },
 
     /** ローカル JSON（NPC フォールバック + 組織・シナリオ・PC） */
