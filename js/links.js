@@ -24,6 +24,11 @@
     npcForm: 'https://docs.google.com/forms/d/e/1FAIpQLSfscXkMnmrSczHr957jNrwon1ZGDQixceyAOmJx26xGQ1Zucw/viewform',
     organizationForm: '#',
     scenarioForm: '#',
-    pcForm: '#'
+    pcForm: '#',
+
+    /** 外部ツール・コミュニティ（# は未設定） */
+    cocofolia: 'https://ccfolia.com/',
+    iachara: 'https://iachara.com/',
+    discord: '#'
   };
 })();

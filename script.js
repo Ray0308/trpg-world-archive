@@ -533,17 +533,25 @@ function renderPortalStatCard({ section, icon, label, count, sub }) {
   `;
 }
 
-function renderPortalFeaturedNpc(npc) {
-  const status = STATUS_LABELS[npc.status] || '不明';
-  const statusClass = STATUS_CLASSES[npc.status] || 'status-unknown';
+function renderPortalExternalLink({ key, icon, name, desc }) {
+  const url = (window.AppLinks || {})[key] || '#';
+  const isReady = url && url !== '#';
+  if (!isReady) {
+    return `
+      <div class="portal-external-card portal-external-card--disabled">
+        <span class="portal-external-icon" aria-hidden="true">${icon}</span>
+        <span class="portal-external-name">${escapeHtml(name)}</span>
+        <span class="portal-external-desc">${escapeHtml(desc)}</span>
+        <span class="portal-external-note">準備中</span>
+      </div>
+    `;
+  }
   return `
-    <a href="#npcs/${npc.id}" class="portal-featured-card" data-nav-section="npcs" data-nav-id="${npc.id}">
-      ${npcAvatarImg(npc)}
-      <span class="portal-featured-body">
-        <span class="portal-featured-name">${escapeHtml(npc.name)}</span>
-        <span class="portal-featured-sub">${escapeHtml(npc.job || npc.furigana || '')}</span>
-      </span>
-      <span class="list-item-badge ${statusClass}">${escapeHtml(status)}</span>
+    <a href="${escapeAttr(url)}" class="portal-external-card" target="_blank" rel="noopener noreferrer">
+      <span class="portal-external-icon" aria-hidden="true">${icon}</span>
+      <span class="portal-external-name">${escapeHtml(name)}</span>
+      <span class="portal-external-desc">${escapeHtml(desc)}</span>
+      <span class="portal-external-go" aria-hidden="true">↗</span>
     </a>
   `;
 }
@@ -556,7 +564,11 @@ function renderHomeView() {
     { section: 'pcs', icon: '👤', label: 'PLAYER', count: store.pcs.length, sub: 'PC' }
   ];
 
-  const featured = store.npcs.slice(0, 4);
+  const externalLinks = [
+    { key: 'cocofolia', icon: '🎲', name: 'ココフォリア', desc: 'オンラインセッション' },
+    { key: 'iachara', icon: '📋', name: 'いあきゃら', desc: 'キャラシート作成' },
+    { key: 'discord', icon: '💬', name: 'Discord', desc: 'コミュニティ' }
+  ];
 
   contentArea.innerHTML = `
     <div class="portal-page">
@@ -575,18 +587,6 @@ function renderHomeView() {
           ${stats.map(renderPortalStatCard).join('')}
         </div>
       </section>
-
-      ${featured.length ? `
-        <section class="portal-section">
-          <div class="portal-section-head">
-            <h2 class="portal-section-label">注目の住民</h2>
-            <a href="#npcs" class="portal-section-link" data-nav-section="npcs">すべて見る →</a>
-          </div>
-          <div class="portal-featured">
-            ${featured.map(renderPortalFeaturedNpc).join('')}
-          </div>
-        </section>
-      ` : ''}
 
       <section class="portal-section">
         <h2 class="portal-section-label">探索する</h2>
@@ -611,6 +611,13 @@ function renderHomeView() {
             <span class="portal-explore-name">PC</span>
             <span class="portal-explore-desc">プレイヤーキャラクター一覧</span>
           </a>
+        </div>
+      </section>
+
+      <section class="portal-section">
+        <h2 class="portal-section-label">ツール・コミュニティ</h2>
+        <div class="portal-external">
+          ${externalLinks.map(renderPortalExternalLink).join('')}
         </div>
       </section>
     </div>
