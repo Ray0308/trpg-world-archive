@@ -54,6 +54,33 @@ window.ArchiveNormalize = (function () {
     return { locationIds, locationNames };
   }
 
+  function parseContactableField(value) {
+    if (isPlaceholderValue(value)) return { contactablePcIds: [], contactablePcNames: [] };
+    const parts = splitIdList(value);
+    return {
+      contactablePcIds: parts.filter(p => /^pc[-_]/i.test(p)),
+      contactablePcNames: parts.filter(p => !/^pc[-_]/i.test(p))
+    };
+  }
+
+  function parseRelatedNpcField(value) {
+    if (isPlaceholderValue(value)) return { relatedNpcIds: [], relatedNpcNames: [] };
+    const parsed = parseRelatedNpcs(value);
+    const relatedNpcIds = [];
+    const relatedNpcNames = [];
+    parsed.forEach(entry => {
+      if (/^npc[-_]/i.test(entry.npcId)) {
+        relatedNpcIds.push(entry);
+      } else {
+        const label = entry.relation
+          ? `${entry.npcId}（${entry.relation}）`
+          : entry.npcId;
+        relatedNpcNames.push(label);
+      }
+    });
+    return { relatedNpcIds, relatedNpcNames };
+  }
+
   function splitParagraphs(value) {
     if (!value) return [];
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -194,6 +221,12 @@ window.ArchiveNormalize = (function () {
     const locations = parseLocationField(
       raw.location_ids || raw.locations || raw.locationIds || raw['関連場所']
     );
+    const contactable = parseContactableField(
+      raw.contactable_pc_ids || raw.contactable_pcs || raw.contactablePcIds || raw['連絡可能PC']
+    );
+    const relatedNpcs = parseRelatedNpcField(
+      raw.related_npc_ids || raw.related_npcs || raw.relatedNpcIds || raw['関連NPC']
+    );
 
     return {
       id: raw.id,
@@ -212,17 +245,15 @@ window.ArchiveNormalize = (function () {
       personality,
       person,
       episodes: parseEpisodes(raw.episodes || raw['エピソード']),
-      contactablePcIds: splitIdList(
-        raw.contactable_pc_ids || raw.contactable_pcs || raw.contactablePcIds || raw['連絡可能PC']
-      ),
+      contactablePcIds: contactable.contactablePcIds,
+      contactablePcNames: contactable.contactablePcNames,
       image: raw.image_url || raw.imageUrl || raw.image || raw['画像URL'] || '',
       avatar: raw.avatar || raw.avatar_url || raw['サムネイルURL'] || '',
       scenarioIds: splitIdList(
         raw.scenario_ids || raw.scenarios || raw.scenarioIds || raw['登場シナリオ']
       ),
-      relatedNpcIds: parseRelatedNpcs(
-        raw.related_npc_ids || raw.related_npcs || raw.relatedNpcIds || raw['関連NPC']
-      ),
+      relatedNpcIds: relatedNpcs.relatedNpcIds,
+      relatedNpcNames: relatedNpcs.relatedNpcNames,
       locationIds: locations.locationIds,
       locationNames: locations.locationNames
     };
@@ -233,6 +264,9 @@ window.ArchiveNormalize = (function () {
     row = stripAdminFields(row);
     const person = parsePersonField(row['人物'] || row.person);
     const personality = String(row.personality || row['性格'] || person.personality || '').trim();
+    const contactable = parseContactableField(row['連絡可能PC'] || row.contactablePcIds);
+    const relatedNpcs = parseRelatedNpcField(row.relatedNpcIds || row['関連NPC']);
+    const locations = parseLocationField(row.locationIds || row['関連場所']);
     return {
       id: row.id,
       name: row['名前'] || row.name || '',
@@ -250,12 +284,15 @@ window.ArchiveNormalize = (function () {
       personality,
       person,
       episodes: parseEpisodes(row['エピソード'] || row.episodes),
-      contactablePcIds: splitIds(row['連絡可能PC'] || row.contactablePcIds),
+      contactablePcIds: contactable.contactablePcIds,
+      contactablePcNames: contactable.contactablePcNames,
       image: row['画像URL'] || row.imageUrl || row.image || '',
       avatar: row.avatar || row['サムネイルURL'] || '',
       scenarioIds: splitIdList(row.scenarioIds || row['登場シナリオ']),
-      relatedNpcIds: parseRelatedNpcs(row.relatedNpcIds || row['関連NPC']),
-      ...parseLocationField(row.locationIds || row['関連場所'])
+      relatedNpcIds: relatedNpcs.relatedNpcIds,
+      relatedNpcNames: relatedNpcs.relatedNpcNames,
+      locationIds: locations.locationIds,
+      locationNames: locations.locationNames
     };
   }
 
@@ -268,6 +305,9 @@ window.ArchiveNormalize = (function () {
     if (raw['名前'] || raw.organization_id !== undefined) {
       return normalizeNpcRow(raw);
     }
+    const contactable = parseContactableField(raw.contactablePcIds);
+    const relatedNpcs = parseRelatedNpcField(raw.relatedNpcIds);
+    const locations = parseLocationField(raw.locationIds);
     return {
       id: raw.id,
       name: raw.name || '',
@@ -285,12 +325,15 @@ window.ArchiveNormalize = (function () {
       personality: String(raw.personality || raw.person?.personality || '').trim(),
       person: parsePersonField(raw.person),
       episodes: parseEpisodes(raw.episodes),
-      contactablePcIds: splitIdList(raw.contactablePcIds),
+      contactablePcIds: contactable.contactablePcIds,
+      contactablePcNames: contactable.contactablePcNames,
       image: raw.image || '',
       avatar: raw.avatar || '',
       scenarioIds: splitIdList(raw.scenarioIds),
-      relatedNpcIds: parseRelatedNpcs(raw.relatedNpcIds),
-      ...parseLocationField(raw.locationIds)
+      relatedNpcIds: relatedNpcs.relatedNpcIds,
+      relatedNpcNames: relatedNpcs.relatedNpcNames,
+      locationIds: locations.locationIds,
+      locationNames: locations.locationNames
     };
   }
 

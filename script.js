@@ -370,12 +370,14 @@ function isPresent(value) {
   return Boolean(value);
 }
 
-function renderDetailSection(heading, bodyHtml) {
-  if (!bodyHtml || !String(bodyHtml).trim()) return '';
+function renderDetailSection(heading, bodyHtml, { alwaysShow = false } = {}) {
+  const hasBody = bodyHtml && String(bodyHtml).trim();
+  if (!hasBody && !alwaysShow) return '';
+  const inner = hasBody ? bodyHtml : renderEmpty();
   return `
     <section class="detail-section">
       <h2 class="section-heading">${escapeHtml(heading)}</h2>
-      ${bodyHtml}
+      ${inner}
     </section>
   `;
 }
@@ -391,9 +393,25 @@ function renderLinkListIfAny(items) {
   return renderLinkList(list);
 }
 
-function renderRelatedBlock(title, innerHtml) {
-  if (!innerHtml || !String(innerHtml).trim()) return '';
-  return `<div class="related-block"><h3>${escapeHtml(title)}</h3>${innerHtml}</div>`;
+function renderRelatedBlock(title, innerHtml, { alwaysShow = false } = {}) {
+  const hasBody = innerHtml && String(innerHtml).trim();
+  if (!hasBody && !alwaysShow) return '';
+  const inner = hasBody ? innerHtml : renderEmpty();
+  return `<div class="related-block"><h3>${escapeHtml(title)}</h3>${inner}</div>`;
+}
+
+function renderContactableContent(npc) {
+  const contactablePcs = resolvePcs(npc.contactablePcIds);
+  const items = [
+    ...contactablePcs.map(pc =>
+      renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)
+    ),
+    ...(npc.contactablePcNames || []).map(name =>
+      `<span class="contact-name">${escapeHtml(name)}</span>`
+    )
+  ];
+  if (!items.length) return '';
+  return renderLinkList(items);
 }
 
 function hasNpcOrgInfo(npc) {
@@ -439,6 +457,12 @@ function renderNpcRelatedSection(npc) {
       return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
     })
   );
+  const npcNameList = (npc.relatedNpcNames || []).length
+    ? `<ul class="link-list">${npc.relatedNpcNames.map(name =>
+        `<li><span class="contact-name">${escapeHtml(name)}</span></li>`
+      ).join('')}</ul>`
+    : '';
+  const npcLinksCombined = [npcLinks, npcNameList].filter(Boolean).join('') || '';
   const locations = resolveLocations(npc.locationIds);
   let locationHtml = '';
   if (locations.length) {
@@ -452,13 +476,12 @@ function renderNpcRelatedSection(npc) {
   }
 
   const blocks = [
-    renderRelatedBlock('登場シナリオ', scenarioLinks),
-    renderRelatedBlock('関連NPC', npcLinks),
-    renderRelatedBlock('関連場所', locationHtml)
-  ].filter(Boolean).join('');
+    renderRelatedBlock('登場シナリオ', scenarioLinks, { alwaysShow: true }),
+    renderRelatedBlock('関連NPC', npcLinksCombined, { alwaysShow: true }),
+    renderRelatedBlock('関連場所', locationHtml, { alwaysShow: true })
+  ].join('');
 
-  if (!blocks) return '';
-  return renderDetailSection('関連情報', `<div class="related-grid">${blocks}</div>`);
+  return renderDetailSection('関連情報', `<div class="related-grid">${blocks}</div>`, { alwaysShow: true });
 }
 
 function renderListLayout(listHtml, detailHtml) {
@@ -533,25 +556,49 @@ function renderPortalStatCard({ section, icon, label, count, sub }) {
   `;
 }
 
-function renderPortalExternalLink({ key, icon, name, desc }) {
-  const url = (window.AppLinks || {})[key] || '#';
+const DISCORD_LOGO_SVG = `<svg class="community-logo-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>`;
+
+const COMMUNITY_LINKS = [
+  {
+    key: 'cocofolia',
+    name: 'ココフォリア',
+    desc: 'ブラウザでサラッと遊べるオンラインセッションツール',
+    logoClass: 'community-logo--cocofolia',
+    logoHtml: '<span class="community-logo-mark community-logo-mark--cocofolia" aria-hidden="true"></span><span class="community-logo-word">CCFOLIA</span>'
+  },
+  {
+    key: 'iachara',
+    name: 'いあきゃら',
+    desc: 'クトゥルフ神話TRPGのキャラクターシートを簡単作成',
+    logoClass: 'community-logo--iachara',
+    logoHtml: '<span class="community-logo-word community-logo-word--iachara">いあきゃら</span>'
+  },
+  {
+    key: 'discord',
+    name: 'Discord',
+    desc: '猫TRPG公式サーバーで質問や要望ができます',
+    logoClass: 'community-logo--discord',
+    logoHtml: `${DISCORD_LOGO_SVG}<span class="community-logo-word community-logo-word--discord">Discord</span>`
+  }
+];
+
+function renderCommunityCard(item) {
+  const url = (window.AppLinks || {})[item.key] || '#';
   const isReady = url && url !== '#';
   if (!isReady) {
     return `
-      <div class="portal-external-card portal-external-card--disabled">
-        <span class="portal-external-icon" aria-hidden="true">${icon}</span>
-        <span class="portal-external-name">${escapeHtml(name)}</span>
-        <span class="portal-external-desc">${escapeHtml(desc)}</span>
-        <span class="portal-external-note">準備中</span>
+      <div class="community-card community-card--disabled">
+        <div class="community-logo ${item.logoClass}">${item.logoHtml}</div>
+        <p class="community-name">${escapeHtml(item.name)}</p>
+        <p class="community-desc">${escapeHtml(item.desc)}</p>
       </div>
     `;
   }
   return `
-    <a href="${escapeAttr(url)}" class="portal-external-card" target="_blank" rel="noopener noreferrer">
-      <span class="portal-external-icon" aria-hidden="true">${icon}</span>
-      <span class="portal-external-name">${escapeHtml(name)}</span>
-      <span class="portal-external-desc">${escapeHtml(desc)}</span>
-      <span class="portal-external-go" aria-hidden="true">↗</span>
+    <a href="${escapeAttr(url)}" class="community-card" target="_blank" rel="noopener noreferrer">
+      <div class="community-logo ${item.logoClass}">${item.logoHtml}</div>
+      <p class="community-name">${escapeHtml(item.name)}</p>
+      <p class="community-desc">${escapeHtml(item.desc)}</p>
     </a>
   `;
 }
@@ -564,11 +611,7 @@ function renderHomeView() {
     { section: 'pcs', icon: '👤', label: 'PLAYER', count: store.pcs.length, sub: 'PC' }
   ];
 
-  const externalLinks = [
-    { key: 'cocofolia', icon: '🎲', name: 'ココフォリア', desc: 'オンラインセッション' },
-    { key: 'iachara', icon: '📋', name: 'いあきゃら', desc: 'キャラシート作成' },
-    { key: 'discord', icon: '💬', name: 'Discord', desc: 'コミュニティ' }
-  ];
+  const externalLinks = COMMUNITY_LINKS;
 
   contentArea.innerHTML = `
     <div class="portal-page">
@@ -614,10 +657,10 @@ function renderHomeView() {
         </div>
       </section>
 
-      <section class="portal-section">
-        <h2 class="portal-section-label">ツール・コミュニティ</h2>
-        <div class="portal-external">
-          ${externalLinks.map(renderPortalExternalLink).join('')}
+      <section class="portal-section portal-section--community">
+        <h2 class="portal-community-title">コミュニティ</h2>
+        <div class="community-grid">
+          ${externalLinks.map(renderCommunityCard).join('')}
         </div>
       </section>
     </div>
@@ -647,7 +690,6 @@ function renderNpcListItem(npc, active) {
 
 function renderNpcDetail(npc) {
   const orgLinks = renderNpcOrgDisplay(npc);
-  const contactablePcs = resolvePcs(npc.contactablePcIds);
   const bioHtml = (npc.bio || []).map(p => `<p>${escapeHtml(p)}</p>`).join('');
 
   const headerRows = [
@@ -674,11 +716,7 @@ function renderNpcDetail(npc) {
     </div>
   ` : '';
 
-  const contactableHtml = contactablePcs.length
-    ? renderLinkList(contactablePcs.map(pc =>
-        renderLink(`#pcs/${pc.id}`, pc.name, pc.playerName)
-      ))
-    : '';
+  const contactableHtml = renderContactableContent(npc);
 
   return `
     <article class="entity-detail">
@@ -695,7 +733,7 @@ function renderNpcDetail(npc) {
       ${renderNpcPersonalitySection(npc)}
       ${renderNpcPersonSection(npc)}
       ${renderDetailSection('エピソード', episodesHtml)}
-      ${renderDetailSection('連絡可能PC', contactableHtml)}
+      ${renderDetailSection('連絡可能PC', contactableHtml, { alwaysShow: true })}
       ${renderNpcRelatedSection(npc)}
     </article>
   `;

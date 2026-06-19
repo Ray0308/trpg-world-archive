@@ -657,66 +657,122 @@ input {
   line-height: 1.5;
 }
 
-.portal-external {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.85rem;
-}
-
-.portal-external-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.25rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
-  text-decoration: none;
-  color: inherit;
-  position: relative;
-  transition: border-color 0.15s, transform 0.15s;
-}
-
-.portal-external-card:hover {
-  border-color: var(--accent-border);
-  transform: translateY(-2px);
-  text-decoration: none;
-  color: inherit;
-}
-
-.portal-external-card--disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.portal-external-icon {
-  font-size: 1.75rem;
-}
-
-.portal-external-name {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.portal-external-desc {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.portal-external-go {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  font-size: 0.9rem;
-  color: var(--accent);
-}
-
 .portal-external-note {
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 0.25rem;
+}
+
+/* ---- Community (Cocofolia-style) ---- */
+
+.portal-section--community {
+  margin-bottom: 0;
+}
+
+.portal-community-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.community-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.community-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s;
+}
+
+.community-card:hover {
+  transform: translateY(-3px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.community-card--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.community-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 100px;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.community-logo--cocofolia {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.community-logo-mark--cocofolia {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff 50%, #e8487a 50%);
+  flex-shrink: 0;
+}
+
+.community-logo-word {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.community-logo-word--iachara {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #2d8a7e;
+}
+
+.community-logo--iachara {
+  background: #f5f5f5;
+}
+
+.community-logo--discord {
+  background: #5865f2;
+  color: #fff;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.community-logo-svg {
+  width: 44px;
+  height: 44px;
+}
+
+.community-logo-word--discord {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.community-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.community-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
 }
 
 .error-panel h2 {
@@ -1380,6 +1436,11 @@ input {
 
 .link-list li:last-child {
   border-bottom: none;
+}
+
+.contact-name {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
 }
 
 .entity-link {
@@ -2052,6 +2113,10 @@ input {
   }
 
   .portal-external {
+    grid-template-columns: 1fr;
+  }
+
+  .community-grid {
     grid-template-columns: 1fr;
   }
 }
