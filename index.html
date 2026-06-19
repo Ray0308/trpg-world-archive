@@ -13,7 +13,7 @@
   <div class="app">
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <a href="#npcs" class="site-brand site-brand--sidebar">
+        <a href="#home" class="site-brand site-brand--sidebar">
           <img src="images/yokofolia-mascot.png" alt="" class="site-brand-mascot" width="40" height="40" decoding="async">
           <span class="site-brand-text">
             <span class="site-brand-name">YOKOFOLIA</span>
@@ -29,6 +29,7 @@
         </button>
       </div>
       <ul class="nav-menu" id="navMenu">
+        <li><a href="#home" class="nav-link" data-section="home"><span class="nav-icon">🏠</span>ホーム</a></li>
         <li><a href="#npcs" class="nav-link" data-section="npcs"><span class="nav-icon">🧑‍🤝‍🧑</span>NPC</a></li>
         <li><a href="#organizations" class="nav-link" data-section="organizations"><span class="nav-icon">🏛️</span>組織</a></li>
         <li><a href="#scenarios" class="nav-link" data-section="scenarios"><span class="nav-icon">📜</span>シナリオ</a></li>
@@ -43,7 +44,7 @@
             <path d="M3 12h18M3 6h18M3 18h18"/>
           </svg>
         </button>
-        <a href="#npcs" class="site-brand">
+        <a href="#home" class="site-brand">
           <img src="images/yokofolia-mascot.png" alt="" class="site-brand-mascot" width="36" height="36" decoding="async">
           <span class="site-brand-text">
             <span class="site-brand-name">YOKOFOLIA</span>
@@ -60,7 +61,12 @@
       </header>
 
       <main class="content-area" id="contentArea">
-        <p class="loading">データを読み込んでいます...</p>
+        <div class="portal-loading" role="status" aria-live="polite">
+          <img src="images/yokofolia-mascot.png" alt="" class="portal-loading-mascot" width="96" height="96" decoding="async">
+          <p class="portal-loading-brand">YOKOFOLIA</p>
+          <p class="portal-loading-message" id="loadingMessage">住民台帳を開いています…</p>
+          <div class="portal-loading-bar" aria-hidden="true"><span></span></div>
+        </div>
       </main>
 
       <footer class="footer">

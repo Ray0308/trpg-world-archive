@@ -212,9 +212,9 @@ function orgMembers(orgId) {
 /* ---- Routing ---- */
 
 function parseHash() {
-  const hash = location.hash.slice(1) || 'npcs';
+  const hash = location.hash.slice(1) || 'home';
   const parts = hash.split('/').filter(Boolean);
-  return { section: parts[0] || 'npcs', id: parts[1] || null };
+  return { section: parts[0] || 'home', id: parts[1] || null };
 }
 
 function navigate(section, id) {
@@ -263,6 +263,42 @@ function getActiveEntity() {
     case 'scenarios': return indexes.scenarioById.get(route.id);
     case 'pcs': return indexes.pcById.get(route.id);
     default: return null;
+  }
+}
+
+/* ---- Loading ---- */
+
+const LOADING_MESSAGES = [
+  '住民台帳を開いています…',
+  '迷宮の地図を広げています…',
+  '登場人物を呼び集めています…',
+  'ふわっと同期中…'
+];
+
+let loadingMessageTimer = null;
+
+function renderLoadingScreen() {
+  contentArea.innerHTML = `
+    <div class="portal-loading" role="status" aria-live="polite">
+      <img src="images/yokofolia-mascot.png" alt="" class="portal-loading-mascot" width="96" height="96" decoding="async">
+      <p class="portal-loading-brand">YOKOFOLIA</p>
+      <p class="portal-loading-message" id="loadingMessage">${LOADING_MESSAGES[0]}</p>
+      <div class="portal-loading-bar" aria-hidden="true"><span></span></div>
+    </div>
+  `;
+
+  let index = 0;
+  loadingMessageTimer = setInterval(() => {
+    index = (index + 1) % LOADING_MESSAGES.length;
+    const el = document.getElementById('loadingMessage');
+    if (el) el.textContent = LOADING_MESSAGES[index];
+  }, 2200);
+}
+
+function stopLoadingScreen() {
+  if (loadingMessageTimer) {
+    clearInterval(loadingMessageTimer);
+    loadingMessageTimer = null;
   }
 }
 
@@ -481,6 +517,106 @@ function getActiveId(filtered, fallbackId) {
     return filtered[0].id;
   }
   return fallbackId || filtered[0]?.id || null;
+}
+
+/* ---- Portal Home ---- */
+
+function renderPortalStatCard({ section, icon, label, count, sub }) {
+  return `
+    <a href="#${section}" class="stat-card" data-nav-section="${section}">
+      <span class="stat-card-icon" aria-hidden="true">${icon}</span>
+      <span class="stat-card-label">${escapeHtml(label)}</span>
+      <span class="stat-card-divider" aria-hidden="true"></span>
+      <span class="stat-card-value">${count}</span>
+      <span class="stat-card-sub">${escapeHtml(sub)}</span>
+    </a>
+  `;
+}
+
+function renderPortalFeaturedNpc(npc) {
+  const status = STATUS_LABELS[npc.status] || '不明';
+  const statusClass = STATUS_CLASSES[npc.status] || 'status-unknown';
+  return `
+    <a href="#npcs/${npc.id}" class="portal-featured-card" data-nav-section="npcs" data-nav-id="${npc.id}">
+      ${npcAvatarImg(npc)}
+      <span class="portal-featured-body">
+        <span class="portal-featured-name">${escapeHtml(npc.name)}</span>
+        <span class="portal-featured-sub">${escapeHtml(npc.job || npc.furigana || '')}</span>
+      </span>
+      <span class="list-item-badge ${statusClass}">${escapeHtml(status)}</span>
+    </a>
+  `;
+}
+
+function renderHomeView() {
+  const stats = [
+    { section: 'npcs', icon: '🧑‍🤝‍🧑', label: 'NPC', count: store.npcs.length, sub: '登録済み' },
+    { section: 'organizations', icon: '🏛️', label: 'ORGANIZATION', count: store.organizations.length, sub: '組織' },
+    { section: 'scenarios', icon: '📜', label: 'SCENARIO', count: store.scenarios.length, sub: 'シナリオ' },
+    { section: 'pcs', icon: '👤', label: 'PLAYER', count: store.pcs.length, sub: 'PC' }
+  ];
+
+  const featured = store.npcs.slice(0, 4);
+
+  contentArea.innerHTML = `
+    <div class="portal-page">
+      <section class="portal-hero">
+        <img src="images/yokofolia-mascot.png" alt="" class="portal-hero-mascot" width="120" height="120" decoding="async">
+        <div class="portal-hero-body">
+          <p class="portal-hero-kicker">TRPG WORLD PORTAL</p>
+          <h1 class="portal-hero-title">ふわっと住民台帳</h1>
+          <p class="portal-hero-lead">この世界に暮らす人々・組織・物語を、ひとつの場所から辿れるアーカイブ。</p>
+        </div>
+      </section>
+
+      <section class="portal-section">
+        <h2 class="portal-section-label">本日の台帳</h2>
+        <div class="portal-stats">
+          ${stats.map(renderPortalStatCard).join('')}
+        </div>
+      </section>
+
+      ${featured.length ? `
+        <section class="portal-section">
+          <div class="portal-section-head">
+            <h2 class="portal-section-label">注目の住民</h2>
+            <a href="#npcs" class="portal-section-link" data-nav-section="npcs">すべて見る →</a>
+          </div>
+          <div class="portal-featured">
+            ${featured.map(renderPortalFeaturedNpc).join('')}
+          </div>
+        </section>
+      ` : ''}
+
+      <section class="portal-section">
+        <h2 class="portal-section-label">探索する</h2>
+        <div class="portal-explore">
+          <a href="#npcs" class="portal-explore-card" data-nav-section="npcs">
+            <span class="portal-explore-icon">🧑‍🤝‍🧑</span>
+            <span class="portal-explore-name">NPC</span>
+            <span class="portal-explore-desc">登場人物のプロフィールとエピソード</span>
+          </a>
+          <a href="#organizations" class="portal-explore-card" data-nav-section="organizations">
+            <span class="portal-explore-icon">🏛️</span>
+            <span class="portal-explore-name">組織</span>
+            <span class="portal-explore-desc">勢力・結社とそのメンバー</span>
+          </a>
+          <a href="#scenarios" class="portal-explore-card" data-nav-section="scenarios">
+            <span class="portal-explore-icon">📜</span>
+            <span class="portal-explore-name">シナリオ</span>
+            <span class="portal-explore-desc">物語の記録と関連情報</span>
+          </a>
+          <a href="#pcs" class="portal-explore-card" data-nav-section="pcs">
+            <span class="portal-explore-icon">👤</span>
+            <span class="portal-explore-name">PC</span>
+            <span class="portal-explore-desc">プレイヤーキャラクター一覧</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  `;
+
+  bindNavigation();
 }
 
 /* ---- NPC Views ---- */
@@ -941,6 +1077,9 @@ function render() {
   }
 
   switch (route.section) {
+    case 'home':
+      renderHomeView();
+      break;
     case 'organizations':
       renderOrganizationsView();
       break;
@@ -1046,8 +1185,10 @@ window.addEventListener('hashchange', onHashChange);
 /* ---- Init ---- */
 
 async function init() {
+  renderLoadingScreen();
   try {
     await loadData();
+    stopLoadingScreen();
     route = parseHash();
     renderNoticeBanner();
     if (!route.id && route.section === 'npcs' && store.npcs.length > 0) {
@@ -1066,6 +1207,7 @@ async function init() {
     updateNavActive();
     render();
   } catch (err) {
+    stopLoadingScreen();
     console.error('[TRPG Archive]', err);
     renderFatalError(err);
   }
