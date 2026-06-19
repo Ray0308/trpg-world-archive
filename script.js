@@ -1,5 +1,5 @@
 /* ========================================
-   TRPG World Archive v0.2
+   YOKOFOLIA ふわっと住民台帳
    ======================================== */
 
 const STATUS_LABELS = {
@@ -246,11 +246,13 @@ function scrollDetailToTop() {
   if (panel) panel.scrollTop = 0;
 }
 
+const SITE_NAME = 'YOKOFOLIA ふわっと住民台帳';
+
 function updateDocumentTitle() {
   const entity = getActiveEntity();
   document.title = entity
-    ? `${entity.name} — TRPG World Archive`
-    : 'TRPG World Archive';
+    ? `${entity.name} — YOKOFOLIA`
+    : SITE_NAME;
 }
 
 function getActiveEntity() {

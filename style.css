@@ -1,26 +1,28 @@
 /* ========================================
-   TRPG World Archive v0.1 — Dark Theme
+   YOKOFOLIA ふわっと住民台帳 — Dark Theme
    ======================================== */
 
 :root {
-  --bg-base: #0f1117;
-  --bg-sidebar: #161b26;
-  --bg-panel: #1a2030;
-  --bg-card: #1e2538;
-  --bg-card-hover: #252d42;
-  --bg-input: #141a28;
-  --bg-active: #1e3a5f;
+  --bg-base: #0d1118;
+  --bg-sidebar: #141a24;
+  --bg-panel: #181f2c;
+  --bg-card: #1c2434;
+  --bg-card-hover: #243044;
+  --bg-input: #121824;
+  --bg-active: #1e3348;
 
-  --border: #2a3348;
-  --border-light: #353f56;
+  --border: #2a3548;
+  --border-light: #38465c;
 
   --text-primary: #e8ecf4;
   --text-secondary: #9aa5be;
   --text-muted: #6b7894;
 
-  --accent: #4a9eff;
-  --accent-dim: rgba(74, 158, 255, 0.15);
-  --accent-hover: #6bb0ff;
+  --accent: #6ba3e8;
+  --accent-dim: rgba(107, 163, 232, 0.15);
+  --accent-hover: #8bb8f0;
+  --accent-warm: #d98a4a;
+  --accent-warm-dim: rgba(217, 138, 74, 0.14);
 
   --status-alive: #34d399;
   --status-alive-bg: rgba(52, 211, 153, 0.12);
@@ -54,7 +56,10 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg-base);
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 15% -10%, rgba(107, 163, 232, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 110%, rgba(217, 138, 74, 0.05) 0%, transparent 50%);
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
@@ -108,6 +113,15 @@ input {
   padding: 0.75rem;
   display: flex;
   justify-content: flex-end;
+}
+
+.sidebar-brand {
+  padding: 1rem 0.85rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-brand .site-brand {
+  width: 100%;
 }
 
 .sidebar-close {
@@ -196,6 +210,64 @@ input {
   color: var(--text-primary);
   white-space: nowrap;
   text-decoration: none;
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.site-brand:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.site-brand-mascot {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.site-brand--sidebar .site-brand-mascot {
+  width: 40px;
+  height: 40px;
+}
+
+.site-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.site-brand-name {
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.site-brand-tagline {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--accent-warm);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.site-brand:hover .site-brand-name {
+  color: var(--accent-hover);
 }
 
 .site-title:hover {
@@ -970,11 +1042,20 @@ input {
   gap: 0.65rem;
 }
 
-.footer-logo {
-  width: 48px;
-  height: 48px;
+.footer-logo,
+.footer-mascot {
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.footer-brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
 }
 
 .footer-name {
@@ -984,6 +1065,13 @@ input {
   letter-spacing: 0.06em;
   color: var(--text-primary);
   line-height: 1;
+}
+
+.footer-tagline {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent-warm);
+  letter-spacing: 0.03em;
 }
 
 .footer-copy {
@@ -1021,6 +1109,20 @@ input {
   max-width: 960px;
   margin: 0 auto;
   width: 100%;
+}
+
+.kp-intro-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.kp-intro-mascot {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
 }
 
 .kp-intro {
@@ -1459,6 +1561,14 @@ input {
   .header {
     padding: 0.6rem 1rem;
     flex-wrap: wrap;
+  }
+
+  .site-brand-name {
+    font-size: 0.85rem;
+  }
+
+  .site-brand-tagline {
+    font-size: 0.62rem;
   }
 
   .site-title {
