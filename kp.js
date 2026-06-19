@@ -159,6 +159,60 @@
     return map[String(status).trim()] || 'status-unknown';
   }
 
+  function generatePickerAvatarFallback(name) {
+    const initial = (name || '?').charAt(0);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+      <rect width="80" height="80" rx="8" fill="#2d5a3d"/>
+      <circle cx="40" cy="32" r="14" fill="#4a9eff" opacity="0.6"/>
+      <ellipse cx="40" cy="68" rx="22" ry="16" fill="#4a9eff" opacity="0.4"/>
+      <text x="40" y="36" text-anchor="middle" fill="#fff" font-size="14" font-family="sans-serif" font-weight="600">${initial}</text>
+    </svg>`;
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
+  window.handleArchiveImgError = window.handleArchiveImgError || function (img) {
+    let fallbacks = [];
+    try {
+      const raw = img.getAttribute('data-fallbacks') || '%5B%5D';
+      fallbacks = JSON.parse(decodeURIComponent(raw));
+    } catch (e) {
+      fallbacks = [];
+    }
+    if (fallbacks.length > 0) {
+      img.src = fallbacks.shift();
+      img.setAttribute('data-fallbacks', encodeURIComponent(JSON.stringify(fallbacks)));
+      return;
+    }
+    img.onerror = null;
+    try {
+      const svg = decodeURIComponent(img.getAttribute('data-svg-fallback') || '');
+      if (svg) img.src = svg;
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
+  function renderPickerAvatar(npc) {
+    const svgFallback = generatePickerAvatarFallback(npc.name);
+    const url = npc.image_url || '';
+    const utils = window.ImageUtils;
+    const { src, fallbacks } = utils
+      ? utils.buildImgAttrs(url, svgFallback)
+      : { src: url || svgFallback, fallbacks: [] };
+    const fallbacksEncoded = encodeURIComponent(JSON.stringify(fallbacks));
+    const svgEncoded = encodeURIComponent(svgFallback);
+
+    return `<img class="kp-picker-avatar"` +
+      ` src="${escapeAttr(src)}"` +
+      ` alt=""` +
+      ` loading="lazy"` +
+      ` decoding="async"` +
+      ` referrerpolicy="no-referrer"` +
+      ` data-fallbacks="${fallbacksEncoded}"` +
+      ` data-svg-fallback="${svgEncoded}"` +
+      ` onerror="handleArchiveImgError(this)">`;
+  }
+
   function filterNpcs(npcs, query) {
     const q = query.trim().toLowerCase();
     if (!q) return npcs;
@@ -188,13 +242,16 @@
           return `
             <li>
               <${tag} class="kp-picker-item${disabled}"${attrs} role="option">
-                <span class="kp-picker-name">${escapeHtml(npc.name)}</span>
-                ${npc.furigana ? `<span class="kp-picker-sub">${escapeHtml(npc.furigana)}</span>` : ''}
-                <span class="kp-picker-meta">
-                  ${npc.occupation ? `<span>${escapeHtml(npc.occupation)}</span>` : ''}
-                  ${npc.status ? `<span class="list-item-badge ${statusBadgeClass(npc.status)}">${escapeHtml(npc.status)}</span>` : ''}
+                ${renderPickerAvatar(npc)}
+                <span class="kp-picker-body">
+                  <span class="kp-picker-name">${escapeHtml(npc.name)}</span>
+                  ${npc.furigana ? `<span class="kp-picker-sub">${escapeHtml(npc.furigana)}</span>` : ''}
+                  <span class="kp-picker-meta">
+                    ${npc.occupation ? `<span>${escapeHtml(npc.occupation)}</span>` : ''}
+                    ${npc.status ? `<span class="list-item-badge ${statusBadgeClass(npc.status)}">${escapeHtml(npc.status)}</span>` : ''}
+                  </span>
+                  ${hasEdit ? '' : '<span class="kp-picker-note">編集URLなし</span>'}
                 </span>
-                ${hasEdit ? '' : '<span class="kp-picker-note">編集URLなし</span>'}
               </${tag}>
             </li>
           `;

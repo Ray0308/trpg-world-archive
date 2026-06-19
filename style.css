@@ -1211,6 +1211,9 @@ input {
 
 .kp-picker-item {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   text-align: left;
   padding: 0.75rem 0.85rem;
   background: var(--bg-card);
@@ -1220,6 +1223,20 @@ input {
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   font-family: inherit;
+}
+
+.kp-picker-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg-input);
+}
+
+.kp-picker-body {
+  min-width: 0;
+  flex: 1;
 }
 
 .kp-picker-item:hover:not(.kp-picker-item--disabled) {

@@ -195,6 +195,7 @@ function getKpNpcs_(ss) {
         furigana: record.furigana || '',
         occupation: record.occupation || '',
         status: record.status || '',
+        image_url: record.image_url || '',
         edit_url: record.edit_url || ''
       };
     })
