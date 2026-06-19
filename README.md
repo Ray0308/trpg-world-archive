@@ -55,9 +55,23 @@ script.js                … UI（閲覧専用）
 
 ## スプレッドシート列（参考）
 
-### NPC
+### NPC（現在のスプレッドシート列）
 
-id, 名前, フリガナ, 生年月日, 年齢, 国籍, 出身地, 職業, organization_id, 状態, 人物紹介, 人物, エピソード, 連絡可能PC, 画像URL
+```
+id, name, furigana, birth_date, age, nationality, birth_place, occupation, status,
+organization_names, organization_ids, image_url, profile, personality, memo, edit_url
+```
+
+| 列 | サイト表示 |
+|----|-----------|
+| `name` 〜 `status` | 基本情報 |
+| `organization_names` / `organization_ids` | 所属組織 |
+| `image_url` | 画像 |
+| `profile` | 人物紹介 |
+| `personality` | 性格 |
+| `memo`, `edit_url` | 非表示（管理用） |
+
+将来列を追加した場合（`person`, `episodes`, `contactable_pc_ids` 等）はサイト側も対応済み。
 
 ### 組織
 

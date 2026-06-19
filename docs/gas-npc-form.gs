@@ -1,0 +1,234 @@
+/**
+ * TRPG World Archive — NPC フォーム → NPCS シート → 公開 API
+ *
+ * トリガー設定: フォーム送信時 → onNpcFormSubmit
+ * 本番初期化（1回のみ）: resetNpcSheetForProduction
+ */
+
+function getAnswers_(response) {
+  const answers = {};
+  response.getItemResponses().forEach(itemResponse => {
+    let title = normalizeTitle_(itemResponse.getItem().getTitle());
+    answers[title] = itemResponse.getResponse();
+  });
+  return answers;
+}
+
+function normalizeTitle_(title) {
+  return String(title)
+    .replace(/^[0-9０-９]+[.．、\s]*/, '')
+    .trim();
+}
+
+function getNpcHeaders_() {
+  return [
+    'id',
+    'name',
+    'furigana',
+    'birth_date',
+    'age',
+    'nationality',
+    'birth_place',
+    'occupation',
+    'status',
+    'organization_names',
+    'organization_ids',
+    'image_url',
+    'profile',
+    'person',
+    'episodes',
+    'scenario_ids',
+    'related_npc_ids',
+    'contactable_pc_ids',
+    'location_ids',
+    'memo',
+    'edit_url',
+    'form_response_id',
+    'created_at',
+    'updated_at'
+  ];
+}
+
+function ensureNpcHeader_(sheet) {
+  const headers = getNpcHeaders_();
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const firstRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const isEmpty = firstRow.every(value => value === '');
+
+  if (isEmpty) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers;
+  }
+
+  const existing = firstRow.map(h => String(h).trim()).filter(Boolean);
+  const missing = headers.filter(h => !existing.includes(h));
+  if (missing.length) {
+    sheet.getRange(1, existing.length + 1, 1, existing.length + missing.length)
+      .setValues([missing]);
+    return existing.concat(missing);
+  }
+  return existing;
+}
+
+function generateNpcId_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return 'npc_001';
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  let maxNumber = 0;
+  ids.forEach(id => {
+    const match = String(id).match(/^npc_(\d+)$/);
+    if (match) maxNumber = Math.max(maxNumber, Number(match[1]));
+  });
+  return 'npc_' + String(maxNumber + 1).padStart(3, '0');
+}
+
+function toDriveFileUrl_(value) {
+  if (!value) return '';
+  if (Array.isArray(value)) {
+    const fileId = value[0];
+    return fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : '';
+  }
+  const text = String(value);
+  if (text.startsWith('http')) return text;
+  return `https://drive.google.com/uc?export=view&id=${text}`;
+}
+
+function cleanStatus_(status) {
+  return String(status).replace(/[＊*]/g, '').trim();
+}
+
+function pickAnswer_(answers, ...keys) {
+  for (const key of keys) {
+    if (answers[key] != null && String(answers[key]).trim() !== '') {
+      return answers[key];
+    }
+  }
+  return '';
+}
+
+function buildNpcRowFromAnswers_(answers, sheet, response) {
+  const now = new Date();
+  return {
+    id: generateNpcId_(sheet),
+    name: pickAnswer_(answers, 'NPC名'),
+    furigana: pickAnswer_(answers, 'ふりがな'),
+    birth_date: pickAnswer_(answers, '生年月日'),
+    age: pickAnswer_(answers, '年齢'),
+    nationality: pickAnswer_(answers, '国籍'),
+    birth_place: pickAnswer_(answers, '出身地'),
+    occupation: pickAnswer_(answers, '職業'),
+    status: cleanStatus_(pickAnswer_(answers, '状態')),
+    organization_names: pickAnswer_(answers, '所属組織'),
+    organization_ids: '',
+    image_url: toDriveFileUrl_(pickAnswer_(answers, 'NPC画像')),
+    profile: pickAnswer_(answers, '人物紹介'),
+    person: pickAnswer_(answers, '人物情報'),
+    episodes: pickAnswer_(answers, 'エピソード'),
+    scenario_ids: pickAnswer_(answers, '登場シナリオ'),
+    related_npc_ids: pickAnswer_(answers, '関連NPC'),
+    contactable_pc_ids: pickAnswer_(answers, '連絡可能PC'),
+    location_ids: pickAnswer_(answers, '関連場所'),
+    memo: pickAnswer_(answers, '備考'),
+    edit_url: response.getEditResponseUrl(),
+    form_response_id: response.getId(),
+    created_at: now,
+    updated_at: now
+  };
+}
+
+/**
+ * フォーム送信トリガーに設定する関数（この名前で登録）
+ */
+function onNpcFormSubmit(e) {
+  const form = FormApp.getActiveForm();
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const sheet = getOrCreateSheet_(ss, 'NPCS');
+  const headers = ensureNpcHeader_(sheet);
+
+  const response = e.response;
+  const answers = getAnswers_(response);
+  const rowData = buildNpcRowFromAnswers_(answers, sheet, response);
+  const row = headers.map(header => rowData[header] ?? '');
+  sheet.appendRow(row);
+}
+
+function doGet(e) {
+  const form = FormApp.getActiveForm();
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const type = (e && e.parameter && e.parameter.type) || 'npcs';
+
+  if (type === 'npcs') {
+    return jsonResponse_(getPublicNpcs_(ss), e && e.parameter && e.parameter.callback);
+  }
+
+  return jsonResponse_({ error: 'unknown type', type: type }, e && e.parameter && e.parameter.callback);
+}
+
+function getPublicNpcs_(ss) {
+  const sheet = ss.getSheetByName('NPCS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const adminKeys = new Set([
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo'
+  ]);
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      adminKeys.forEach(key => delete record[key]);
+      return record;
+    });
+}
+
+function jsonResponse_(data, callback) {
+  const json = JSON.stringify(data);
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getOrCreateSheet_(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  return sheet || ss.insertSheet(sheetName);
+}
+
+/**
+ * 本番用に NPCS シートを初期化（1回だけ手動実行）
+ * プルダウンでは resetNpcSheetForProduction を選ぶ
+ */
+function resetNpcSheetForProduction() {
+  const form = FormApp.getActiveForm();
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const headers = getNpcHeaders_();
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  const archiveName = 'NPCS_archive_' + stamp;
+
+  const existing = ss.getSheetByName('NPCS');
+  if (existing) {
+    if (ss.getSheetByName(archiveName)) {
+      throw new Error(archiveName + ' が既にあります。アーカイブ名を変えるか削除してください。');
+    }
+    existing.setName(archiveName);
+  }
+
+  const sheet = ss.insertSheet('NPCS', 0);
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+
+  return '完了: 新しい NPCS シートを作成しました。旧データは ' + archiveName + ' にあります。';
+}

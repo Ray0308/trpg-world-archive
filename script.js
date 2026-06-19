@@ -172,6 +172,27 @@ function resolveOrgs(ids) {
   return (ids || []).map(id => indexes.orgById.get(id)).filter(Boolean);
 }
 
+function splitOrgNames(text) {
+  return String(text || '')
+    .split(/[,、|]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function resolveOrgsForNpc(npc) {
+  const byId = resolveOrgs(npc.organizationIds);
+  if (byId.length) return byId;
+  const names = splitOrgNames(npc.organizationNames);
+  const matched = [];
+  names.forEach(part => {
+    const org = store.organizations.find(o =>
+      o.name === part || part.includes(o.name) || o.name.includes(part)
+    );
+    if (org && !matched.some(item => item.id === org.id)) matched.push(org);
+  });
+  return matched;
+}
+
 function resolveScenarios(ids) {
   return (ids || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
 }
@@ -337,14 +358,8 @@ function renderRelatedBlock(title, innerHtml) {
   return `<div class="related-block"><h3>${escapeHtml(title)}</h3>${innerHtml}</div>`;
 }
 
-function renderNpcOrgListContent(npc) {
-  const orgs = resolveOrgs(npc.organizationIds);
-  if (!orgs.length) return '';
-  return renderLinkList(orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)));
-}
-
 function hasNpcOrgInfo(npc) {
-  return resolveOrgs(npc.organizationIds).length > 0 || isPresent(npc.organizationNames);
+  return resolveOrgsForNpc(npc).length > 0 || isPresent(npc.organizationNames);
 }
 
 function renderNpcPersonSection(npc) {
@@ -352,12 +367,26 @@ function renderNpcPersonSection(npc) {
   const rows = [
     renderInfoRow('家族', escapeHtml(p.family || '')),
     renderInfoRow('ペット', escapeHtml(p.pet || '')),
-    renderInfoRow('特徴', escapeHtml(p.traits || '')),
-    renderInfoRow('性格', escapeHtml(p.personality || ''))
+    renderInfoRow('特徴', escapeHtml(p.traits || ''))
   ].filter(Boolean);
 
   if (!rows.length) return '';
   return renderDetailSection('人物', `<dl class="info-grid info-grid--compact">${rows.join('')}</dl>`);
+}
+
+function renderNpcPersonalitySection(npc) {
+  const text = npc.personality || '';
+  if (!isPresent(text)) return '';
+  const html = splitParagraphs(text).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+  return renderDetailSection('性格', `<div class="prose">${html}</div>`);
+}
+
+function splitParagraphs(text) {
+  if (!text) return [];
+  return String(text)
+    .split(/\n{2,}|\r\n\r\n/)
+    .map(s => s.trim())
+    .filter(Boolean);
 }
 
 function renderNpcRelatedSection(npc) {
@@ -372,7 +401,6 @@ function renderNpcRelatedSection(npc) {
       return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
     })
   );
-  const orgContent = renderNpcOrgListContent(npc);
   const locations = resolveLocations(npc.locationIds);
   const locationHtml = locations.length
     ? `<ul class="link-list">${locations.map(loc =>
@@ -383,7 +411,6 @@ function renderNpcRelatedSection(npc) {
   const blocks = [
     renderRelatedBlock('登場シナリオ', scenarioLinks),
     renderRelatedBlock('関連NPC', npcLinks),
-    renderRelatedBlock('所属組織', orgContent),
     renderRelatedBlock('関連場所', locationHtml)
   ].filter(Boolean).join('');
 
@@ -404,12 +431,13 @@ function renderLinkList(items) {
 }
 
 function renderNpcOrgDisplay(npc) {
-  const orgs = resolveOrgs(npc.organizationIds);
+  const orgs = resolveOrgsForNpc(npc);
   if (orgs.length) {
     return orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、');
   }
-  if (isPresent(npc.organizationNames)) {
-    return escapeHtml(npc.organizationNames);
+  const names = splitOrgNames(npc.organizationNames);
+  if (names.length) {
+    return names.map(name => escapeHtml(name)).join('、');
   }
   return '';
 }
@@ -514,6 +542,7 @@ function renderNpcDetail(npc) {
       </header>
 
       ${renderDetailSection('人物紹介', bioHtml ? `<div class="prose">${bioHtml}</div>` : '')}
+      ${renderNpcPersonalitySection(npc)}
       ${renderNpcPersonSection(npc)}
       ${renderDetailSection('エピソード', episodesHtml)}
       ${renderDetailSection('連絡可能PC', contactableHtml)}

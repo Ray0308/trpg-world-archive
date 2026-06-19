@@ -2,6 +2,8 @@
 
 ブラウザ（GitHub Pages）から NPC データを取得するには、**JSONP 用の callback パラメータ**に対応してください。
 
+NPC の **全表示項目**（人物・エピソード・連絡可能PC・関連ID 等）を API に含める手順は [gas-npc-export.md](./gas-npc-export.md) を参照してください。
+
 ## doGet の例
 
 ```javascript

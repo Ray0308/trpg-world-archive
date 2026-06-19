@@ -67,7 +67,20 @@ window.ArchiveNormalize = (function () {
       };
     }
     if (typeof value === 'string' && value.trim()) {
-      return { family: value.trim(), pet: '', traits: '', personality: '' };
+      const text = value.trim();
+      if (text.startsWith('{') || text.startsWith('[')) {
+        const parsed = parseJsonField(text, null);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return {
+            family: parsed.family || parsed['家族'] || '',
+            pet: parsed.pet || parsed['ペット'] || '',
+            traits: parsed.traits || parsed['特徴'] || '',
+            personality: parsed.personality || parsed['性格'] || ''
+          };
+        }
+      }
+      // フォーム「人物情報」の自由記述 → 性格として表示
+      return { family: '', pet: '', traits: '', personality: text };
     }
     return { family: '', pet: '', traits: '', personality: '' };
   }
@@ -120,14 +133,28 @@ window.ArchiveNormalize = (function () {
       raw.profile !== undefined;
   }
 
+  function mergeApiPersonFields(raw, person) {
+    const pairs = [
+      ['family', raw.family || raw.family_info || raw['家族']],
+      ['pet', raw.pet || raw['ペット']],
+      ['traits', raw.traits || raw.features || raw['特徴']],
+      ['personality', raw.personality || raw['性格']]
+    ];
+    pairs.forEach(([key, value]) => {
+      const text = value == null ? '' : String(value).trim();
+      if (text && !person[key]) person[key] = text;
+    });
+    return person;
+  }
+
   /** Apps Script API → 内部モデル（管理フィールドは含めない） */
   function normalizeNpcFromApi(raw) {
     raw = stripAdminFields(raw);
-    const person = parsePersonField(raw.person || raw['人物']);
-    const personality = raw.personality || raw['性格'] || '';
-    if (personality && !person.personality) {
-      person.personality = String(personality).trim();
-    }
+    let person = parsePersonField(raw.person || raw['人物']);
+    person = mergeApiPersonFields(raw, person);
+    const personality = String(
+      raw.personality || raw['性格'] || person.personality || ''
+    ).trim();
 
     return {
       id: raw.id,
@@ -143,20 +170,31 @@ window.ArchiveNormalize = (function () {
       organizationNames: String(raw.organization_names || '').trim(),
       status: normalizeStatus(raw.status || raw['状態']),
       bio: splitParagraphs(raw.profile || raw.bio || raw['人物紹介']),
+      personality,
       person,
       episodes: parseEpisodes(raw.episodes || raw['エピソード']),
-      contactablePcIds: splitIds(raw.contactable_pc_ids || raw.contactablePcIds || raw['連絡可能PC']),
-      image: raw.image_url || raw.imageUrl || raw.image || '',
-      avatar: raw.avatar || raw['サムネイルURL'] || '',
-      scenarioIds: splitIds(raw.scenario_ids || raw.scenarioIds || raw['登場シナリオ']),
-      relatedNpcIds: parseRelatedNpcs(raw.related_npc_ids || raw.relatedNpcIds || raw['関連NPC']),
-      locationIds: splitIds(raw.location_ids || raw.locationIds || raw['関連場所'])
+      contactablePcIds: splitIds(
+        raw.contactable_pc_ids || raw.contactable_pcs || raw.contactablePcIds || raw['連絡可能PC']
+      ),
+      image: raw.image_url || raw.imageUrl || raw.image || raw['画像URL'] || '',
+      avatar: raw.avatar || raw.avatar_url || raw['サムネイルURL'] || '',
+      scenarioIds: splitIds(
+        raw.scenario_ids || raw.scenarios || raw.scenarioIds || raw['登場シナリオ']
+      ),
+      relatedNpcIds: parseRelatedNpcs(
+        raw.related_npc_ids || raw.related_npcs || raw.relatedNpcIds || raw['関連NPC']
+      ),
+      locationIds: splitIds(
+        raw.location_ids || raw.locations || raw.locationIds || raw['関連場所']
+      )
     };
   }
 
   /** スプレッドシート NPC 行 → 内部モデル */
   function normalizeNpcRow(row) {
     row = stripAdminFields(row);
+    const person = parsePersonField(row['人物'] || row.person);
+    const personality = String(row.personality || row['性格'] || person.personality || '').trim();
     return {
       id: row.id,
       name: row['名前'] || row.name || '',
@@ -170,8 +208,9 @@ window.ArchiveNormalize = (function () {
       organizationIds: splitIds(row.organization_id || row.organizationIds || row['organization_id']),
       organizationNames: String(row.organization_names || '').trim(),
       status: normalizeStatus(row['状態'] || row.status),
-      bio: splitParagraphs(row['人物紹介'] || row.bio),
-      person: parsePersonField(row['人物'] || row.person),
+      bio: splitParagraphs(row['人物紹介'] || row.bio || row.profile),
+      personality,
+      person,
       episodes: parseEpisodes(row['エピソード'] || row.episodes),
       contactablePcIds: splitIds(row['連絡可能PC'] || row.contactablePcIds),
       image: row['画像URL'] || row.imageUrl || row.image || '',
@@ -204,7 +243,8 @@ window.ArchiveNormalize = (function () {
       organizationIds: splitIds(raw.organizationIds),
       organizationNames: String(raw.organizationNames || '').trim(),
       status: normalizeStatus(raw.status),
-      bio: splitParagraphs(raw.bio),
+      bio: splitParagraphs(raw.bio || raw.profile),
+      personality: String(raw.personality || raw.person?.personality || '').trim(),
       person: parsePersonField(raw.person),
       episodes: parseEpisodes(raw.episodes),
       contactablePcIds: splitIds(raw.contactablePcIds),
