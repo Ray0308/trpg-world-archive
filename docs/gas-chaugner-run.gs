@@ -1,6 +1,8 @@
 /**
  * チャウグナー・ラン — スコアランキング API
  *
+ * 設定手順の詳細: docs/chaugner-run-setup.md
+ *
  * NPC 用 GAS に doGet の分岐を追記するか、このファイルを単体デプロイしてください。
  *
  * シート: CHAUGNER_SCORES

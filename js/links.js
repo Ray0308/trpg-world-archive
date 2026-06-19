@@ -29,6 +29,6 @@
     /** 外部ツール・コミュニティ（# は未設定） */
     cocofolia: 'https://ccfolia.com/',
     iachara: 'https://iachara.com/',
-    discord: 'https://discord.gg/Nvp8k3tCWK'
+    discord: 'https://discord.com/channels/1420377314264485950/1420377315082502228'
   };
 })();

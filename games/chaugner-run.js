@@ -10,13 +10,16 @@
   // 既存 API と同じデプロイを使う場合の例:
   // const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw20JiLGzzdC2m7uOgP14RecbtwFhbHUBuO-emsrDThF-YRsB8Ux60SQPOlRU5yXquw/exec';
 
-  const MASCOT_IMAGE_PATH = '../assets/images/mascot/chaugner.png';
+  const MASCOT_IMAGE_PATH = '../images/yokofolia-mascot.png';
   const CANVAS_W = 800;
   const CANVAS_H = 320;
   const GROUND_Y = 260;
-  const GRAVITY = 0.55;
-  const JUMP_VELOCITY = -11.5;
-  const BASE_SPEED = 5;
+  const GRAVITY_RISE_HELD = 0.22;
+  const GRAVITY_RISE_RELEASE = 0.58;
+  const GRAVITY_FALL = 0.62;
+  const JUMP_VELOCITY = -10.5;
+  const JUMP_VELOCITY_MAX = -16;
+  const BASE_SPEED = 4.5;
   const MAX_SPEED = 13;
   const OBSTACLE_MIN_GAP = 180;
   const OBSTACLE_MAX_GAP = 340;
@@ -50,6 +53,7 @@
   let elapsedMs = 0;
   let animId = null;
   let lastTs = 0;
+  let jumpHeld = false;
 
   const player = {
     x: 80,
@@ -175,6 +179,7 @@
     player.grounded = true;
     obstacles = [];
     distanceSinceObstacle = 500;
+    jumpHeld = false;
     updateScoreHud();
   }
 
@@ -182,12 +187,17 @@
     scoreValue.textContent = formatMeters(scoreMeters);
   }
 
-  function jump() {
+  function jumpStart() {
     if (state !== 'playing') return;
+    jumpHeld = true;
     if (player.grounded) {
       player.vy = JUMP_VELOCITY;
       player.grounded = false;
     }
+  }
+
+  function jumpEnd() {
+    jumpHeld = false;
   }
 
   function spawnObstacle(x) {
@@ -208,7 +218,11 @@
 
   function drawMascot(x, y, w, h) {
     if (mascotLoaded) {
-      ctx.drawImage(mascotImg, x, y, w, h);
+      ctx.save();
+      ctx.translate(x + w, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(mascotImg, 0, 0, w, h);
+      ctx.restore();
       return;
     }
     ctx.fillStyle = '#4a6a5a';
@@ -298,7 +312,16 @@
     scoreMeters += (gameSpeed * dt) / 60;
     updateScoreHud();
 
-    player.vy += GRAVITY;
+    if (!player.grounded) {
+      let gravity = GRAVITY_FALL;
+      if (player.vy < 0) {
+        gravity = jumpHeld ? GRAVITY_RISE_HELD : GRAVITY_RISE_RELEASE;
+        if (jumpHeld && player.vy > JUMP_VELOCITY_MAX) {
+          player.vy = Math.max(JUMP_VELOCITY_MAX, player.vy - 0.35);
+        }
+      }
+      player.vy += gravity;
+    }
     player.y += player.vy;
 
     const floor = GROUND_Y;
@@ -412,14 +435,29 @@
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
-      jump();
+      jumpStart();
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      jumpEnd();
     }
   });
 
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    jump();
+    jumpStart();
   });
+
+  canvas.addEventListener('pointerup', e => {
+    e.preventDefault();
+    jumpEnd();
+  });
+
+  canvas.addEventListener('pointercancel', jumpEnd);
+  canvas.addEventListener('pointerleave', jumpEnd);
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;
