@@ -37,6 +37,23 @@ window.ArchiveNormalize = (function () {
       .filter(Boolean);
   }
 
+  function isPlaceholderValue(value) {
+    const t = String(value ?? '').trim();
+    return !t || t === '未設定' || t === 'なし' || t === '—' || t === '-';
+  }
+
+  function splitIdList(value) {
+    return splitIds(value).filter(id => !isPlaceholderValue(id));
+  }
+
+  function parseLocationField(value) {
+    if (isPlaceholderValue(value)) return { locationIds: [], locationNames: [] };
+    const parts = splitIds(value);
+    const locationIds = parts.filter(p => /^loc-/i.test(p));
+    const locationNames = parts.filter(p => !/^loc-/i.test(p));
+    return { locationIds, locationNames };
+  }
+
   function splitParagraphs(value) {
     if (!value) return [];
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -86,16 +103,35 @@ window.ArchiveNormalize = (function () {
   }
 
   function parseEpisodes(value) {
-    const parsed = parseJsonField(value, []);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(ep => ({
-      icon: ep.icon || '📌',
-      title: ep.title || ep['タイトル'] || '',
-      desc: ep.desc || ep.description || ep['説明'] || ''
-    }));
+    if (value == null || value === '') return [];
+    if (isPlaceholderValue(value)) return [];
+
+    const parsed = parseJsonField(value, null);
+    if (Array.isArray(parsed)) {
+      return parsed.map(ep => ({
+        icon: ep.icon || '📌',
+        title: ep.title || ep['タイトル'] || '',
+        desc: ep.desc || ep.description || ep['説明'] || ''
+      })).filter(ep => ep.title || ep.desc);
+    }
+
+    const text = String(value).trim();
+    if (!text) return [];
+
+    // フォームの自由記述（1行1件、「タイトル：説明」形式にも対応）
+    return text.split(/\n+/).map(line => {
+      line = line.trim();
+      if (!line) return null;
+      const m = line.match(/^(.+?)[：:]\s*(.+)$/);
+      if (m) {
+        return { icon: '📌', title: m[1].trim(), desc: m[2].trim() };
+      }
+      return { icon: '📌', title: line, desc: '' };
+    }).filter(Boolean);
   }
 
   function parseRelatedNpcs(value) {
+    if (isPlaceholderValue(value)) return [];
     const parsed = parseJsonField(value, []);
     if (Array.isArray(parsed) && parsed.length && typeof parsed[0] === 'object') {
       return parsed.map(r => ({
@@ -103,7 +139,7 @@ window.ArchiveNormalize = (function () {
         relation: r.relation || r['関係'] || ''
       })).filter(r => r.npcId);
     }
-    return splitIds(value).map(id => ({ npcId: id, relation: '' }));
+    return splitIds(value).filter(id => !isPlaceholderValue(id)).map(id => ({ npcId: id, relation: '' }));
   }
 
   function normalizeStatus(value) {
@@ -155,6 +191,9 @@ window.ArchiveNormalize = (function () {
     const personality = String(
       raw.personality || raw['性格'] || person.personality || ''
     ).trim();
+    const locations = parseLocationField(
+      raw.location_ids || raw.locations || raw.locationIds || raw['関連場所']
+    );
 
     return {
       id: raw.id,
@@ -173,20 +212,19 @@ window.ArchiveNormalize = (function () {
       personality,
       person,
       episodes: parseEpisodes(raw.episodes || raw['エピソード']),
-      contactablePcIds: splitIds(
+      contactablePcIds: splitIdList(
         raw.contactable_pc_ids || raw.contactable_pcs || raw.contactablePcIds || raw['連絡可能PC']
       ),
       image: raw.image_url || raw.imageUrl || raw.image || raw['画像URL'] || '',
       avatar: raw.avatar || raw.avatar_url || raw['サムネイルURL'] || '',
-      scenarioIds: splitIds(
+      scenarioIds: splitIdList(
         raw.scenario_ids || raw.scenarios || raw.scenarioIds || raw['登場シナリオ']
       ),
       relatedNpcIds: parseRelatedNpcs(
         raw.related_npc_ids || raw.related_npcs || raw.relatedNpcIds || raw['関連NPC']
       ),
-      locationIds: splitIds(
-        raw.location_ids || raw.locations || raw.locationIds || raw['関連場所']
-      )
+      locationIds: locations.locationIds,
+      locationNames: locations.locationNames
     };
   }
 
@@ -215,9 +253,9 @@ window.ArchiveNormalize = (function () {
       contactablePcIds: splitIds(row['連絡可能PC'] || row.contactablePcIds),
       image: row['画像URL'] || row.imageUrl || row.image || '',
       avatar: row.avatar || row['サムネイルURL'] || '',
-      scenarioIds: splitIds(row.scenarioIds || row['登場シナリオ']),
+      scenarioIds: splitIdList(row.scenarioIds || row['登場シナリオ']),
       relatedNpcIds: parseRelatedNpcs(row.relatedNpcIds || row['関連NPC']),
-      locationIds: splitIds(row.locationIds || row['関連場所'])
+      ...parseLocationField(row.locationIds || row['関連場所'])
     };
   }
 
@@ -247,12 +285,12 @@ window.ArchiveNormalize = (function () {
       personality: String(raw.personality || raw.person?.personality || '').trim(),
       person: parsePersonField(raw.person),
       episodes: parseEpisodes(raw.episodes),
-      contactablePcIds: splitIds(raw.contactablePcIds),
+      contactablePcIds: splitIdList(raw.contactablePcIds),
       image: raw.image || '',
       avatar: raw.avatar || '',
-      scenarioIds: splitIds(raw.scenarioIds),
+      scenarioIds: splitIdList(raw.scenarioIds),
       relatedNpcIds: parseRelatedNpcs(raw.relatedNpcIds),
-      locationIds: splitIds(raw.locationIds)
+      ...parseLocationField(raw.locationIds)
     };
   }
 

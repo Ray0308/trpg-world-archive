@@ -402,11 +402,16 @@ function renderNpcRelatedSection(npc) {
     })
   );
   const locations = resolveLocations(npc.locationIds);
-  const locationHtml = locations.length
-    ? `<ul class="link-list">${locations.map(loc =>
-        `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>`
-      ).join('')}</ul>`
-    : '';
+  let locationHtml = '';
+  if (locations.length) {
+    locationHtml = `<ul class="link-list">${locations.map(loc =>
+      `<li><span class="location-item">${loc.icon || '📍'} ${escapeHtml(loc.name)}</span></li>`
+    ).join('')}</ul>`;
+  } else if (npc.locationNames?.length) {
+    locationHtml = `<ul class="link-list">${npc.locationNames.map(name =>
+      `<li><span class="location-item">📍 ${escapeHtml(name)}</span></li>`
+    ).join('')}</ul>`;
+  }
 
   const blocks = [
     renderRelatedBlock('登場シナリオ', scenarioLinks),
@@ -517,7 +522,7 @@ function renderNpcDetail(npc) {
           <span class="episode-icon">${ep.icon || '📌'}</span>
           <div class="episode-body">
             <h3>${escapeHtml(ep.title)}</h3>
-            <p>${escapeHtml(ep.desc)}</p>
+            ${ep.desc ? `<p>${escapeHtml(ep.desc)}</p>` : ''}
           </div>
         </div>
       `).join('')}
