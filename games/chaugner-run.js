@@ -12,10 +12,10 @@
   const CANVAS_W = 800;
   const CANVAS_H = 320;
   const GROUND_Y = 260;
-  const GRAVITY_JUMP = 0.55;
-  const GRAVITY_FALL = 0.9;
-  const JUMP_VELOCITY = -11.5;
-  const FLOAT_DURATION_MS = 1000;
+  const GRAVITY = 0.85;
+  const FLOAT_VELOCITY = -3.2;
+  const LIFT_VELOCITY = -11;
+  const MAX_FLOAT_Y = 100;
   const BASE_SPEED = 4.2;
   const MAX_SPEED = 13;
   const OBSTACLE_MIN_GAP = 200;
@@ -50,9 +50,7 @@
   let elapsedMs = 0;
   let animId = null;
   let lastTs = 0;
-  /** ground → jump → float → fall → ground */
-  let flightPhase = 'ground';
-  let floatRemainingMs = 0;
+  let floatHeld = false;
 
   const player = {
     x: 80,
@@ -188,8 +186,7 @@
     player.grounded = true;
     obstacles = [];
     distanceSinceObstacle = 500;
-    flightPhase = 'ground';
-    floatRemainingMs = 0;
+    floatHeld = false;
     updateScoreHud();
   }
 
@@ -197,13 +194,17 @@
     scoreValue.textContent = formatMeters(scoreMeters);
   }
 
-  function jumpStart() {
+  function floatStart() {
     if (state !== 'playing') return;
-    if (flightPhase !== 'ground') return;
-    player.grounded = false;
-    flightPhase = 'jump';
-    player.vy = JUMP_VELOCITY;
-    floatRemainingMs = 0;
+    floatHeld = true;
+    if (player.grounded) {
+      player.grounded = false;
+      player.vy = LIFT_VELOCITY;
+    }
+  }
+
+  function floatEnd() {
+    floatHeld = false;
   }
 
   function spawnObstacle(x) {
@@ -301,7 +302,7 @@
 
     drawMascot(player.x, player.y, player.w, player.h);
 
-    if (flightPhase === 'float' && floatRemainingMs > 0) {
+    if (floatHeld && !player.grounded) {
       ctx.fillStyle = 'rgba(232, 72, 122, 0.2)';
       ctx.beginPath();
       ctx.ellipse(player.x + player.w / 2, player.y + player.h + 6, player.w * 0.55, 8, 0, 0, Math.PI * 2);
@@ -326,32 +327,28 @@
     updateScoreHud();
 
     if (!player.grounded) {
-      if (flightPhase === 'jump') {
-        player.vy += GRAVITY_JUMP;
-        if (player.vy >= 0) {
-          flightPhase = 'float';
-          player.vy = 0;
-          floatRemainingMs = FLOAT_DURATION_MS;
+      if (floatHeld) {
+        if (player.vy > FLOAT_VELOCITY) {
+          player.vy = Math.max(FLOAT_VELOCITY, player.vy - 1.1);
+        } else {
+          player.vy = FLOAT_VELOCITY;
         }
-      } else if (flightPhase === 'float') {
-        floatRemainingMs = Math.max(0, floatRemainingMs - dt);
-        player.vy = 0;
-        if (floatRemainingMs <= 0) {
-          flightPhase = 'fall';
-        }
-      } else if (flightPhase === 'fall') {
-        player.vy += GRAVITY_FALL;
+      } else {
+        player.vy += GRAVITY;
       }
     }
     player.y += player.vy;
+
+    if (player.y < MAX_FLOAT_Y) {
+      player.y = MAX_FLOAT_Y;
+      if (player.vy < 0) player.vy = 0;
+    }
 
     const floor = GROUND_Y;
     if (player.y >= floor) {
       player.y = floor;
       player.vy = 0;
       player.grounded = true;
-      flightPhase = 'ground';
-      floatRemainingMs = 0;
     }
 
     for (const obs of obstacles) {
@@ -461,14 +458,29 @@
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
-      jumpStart();
+      floatStart();
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      floatEnd();
     }
   });
 
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    jumpStart();
+    floatStart();
   });
+
+  canvas.addEventListener('pointerup', e => {
+    e.preventDefault();
+    floatEnd();
+  });
+
+  canvas.addEventListener('pointercancel', floatEnd);
+  canvas.addEventListener('pointerleave', floatEnd);
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;
