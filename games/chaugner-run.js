@@ -16,10 +16,12 @@
   const FLOAT_VELOCITY = -3.2;
   const LIFT_VELOCITY = -11;
   const MAX_FLOAT_Y = 100;
-  const BASE_SPEED = 4.2;
-  const MAX_SPEED = 13;
-  const OBSTACLE_MIN_GAP = 200;
-  const OBSTACLE_MAX_GAP = 360;
+  const FLOAT_MAX_MS = 1000;
+  const FLOAT_COOLDOWN_MS = 400;
+  const BASE_SPEED = 4.5;
+  const MAX_SPEED = 12;
+  const OBSTACLE_MIN_GAP = 210;
+  const OBSTACLE_MAX_GAP = 380;
   const NAME_MAX_LEN = 12;
 
   const canvas = document.getElementById('gameCanvas');
@@ -51,6 +53,8 @@
   let animId = null;
   let lastTs = 0;
   let floatHeld = false;
+  let floatBudgetMs = 0;
+  let floatCooldownMs = 0;
 
   const player = {
     x: 80,
@@ -64,8 +68,15 @@
   let obstacles = [];
   let distanceSinceObstacle = 500;
 
+  function difficultyFactor() {
+    return Math.min(1, elapsedMs / 90000);
+  }
+
   function nextObstacleGap() {
-    return OBSTACLE_MIN_GAP + Math.random() * (OBSTACLE_MAX_GAP - OBSTACLE_MIN_GAP);
+    const t = difficultyFactor();
+    const minGap = OBSTACLE_MIN_GAP - t * 50;
+    const maxGap = OBSTACLE_MAX_GAP - t * 90;
+    return minGap + Math.random() * (maxGap - minGap);
   }
 
   function escapeHtml(str) {
@@ -185,8 +196,10 @@
     player.vy = 0;
     player.grounded = true;
     obstacles = [];
-    distanceSinceObstacle = 500;
+    distanceSinceObstacle = 320 + Math.random() * 180;
     floatHeld = false;
+    floatBudgetMs = 0;
+    floatCooldownMs = 0;
     updateScoreHud();
   }
 
@@ -196,10 +209,13 @@
 
   function floatStart() {
     if (state !== 'playing') return;
+    if (floatCooldownMs > 0) return;
+    if (!player.grounded && floatBudgetMs <= 0) return;
     floatHeld = true;
     if (player.grounded) {
       player.grounded = false;
       player.vy = LIFT_VELOCITY;
+      floatBudgetMs = FLOAT_MAX_MS;
     }
   }
 
@@ -207,20 +223,59 @@
     floatHeld = false;
   }
 
-  function spawnObstacle(x) {
-    const types = ['cactus', 'rock', 'tall'];
-    const type = types[Math.floor(Math.random() * types.length)];
+  function createObstacle(x, lane) {
+    const t = difficultyFactor();
+    const groundBase = GROUND_Y + player.h;
+    let type = 'cactus';
     let w = 28;
     let h = 36;
-    if (type === 'rock') { w = 34; h = 28; }
-    if (type === 'tall') { w = 22; h = 52; }
-    obstacles.push({
-      x,
-      y: GROUND_Y + player.h - h,
-      w,
-      h,
-      type
-    });
+    let y = groundBase - h;
+
+    if (lane === 'air') {
+      type = 'air';
+      w = 36 + Math.floor(Math.random() * 16);
+      h = 26 + Math.floor(Math.random() * 14);
+      y = 118 + Math.floor(Math.random() * 28);
+    } else if (lane === 'tall') {
+      type = 'tall';
+      w = 20 + Math.floor(Math.random() * 8);
+      h = 48 + Math.floor(Math.random() * 16);
+      y = groundBase - h;
+    } else {
+      const roll = Math.random();
+      if (roll < 0.35 + t * 0.15) {
+        type = 'rock';
+        w = 30 + Math.floor(Math.random() * 12);
+        h = 24 + Math.floor(Math.random() * 10);
+      } else if (roll < 0.55 + t * 0.1) {
+        type = 'tall';
+        w = 20 + Math.floor(Math.random() * 8);
+        h = 44 + Math.floor(Math.random() * 14);
+      }
+      y = groundBase - h;
+    }
+
+    obstacles.push({ x, y, w, h, type, lane });
+  }
+
+  function spawnObstacleWave() {
+    const t = difficultyFactor();
+    const startX = CANVAS_W + 10 + Math.floor(Math.random() * 40);
+    const pattern = Math.random();
+
+    if (pattern < 0.12 + t * 0.12) {
+      createObstacle(startX, 'ground');
+      createObstacle(startX + 42 + Math.floor(Math.random() * 36), 'ground');
+    } else if (pattern < 0.28 + t * 0.14) {
+      createObstacle(startX, 'air');
+    } else if (pattern < 0.42 + t * 0.12) {
+      createObstacle(startX, 'ground');
+      createObstacle(startX + 8 + Math.floor(Math.random() * 24), 'air');
+    } else if (pattern < 0.58 + t * 0.08) {
+      createObstacle(startX, 'tall');
+    } else {
+      createObstacle(startX, 'ground');
+    }
   }
 
   function drawMascot(x, y, w, h) {
@@ -267,6 +322,11 @@
       ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
       ctx.fillStyle = '#e8487a';
       ctx.fillRect(obs.x + 4, obs.y + 6, obs.w - 8, 6);
+    } else if (obs.type === 'air') {
+      ctx.fillStyle = '#6a4a5a';
+      ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      ctx.fillStyle = 'rgba(232, 72, 122, 0.35)';
+      ctx.fillRect(obs.x + 3, obs.y + 3, obs.w - 6, obs.h - 6);
     } else {
       ctx.fillStyle = '#555';
       ctx.beginPath();
@@ -302,11 +362,18 @@
 
     drawMascot(player.x, player.y, player.w, player.h);
 
-    if (floatHeld && !player.grounded) {
+    if (floatHeld && !player.grounded && floatBudgetMs > 0) {
       ctx.fillStyle = 'rgba(232, 72, 122, 0.2)';
       ctx.beginPath();
       ctx.ellipse(player.x + player.w / 2, player.y + player.h + 6, player.w * 0.55, 8, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      const barW = player.w;
+      const ratio = floatBudgetMs / FLOAT_MAX_MS;
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(player.x, player.y - 10, barW, 4);
+      ctx.fillStyle = ratio > 0.25 ? '#e8487a' : '#c9a84c';
+      ctx.fillRect(player.x, player.y - 10, barW * ratio, 4);
     }
   }
 
@@ -326,8 +393,15 @@
     scoreMeters += (gameSpeed * dt) / 60;
     updateScoreHud();
 
+    if (floatCooldownMs > 0) {
+      floatCooldownMs = Math.max(0, floatCooldownMs - dt);
+    }
+
+    const isFloating = floatHeld && floatBudgetMs > 0;
+
     if (!player.grounded) {
-      if (floatHeld) {
+      if (isFloating) {
+        floatBudgetMs = Math.max(0, floatBudgetMs - dt);
         if (player.vy > FLOAT_VELOCITY) {
           player.vy = Math.max(FLOAT_VELOCITY, player.vy - 1.1);
         } else {
@@ -349,6 +423,8 @@
       player.y = floor;
       player.vy = 0;
       player.grounded = true;
+      floatBudgetMs = 0;
+      floatCooldownMs = FLOAT_COOLDOWN_MS;
     }
 
     for (const obs of obstacles) {
@@ -358,7 +434,7 @@
 
     distanceSinceObstacle += gameSpeed;
     if (distanceSinceObstacle >= nextObstacleGap()) {
-      spawnObstacle(CANVAS_W + 10);
+      spawnObstacleWave();
       distanceSinceObstacle = 0;
     }
 
