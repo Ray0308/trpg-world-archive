@@ -117,6 +117,17 @@ window.handleArchiveImgError = function (img) {
     return;
   }
   img.onerror = null;
+  const emojiFallback = img.getAttribute('data-emoji-fallback');
+  if (emojiFallback) {
+    const span = document.createElement('span');
+    span.className = 'org-icon-emoji';
+    if (img.classList.contains('org-icon-img--detail')) {
+      span.classList.add('org-icon-emoji--detail');
+    }
+    span.textContent = emojiFallback;
+    img.replaceWith(span);
+    return;
+  }
   try {
     const svg = decodeURIComponent(img.getAttribute('data-svg-fallback') || '');
     if (svg) img.src = svg;
@@ -352,22 +363,51 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-function orgIconFallbackSvg() {
-  return 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text x="2" y="26" font-size="22">🏛️</text></svg>'
-  );
+function defaultOrgEmoji(icon) {
+  const value = String(icon || '').trim();
+  if (!value || /\[?Ljava\.lang\.Object;@/i.test(value)) return '🏛️';
+  if (/^https?:\/\//i.test(value)) return '🏛️';
+  if (value.length <= 8) return value;
+  return '🏛️';
 }
 
-function renderOrgIcon(icon) {
+function renderOrgIconImg(url, emoji, variant) {
+  const utils = window.ImageUtils;
+  const { src, fallbacks } = utils
+    ? utils.buildImgAttrs(url, '')
+    : { src: url, fallbacks: [] };
+  const fallbacksEncoded = encodeURIComponent(JSON.stringify(fallbacks));
+  const sizeClass = variant === 'detail' ? 'org-icon-img--detail' : 'org-icon-img--card';
+
+  return `<img class="org-icon-img ${sizeClass}"` +
+    ` src="${escapeAttr(src)}"` +
+    ` alt=""` +
+    ` loading="lazy"` +
+    ` decoding="async"` +
+    ` referrerpolicy="no-referrer"` +
+    ` data-fallbacks="${fallbacksEncoded}"` +
+    ` data-emoji-fallback="${escapeAttr(emoji)}"` +
+    ` onerror="handleArchiveImgError(this)">`;
+}
+
+function renderOrgIcon(icon, { variant = 'card' } = {}) {
   const value = String(icon || '').trim();
+  const emoji = defaultOrgEmoji(icon);
+  const wrapClass = variant === 'detail' ? 'org-icon-wrap org-icon-wrap--detail' : 'org-icon-wrap org-icon-wrap--card';
+
   if (!value || /\[?Ljava\.lang\.Object;@/i.test(value)) {
-    return '🏛️';
+    const emojiClass = variant === 'detail' ? 'org-icon-emoji org-icon-emoji--detail' : 'org-icon-emoji';
+    return `<span class="${emojiClass}">${escapeHtml(emoji)}</span>`;
   }
   if (/^https?:\/\//i.test(value)) {
-    return renderImg(value, orgIconFallbackSvg(), { className: 'org-icon-img', alt: '' });
+    return `<span class="${wrapClass}">${renderOrgIconImg(value, emoji, variant)}</span>`;
   }
-  if (value.length > 8) return '🏛️';
-  return escapeHtml(value || '🏛️');
+  if (value.length > 8) {
+    const emojiClass = variant === 'detail' ? 'org-icon-emoji org-icon-emoji--detail' : 'org-icon-emoji';
+    return `<span class="${emojiClass}">${escapeHtml(emoji)}</span>`;
+  }
+  const emojiClass = variant === 'detail' ? 'org-icon-emoji org-icon-emoji--detail' : 'org-icon-emoji';
+  return `<span class="${emojiClass}">${escapeHtml(value)}</span>`;
 }
 
 function renderLink(href, label, sub = '') {
@@ -802,7 +842,7 @@ function renderOrgCard(org, active) {
     <article class="org-card ${active ? 'active' : ''}"
              data-nav-section="organizations"
              data-nav-id="${org.id}">
-      <span class="org-card-icon">${renderOrgIcon(org.icon)}</span>
+      <span class="org-card-icon">${renderOrgIcon(org.icon, { variant: 'card' })}</span>
       <h3 class="org-card-name">${escapeHtml(org.name)}</h3>
       <p class="org-card-summary">${escapeHtml(org.summary || '')}</p>
       <p class="org-card-meta">所属NPC ${members.length} 名${preview ? ` — ${preview}` : ''}</p>
@@ -814,53 +854,49 @@ function renderOrgDetail(org) {
   const members = orgMembers(org.id);
   const scenarios = resolveScenarios(org.scenarioIds);
   const location = org.locationId ? indexes.locationById.get(org.locationId) : null;
+  const locationLabel = location ? `${location.icon || '📍'} ${location.name}` : (org.locationName ? `📍 ${org.locationName}` : '');
+  const descriptionOnly = (org.description || []).filter(Boolean);
 
   return `
-    <article class="entity-detail">
-      <header class="detail-header detail-header--compact">
-        <span class="detail-org-icon">${renderOrgIcon(org.icon)}</span>
+    <article class="entity-detail entity-detail--org">
+      <header class="detail-header detail-header--org">
+        <div class="detail-org-icon">${renderOrgIcon(org.icon, { variant: 'detail' })}</div>
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(org.name)}</h1>
           ${org.nameEn ? `<p class="detail-meta">${escapeHtml(org.nameEn)}</p>` : ''}
+          ${org.summary ? `<p class="detail-summary">${escapeHtml(org.summary)}</p>` : ''}
+          ${locationLabel ? `<p class="detail-meta detail-meta--location">${escapeHtml(locationLabel)}</p>` : ''}
         </div>
       </header>
 
+      ${descriptionOnly.length ? `
       <section class="detail-section">
         <h2 class="section-heading">説明</h2>
         <div class="prose">
-          ${org.summary ? `<p>${escapeHtml(org.summary)}</p>` : ''}
-          ${(org.description || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
-          ${!org.summary && !(org.description || []).length ? renderEmpty() : ''}
+          ${descriptionOnly.map(p => `<p>${escapeHtml(p)}</p>`).join('')}
         </div>
-      </section>
-
-      ${location ? `
-      <section class="detail-section">
-        <h2 class="section-heading">所在地</h2>
-        <p class="location-item">${location.icon || '📍'} ${escapeHtml(location.name)}</p>
       </section>
       ` : ''}
 
       <section class="detail-section">
-        <h2 class="section-heading">所属NPC</h2>
+        <h2 class="section-heading">所属NPC <span class="section-count">${members.length}</span></h2>
         ${members.length ? `
-          <ul class="member-list">
+          <ul class="member-list member-list--org">
             ${members.map(npc => renderNpcMemberRow(npc)).join('')}
           </ul>
         ` : renderEmpty('所属NPCは登録されていません')}
       </section>
 
-      <section class="detail-section">
-        <h2 class="section-heading">関連情報</h2>
+      ${scenarios.length ? `
+      <section class="detail-section detail-section--compact">
+        <h2 class="section-heading">関連シナリオ</h2>
         <div class="related-grid">
-          <div class="related-block">
-            <h3>関連シナリオ</h3>
-            ${renderLinkList(
-              scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
-            )}
-          </div>
+          ${renderLinkList(
+            scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
+          )}
         </div>
       </section>
+      ` : ''}
     </article>
   `;
 }

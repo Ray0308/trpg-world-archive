@@ -1125,6 +1125,11 @@ input {
   align-items: center;
 }
 
+.detail-header--org {
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
 .detail-image {
   width: 160px;
   height: 160px;
@@ -1136,15 +1141,100 @@ input {
 }
 
 .detail-org-icon {
-  font-size: 2.5rem;
-  width: 64px;
-  height: 64px;
+  flex-shrink: 0;
+}
+
+.org-icon-wrap--detail,
+.detail-org-icon .org-icon-wrap--detail {
+  width: 96px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-card);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.org-icon-img--detail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.org-icon-wrap--card {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.org-icon-img--card {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.4rem;
+  display: block;
+}
+
+.org-icon-emoji {
+  font-size: 1.65rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.org-icon-emoji--detail {
+  font-size: 2.75rem;
+  width: 96px;
+  height: 96px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.org-card-icon {
+  font-size: 1.4rem;
+  display: block;
+  margin-bottom: 0.4rem;
+  min-height: 2.25rem;
+}
+
+.detail-meta--location {
+  margin-top: 0.35rem;
+}
+
+.detail-summary {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+.section-count {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 0.35rem;
+}
+
+.member-list--org {
+  max-width: 36rem;
+}
+
+.detail-section--compact {
+  padding-bottom: 0.5rem;
+}
+
+.entity-detail--org .detail-section:last-child {
+  margin-bottom: 0;
 }
 
 .detail-header-body {
@@ -1171,6 +1261,10 @@ input {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.detail-header--org .detail-title {
+  margin-bottom: 0;
 }
 
 /* ---- Info Grid ---- */
@@ -1245,20 +1339,6 @@ input {
   border-color: var(--accent-border);
 }
 
-.org-card-icon {
-  font-size: 1.4rem;
-  display: block;
-  margin-bottom: 0.4rem;
-}
-
-.org-icon-img {
-  width: 1.75rem;
-  height: 1.75rem;
-  object-fit: cover;
-  border-radius: 0.35rem;
-  display: block;
-}
-
 .org-card-name {
   font-size: 0.9rem;
   font-weight: 700;
@@ -1319,6 +1399,11 @@ input {
 .member-info {
   flex: 1;
   min-width: 0;
+}
+
+.member-row .list-item-badge {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .member-name {
