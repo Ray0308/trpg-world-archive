@@ -22,7 +22,7 @@ function getAnswers_(response) {
   const answers = {};
   response.getItemResponses().forEach(itemResponse => {
     const title = normalizeTitle_(itemResponse.getItem().getTitle());
-    answers[title] = itemResponse.getResponse();
+    answers[title] = normalizeAnswerValue_(itemResponse.getResponse());
   });
   return answers;
 }
@@ -38,13 +38,31 @@ function normalizeSheetHeader_(title) {
   return t === 'タイムスタンプ' ? '' : t;
 }
 
+function normalizeAnswerValue_(value) {
+  if (value == null || value === '') return '';
+  if (Array.isArray(value)) {
+    return value.map(v => normalizeAnswerValue_(v)).filter(Boolean).join(', ');
+  }
+  const s = String(value).trim();
+  if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '';
+  return s;
+}
+
 function pickAnswer_(answers, ...keys) {
   for (const key of keys) {
-    if (answers[key] != null && String(answers[key]).trim() !== '') {
-      return answers[key];
-    }
+    const text = normalizeAnswerValue_(answers[key]);
+    if (text) return text;
   }
   return '';
+}
+
+function normalizeOrgIcon_(raw) {
+  const s = normalizeAnswerValue_(raw);
+  if (!s) return '🏛️';
+  if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '🏛️';
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.length <= 8) return s;
+  return '🏛️';
 }
 
 function readSheetHeaders_(sheet) {
@@ -189,7 +207,7 @@ function buildOrgRowFromAnswers_(answers, sheet, meta) {
   return {
     id: generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
-    icon: pickAnswer_(answers, 'アイコン') || '🏛️',
+    icon: normalizeOrgIcon_(pickAnswer_(answers, 'アイコン')),
     summary: pickAnswer_(answers, '概要'),
     description: pickAnswer_(answers, '説明'),
     location_id: '',
@@ -298,6 +316,59 @@ function importAllOrgResponses() {
   }
 
   const msg = '一括取り込み: ' + imported + ' 件追加 / ' + skipped + ' 件スキップ';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * ORGANIZATIONS シートの壊れた値を修正（▶ で1回実行）
+ * [Ljava.lang.Object;@... が name/icon に入っている行を直す
+ */
+function fixOrgSheetGarbageValues() {
+  const form = FormApp.getActiveForm();
+  if (!form) {
+    const msg = '組織PJ から実行してください';
+    Logger.log(msg);
+    return msg;
+  }
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet || sheet.getLastRow() <= 1) {
+    const msg = 'ORGANIZATIONS が空です';
+    Logger.log(msg);
+    return msg;
+  }
+
+  const headers = readSheetHeaders_(sheet);
+  const nameIdx = headers.indexOf('name');
+  const iconIdx = headers.indexOf('icon');
+  let fixed = 0;
+
+  for (let row = 2; row <= sheet.getLastRow(); row++) {
+    let changed = false;
+    if (nameIdx >= 0) {
+      const cell = sheet.getRange(row, nameIdx + 1);
+      const cleaned = normalizeAnswerValue_(cell.getValue())
+        .replace(/\[Ljava\.lang\.Object;@[a-f0-9]+\s*/gi, '')
+        .replace(/Object;@[a-f0-9]+\s*/gi, '')
+        .trim();
+      if (cleaned !== String(cell.getValue() || '').trim()) {
+        cell.setValue(cleaned);
+        changed = true;
+      }
+    }
+    if (iconIdx >= 0) {
+      const cell = sheet.getRange(row, iconIdx + 1);
+      const cleaned = normalizeOrgIcon_(cell.getValue());
+      if (cleaned !== String(cell.getValue() || '').trim()) {
+        cell.setValue(cleaned);
+        changed = true;
+      }
+    }
+    if (changed) fixed++;
+  }
+
+  const msg = '修正完了: ' + fixed + ' 行';
   Logger.log(msg);
   return msg;
 }

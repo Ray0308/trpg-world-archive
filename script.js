@@ -353,10 +353,14 @@ function escapeHtml(str) {
 }
 
 function renderOrgIcon(icon) {
-  const value = String(icon || '🏛️').trim();
+  const value = String(icon || '').trim();
+  if (!value || /\[?Ljava\.lang\.Object;@/i.test(value)) {
+    return '🏛️';
+  }
   if (/^https?:\/\//i.test(value)) {
     return `<img src="${escapeHtml(value)}" alt="" class="org-icon-img" width="28" height="28" loading="lazy" decoding="async">`;
   }
+  if (value.length > 8) return '🏛️';
   return escapeHtml(value || '🏛️');
 }
 

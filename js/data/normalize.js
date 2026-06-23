@@ -353,18 +353,38 @@ window.ArchiveNormalize = (function () {
     };
   }
 
+  function isGarbageSheetValue(value) {
+    return /\[?Ljava\.lang\.Object;@/i.test(String(value ?? ''));
+  }
+
+  function cleanOrgText(value) {
+    let s = String(value ?? '').trim();
+    if (isGarbageSheetValue(s)) return '';
+    s = s.replace(/\[Ljava\.lang\.Object;@[a-f0-9]+\s*/gi, '').trim();
+    s = s.replace(/Object;@[a-f0-9]+\s*/gi, '').trim();
+    return s;
+  }
+
+  function cleanOrgIcon(value) {
+    const s = cleanOrgText(value);
+    if (!s) return '🏛️';
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.length <= 8) return s;
+    return '🏛️';
+  }
+
   function normalizeOrganization(raw) {
     raw = stripAdminFields(raw);
     if (raw['名称']) return normalizeOrganizationRow(raw);
     return {
       id: raw.id,
-      name: raw.name || '',
+      name: cleanOrgText(raw.name),
       nameEn: raw.nameEn || '',
-      icon: raw.icon || '🏛️',
-      summary: raw.summary || '',
-      description: splitParagraphs(raw.description),
+      icon: cleanOrgIcon(raw.icon),
+      summary: cleanOrgText(raw.summary),
+      description: splitParagraphs(cleanOrgText(raw.description) || raw.description),
       locationId: raw.locationId || raw.location_id || null,
-      locationName: raw.locationName || raw.location_name || '',
+      locationName: cleanOrgText(raw.location_name || raw.locationName),
       scenarioIds: splitIds(raw.scenarioIds || raw.scenario_ids)
     };
   }
