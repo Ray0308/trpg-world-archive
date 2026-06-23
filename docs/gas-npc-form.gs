@@ -464,9 +464,20 @@ function getArchiveSpreadsheet_() {
   throw new Error('スプレッドシートを取得できません。NPCフォームを1件送信するか、NPCフォームのスクリプトエディタから実行してください');
 }
 
+function getFormFromEvent_(e) {
+  if (e && e.source && typeof e.source.getDestinationId === 'function') {
+    return e.source;
+  }
+  if (e && e.response && typeof e.response.getSource === 'function') {
+    return e.response.getSource();
+  }
+  return FormApp.getActiveForm() || null;
+}
+
 function getSpreadsheetFromEvent_(e) {
-  if (e && e.response) {
-    return SpreadsheetApp.openById(e.response.getSource().getDestinationId());
+  const form = getFormFromEvent_(e);
+  if (form) {
+    return SpreadsheetApp.openById(form.getDestinationId());
   }
   return getArchiveSpreadsheet_();
 }
@@ -662,7 +673,8 @@ function processOrganizationSubmitFromEvent_(e) {
   const ss = getSpreadsheetFromSubmitEvent_(e);
 
   if (e.response) {
-    const title = e.response.getSource().getTitle();
+    const form = getFormFromEvent_(e);
+    const title = form ? form.getTitle() : '';
     if (!isOrganizationFormTitle_(title)) {
       Logger.log('ORG skip form: ' + title);
       return;
