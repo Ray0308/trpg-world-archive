@@ -452,6 +452,31 @@ window.ArchiveNormalize = (function () {
     return result;
   }
 
+  function orgNameMatches(part, org) {
+    const p = String(part || '').trim();
+    const name = String(org.name || '').trim();
+    if (!p || !name) return false;
+    return name === p || p.includes(name) || name.includes(p);
+  }
+
+  /** 所属組織名から organizationIds を補完（ID 未設定の NPC 用） */
+  function resolveOrganizationIdsForNpc(npc, organizations) {
+    const ids = new Set((npc.organizationIds || []).filter(Boolean));
+    splitIds(npc.organizationNames).forEach(part => {
+      organizations.forEach(org => {
+        if (orgNameMatches(part, org)) ids.add(org.id);
+      });
+    });
+    return [...ids];
+  }
+
+  function linkNpcsToOrganizations(npcs, organizations) {
+    return npcs.map(npc => ({
+      ...npc,
+      organizationIds: resolveOrganizationIdsForNpc(npc, organizations)
+    }));
+  }
+
   function buildIndexes(data) {
     const indexes = {
       npcById: new Map(),
@@ -488,9 +513,13 @@ window.ArchiveNormalize = (function () {
     const organizations = (raw.organizations || []).map(normalizeOrganization);
     let locations = (raw.locations || []).map(normalizeLocation);
     locations = enrichLocations(organizations, locations);
+    const npcs = linkNpcsToOrganizations(
+      (raw.npcs || []).map(normalizeNpc),
+      organizations
+    );
 
     return {
-      npcs: (raw.npcs || []).map(normalizeNpc),
+      npcs,
       organizations,
       scenarios: (raw.scenarios || []).map(normalizeScenario),
       pcs: (raw.pcs || []).map(normalizePc),

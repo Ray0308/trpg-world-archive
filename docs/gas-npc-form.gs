@@ -123,8 +123,60 @@ function pickAnswer_(answers, ...keys) {
   return '';
 }
 
-function buildNpcRowFromAnswers_(answers, sheet, response) {
+function splitList_(value) {
+  if (!value) return [];
+  return String(value)
+    .split(/[,、|]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function orgNameMatches_(part, orgName) {
+  const p = String(part || '').trim();
+  const name = String(orgName || '').trim();
+  if (!p || !name) return false;
+  return name === p || p.indexOf(name) >= 0 || name.indexOf(p) >= 0;
+}
+
+/**
+ * 所属組織（名前）から ORGANIZATIONS シートを引いて ID を解決
+ */
+function resolveOrganizationIdsFromNames_(ss, namesText) {
+  const parts = splitList_(namesText);
+  if (!parts.length) return '';
+
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet || sheet.getLastRow() <= 1) return '';
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const idIdx = headers.indexOf('id');
+  const nameIdx = headers.indexOf('name');
+  if (idIdx < 0 || nameIdx < 0) return '';
+
+  const orgs = values.slice(1)
+    .filter(row => row[idIdx])
+    .map(row => ({
+      id: String(row[idIdx]).trim(),
+      name: String(row[nameIdx] || '').trim()
+    }));
+
+  const matched = [];
+  const seen = new Set();
+  parts.forEach(part => {
+    orgs.forEach(org => {
+      if (orgNameMatches_(part, org.name) && !seen.has(org.id)) {
+        seen.add(org.id);
+        matched.push(org.id);
+      }
+    });
+  });
+  return matched.join(', ');
+}
+
+function buildNpcRowFromAnswers_(answers, sheet, response, ss) {
   const now = new Date();
+  const organizationNames = pickAnswer_(answers, '所属組織');
   return {
     id: generateNpcId_(sheet),
     name: pickAnswer_(answers, 'NPC名'),
@@ -135,8 +187,8 @@ function buildNpcRowFromAnswers_(answers, sheet, response) {
     birth_place: pickAnswer_(answers, '出身地'),
     occupation: pickAnswer_(answers, '職業'),
     status: cleanStatus_(pickAnswer_(answers, '状態')),
-    organization_names: pickAnswer_(answers, '所属組織'),
-    organization_ids: '',
+    organization_names: organizationNames,
+    organization_ids: resolveOrganizationIdsFromNames_(ss, organizationNames),
     image_url: toDriveFileUrl_(pickAnswer_(answers, 'NPC画像')),
     profile: pickAnswer_(answers, '人物紹介'),
     person: pickAnswer_(answers, '人物情報'),
@@ -164,9 +216,40 @@ function onNpcFormSubmit(e) {
 
   const response = e.response;
   const answers = getAnswers_(response);
-  const rowData = buildNpcRowFromAnswers_(answers, sheet, response);
+  const rowData = buildNpcRowFromAnswers_(answers, sheet, response, ss);
   const row = headers.map(header => rowData[header] ?? '');
   sheet.appendRow(row);
+}
+
+/**
+ * 既存 NPC 行の organization_ids を所属組織名から一括更新（手動で1回実行）
+ */
+function syncNpcOrganizationIds() {
+  const ss = getArchiveSpreadsheet_();
+  const sheet = ss.getSheetByName('NPCS');
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return 'NPCS シートにデータがありません';
+  }
+
+  const headers = readSheetHeaders_(sheet);
+  const namesIdx = headers.indexOf('organization_names');
+  const idsIdx = headers.indexOf('organization_ids');
+  if (namesIdx < 0 || idsIdx < 0) {
+    return 'organization_names / organization_ids 列が見つかりません';
+  }
+
+  const lastRow = sheet.getLastRow();
+  let updated = 0;
+  for (let row = 2; row <= lastRow; row++) {
+    const names = sheet.getRange(row, namesIdx + 1).getValue();
+    const resolved = resolveOrganizationIdsFromNames_(ss, names);
+    const current = String(sheet.getRange(row, idsIdx + 1).getValue() || '').trim();
+    if (resolved !== current) {
+      sheet.getRange(row, idsIdx + 1).setValue(resolved);
+      updated++;
+    }
+  }
+  return '完了: ' + updated + ' 行の organization_ids を更新しました';
 }
 
 function doGet(e) {
@@ -176,7 +259,7 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-17-org-form1' }, callback);
+    return jsonResponse_({ api_version: '2026-06-24-npc-org-link' }, callback);
   }
 
   if (type === 'npcs') {
