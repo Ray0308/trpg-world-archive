@@ -211,6 +211,7 @@ function buildNpcRowFromAnswers_(answers, sheet, response, ss) {
  */
 function onNpcFormSubmit(e) {
   const ss = getSpreadsheetFromEvent_(e);
+  rememberArchiveSpreadsheet_(ss);
   const sheet = getOrCreateSheet_(ss, 'NPCS');
   const headers = ensureNpcHeader_(sheet);
 
@@ -223,33 +224,56 @@ function onNpcFormSubmit(e) {
 
 /**
  * 既存 NPC 行の organization_ids を所属組織名から一括更新（手動で1回実行）
+ * ※ 実行ログには return が出ません。ログの「お知らせ」行に結果が出ます。
  */
 function syncNpcOrganizationIds() {
   const ss = getArchiveSpreadsheet_();
   const sheet = ss.getSheetByName('NPCS');
   if (!sheet || sheet.getLastRow() <= 1) {
-    return 'NPCS シートにデータがありません';
+    const msg = 'NPCS シートにデータがありません';
+    Logger.log(msg);
+    return msg;
   }
 
   const headers = readSheetHeaders_(sheet);
   const namesIdx = headers.indexOf('organization_names');
   const idsIdx = headers.indexOf('organization_ids');
   if (namesIdx < 0 || idsIdx < 0) {
-    return 'organization_names / organization_ids 列が見つかりません';
+    const msg = 'organization_names / organization_ids 列が見つかりません';
+    Logger.log(msg);
+    return msg;
   }
 
   const lastRow = sheet.getLastRow();
   let updated = 0;
+  let skippedEmpty = 0;
+  let skippedNoMatch = 0;
+
   for (let row = 2; row <= lastRow; row++) {
     const names = sheet.getRange(row, namesIdx + 1).getValue();
+    const namesText = String(names || '').trim();
+    if (!namesText) {
+      skippedEmpty++;
+      continue;
+    }
     const resolved = resolveOrganizationIdsFromNames_(ss, names);
+    if (!resolved) {
+      skippedNoMatch++;
+      Logger.log('行' + row + ': 一致する組織なし — 「' + namesText + '」');
+      continue;
+    }
     const current = String(sheet.getRange(row, idsIdx + 1).getValue() || '').trim();
     if (resolved !== current) {
       sheet.getRange(row, idsIdx + 1).setValue(resolved);
       updated++;
+      Logger.log('行' + row + ': ' + resolved);
     }
   }
-  return '完了: ' + updated + ' 行の organization_ids を更新しました';
+
+  const msg = '完了: ' + updated + ' 行を更新（空欄スキップ ' + skippedEmpty +
+    ' / 組織名不一致 ' + skippedNoMatch + '）';
+  Logger.log(msg);
+  return msg;
 }
 
 function doGet(e) {
@@ -416,10 +440,24 @@ function getOrCreateSheet_(ss, sheetName) {
  * 本番用に NPCS シートを初期化（1回だけ手動実行）
  * プルダウンでは resetNpcSheetForProduction を選ぶ
  */
+const ARCHIVE_SPREADSHEET_ID_KEY = 'archive_spreadsheet_id';
+
+function rememberArchiveSpreadsheet_(ss) {
+  if (ss && ss.getId) {
+    PropertiesService.getScriptProperties().setProperty(ARCHIVE_SPREADSHEET_ID_KEY, ss.getId());
+  }
+}
+
 function getArchiveSpreadsheet_() {
   const form = FormApp.getActiveForm();
-  if (form) return SpreadsheetApp.openById(form.getDestinationId());
-  throw new Error('スプレッドシートを取得できません（フォーム紐付け GAS から実行してください）');
+  if (form) {
+    const ss = SpreadsheetApp.openById(form.getDestinationId());
+    rememberArchiveSpreadsheet_(ss);
+    return ss;
+  }
+  const cachedId = PropertiesService.getScriptProperties().getProperty(ARCHIVE_SPREADSHEET_ID_KEY);
+  if (cachedId) return SpreadsheetApp.openById(cachedId);
+  throw new Error('スプレッドシートを取得できません。NPCフォームを1件送信するか、NPCフォームのスクリプトエディタから実行してください');
 }
 
 function getSpreadsheetFromEvent_(e) {
