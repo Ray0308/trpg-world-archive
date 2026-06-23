@@ -169,11 +169,46 @@
     const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    if (data.error === 'unknown type') {
+      throw new Error(
+        'APIが古いバージョンです。\n' +
+        'NPCPJ の GAS（docs/gas-npc-form.gs）を貼り直し、' +
+        'ウェブアプリを「新バージョン」で再デプロイしてください。'
+      );
+    }
     if (data.error) throw new Error(data.error);
     if (!data.ok) throw new Error('更新に失敗しました');
 
     invalidateEntityCache(entity);
     return data;
+  }
+
+  async function loadApiCapabilities() {
+    const base = window.AppConfig?.api?.baseUrl || '';
+    if (!base) return [];
+    try {
+      const res = await fetch(`${base}${base.includes('?') ? '&' : '?'}type=version`, {
+        method: 'GET',
+        redirect: 'follow',
+        cache: 'no-store'
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data.capabilities) ? data.capabilities : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function ensureVisibilityApi(entity) {
+    const def = getEntityDef(entity);
+    const caps = await loadApiCapabilities();
+    if (caps.length && !caps.includes(def.visibilityApiType)) {
+      throw new Error(
+        `APIに ${def.visibilityApiType} がありません。\n` +
+        'NPCPJ の GAS を最新にしてウェブアプリを再デプロイしてください。'
+      );
+    }
   }
 
   async function loadKpEntities(entity) {
@@ -660,6 +695,7 @@
 
     try {
       const items = await loadKpEntities(entity);
+      await ensureVisibilityApi(entity);
       renderVisibilityList(entity, items);
       search.oninput = () => renderVisibilityList(entity, filterEntities(entity, items, search.value));
       search.focus();

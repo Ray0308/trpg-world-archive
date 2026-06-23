@@ -287,7 +287,17 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-24-org-transfer-fix' }, callback);
+    return jsonResponse_({
+      api_version: '2026-06-24-kp-org-visibility',
+      capabilities: [
+        'npcs',
+        'organizations',
+        'npc-visibility',
+        'org-visibility',
+        'chaugner-ranking',
+        'chaugner-score'
+      ]
+    }, callback);
   }
 
   if (type === 'npcs') {
