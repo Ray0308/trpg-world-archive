@@ -1,10 +1,14 @@
 /**
  * YOKOFOLIA — フォーム → スプレッドシート → 公開 API
  *
- * NPC:  トリガー onNpcFormSubmit（NPC登録フォーム）— この GAS に紐づける
- * 組織: トリガー onSpreadsheetFormSubmit（スプレッドシートから・フォーム送信時）
- *       → 入力PJ に1本。組織フォームの回答を ORGANIZATIONS に転記
- * 両フォームの回答先は **同じスプレッドシート** にすること
+ * プロジェクト名:
+ *   DBPJ   … スプレッドシート（データ保存）
+ *   NPCPJ  … このファイル（NPC登録 + 公開 API + NPC↔組織ID解決）
+ *   組織PJ … docs/gas-org-form-bound.gs（組織フォーム送信 → ORGANIZATIONS 転記）
+ *
+ * NPC:  トリガー onNpcFormSubmit（NPCPJ / NPCフォーム）
+ * 組織: トリガー onOrganizationFormSubmit（組織PJ / 組織フォーム）— 別ファイル
+ * 両フォームの回答先は **同じ DBPJ** にすること
  */
 
 function getAnswers_(response) {
