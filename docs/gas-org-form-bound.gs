@@ -117,13 +117,21 @@ function getOrCreateSheet_(ss, sheetName) {
   return sheet || ss.insertSheet(sheetName);
 }
 
-function getSpreadsheetFromEvent_(e) {
-  if (e && e.response) {
-    return SpreadsheetApp.openById(e.response.getSource().getDestinationId());
+function getFormFromEvent_(e) {
+  if (e && e.source && typeof e.source.getDestinationId === 'function') {
+    return e.source;
+  }
+  if (e && e.response && typeof e.response.getSource === 'function') {
+    return e.response.getSource();
   }
   const form = FormApp.getActiveForm();
-  if (form) return SpreadsheetApp.openById(form.getDestinationId());
+  if (form) return form;
   throw new Error('DBPJ を取得できません（組織PJ＝組織フォームに紐づけてください）');
+}
+
+function getSpreadsheetFromEvent_(e) {
+  const form = getFormFromEvent_(e);
+  return SpreadsheetApp.openById(form.getDestinationId());
 }
 
 function findOrgResponseSheet_(ss) {
@@ -189,8 +197,10 @@ function buildOrgRowFromAnswers_(answers, sheet, meta) {
     scenario_ids: pickAnswer_(answers, '関連シナリオ'),
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
-    edit_url: m.editUrl || (response ? response.getEditResponseUrl() : ''),
-    form_response_id: m.formResponseId || (response ? response.getId() : ''),
+    edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
+      ? response.getEditResponseUrl() : ''),
+    form_response_id: m.formResponseId || (response && typeof response.getId === 'function'
+      ? response.getId() : ''),
     created_at: now,
     updated_at: now
   };
