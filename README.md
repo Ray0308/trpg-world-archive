@@ -13,7 +13,7 @@
 | NPC登録（Googleフォーム → GAS API） | ✅ |
 | KPページ（登録・編集・一覧・PL表示設定） | ✅ |
 | チャウグナー・ラン（オマケゲーム + ランキング） | ✅ |
-| 組織・シナリオ・PCフォーム | 準備中（`data/*.json` で管理） |
+| 組織・シナリオ・PCフォーム | 組織フォーム準備中（`docs/organization-form-setup.md`） / 他は JSON |
 
 ## データの流れ
 
@@ -46,6 +46,7 @@ python -m http.server 8080
 | ファイル | 内容 |
 |---------|------|
 | `docs/production-setup.md` | 本番セットアップ・確認チェックリスト |
+| `docs/organization-form-setup.md` | 組織登録フォームの作り方 |
 | `docs/chaugner-run-setup.md` | チャウグナー・ランのランキング設定 |
 | `docs/gas-npc-export.md` | GAS / シート列の参考 |
 

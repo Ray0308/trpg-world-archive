@@ -1,8 +1,9 @@
 /**
- * YOKOFOLIA — NPC フォーム → NPCS シート → 公開 API
+ * YOKOFOLIA — フォーム → スプレッドシート → 公開 API
  *
- * トリガー設定: フォーム送信時 → onNpcFormSubmit
- * 本番初期化（1回のみ）: resetNpcSheetForProduction
+ * NPC:  トリガー onNpcFormSubmit（NPC登録フォーム）
+ * 組織: トリガー onOrganizationFormSubmit（組織登録フォーム）
+ * 両フォームの回答先は **同じスプレッドシート** にすること
  */
 
 function getAnswers_(response) {
@@ -156,8 +157,7 @@ function buildNpcRowFromAnswers_(answers, sheet, response) {
  * フォーム送信トリガーに設定する関数（この名前で登録）
  */
 function onNpcFormSubmit(e) {
-  const form = FormApp.getActiveForm();
-  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const ss = getSpreadsheetFromEvent_(e);
   const sheet = getOrCreateSheet_(ss, 'NPCS');
   const headers = ensureNpcHeader_(sheet);
 
@@ -169,18 +169,22 @@ function onNpcFormSubmit(e) {
 }
 
 function doGet(e) {
-  const form = FormApp.getActiveForm();
-  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const ss = getArchiveSpreadsheet_();
   const type = (e && e.parameter && e.parameter.type) || 'npcs';
   const callback = e && e.parameter && e.parameter.callback;
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-16-visibility-fix2' }, callback);
+    return jsonResponse_({ api_version: '2026-06-17-org-form1' }, callback);
   }
 
   if (type === 'npcs') {
     const data = kpMode ? getKpNpcs_(ss) : getPublicNpcs_(ss);
+    return jsonResponse_(data, callback);
+  }
+
+  if (type === 'organizations') {
+    const data = kpMode ? getKpOrganizations_(ss) : getPublicOrganizations_(ss);
     return jsonResponse_(data, callback);
   }
 
@@ -328,9 +332,194 @@ function getOrCreateSheet_(ss, sheetName) {
  * 本番用に NPCS シートを初期化（1回だけ手動実行）
  * プルダウンでは resetNpcSheetForProduction を選ぶ
  */
-function resetNpcSheetForProduction() {
+function getArchiveSpreadsheet_() {
   const form = FormApp.getActiveForm();
-  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  if (form) return SpreadsheetApp.openById(form.getDestinationId());
+  throw new Error('スプレッドシートを取得できません（フォーム紐付け GAS から実行してください）');
+}
+
+function getSpreadsheetFromEvent_(e) {
+  if (e && e.response) {
+    return SpreadsheetApp.openById(e.response.getSource().getDestinationId());
+  }
+  return getArchiveSpreadsheet_();
+}
+
+function getOrgHeaders_() {
+  return [
+    'id',
+    'name',
+    'name_en',
+    'icon',
+    'summary',
+    'description',
+    'location_id',
+    'location_name',
+    'scenario_ids',
+    'memo',
+    'pl_hidden',
+    'edit_url',
+    'form_response_id',
+    'created_at',
+    'updated_at'
+  ];
+}
+
+function ensureOrgHeader_(sheet) {
+  const headers = getOrgHeaders_();
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const firstRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const isEmpty = firstRow.every(value => value === '');
+
+  if (isEmpty) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers;
+  }
+
+  const present = new Set(
+    firstRow.map(h => String(h).trim()).filter(Boolean)
+  );
+
+  headers.forEach(name => {
+    if (!present.has(name)) {
+      const col = sheet.getLastColumn() + 1;
+      sheet.getRange(1, col).setValue(name);
+      present.add(name);
+    }
+  });
+
+  return readSheetHeaders_(sheet);
+}
+
+function generateOrgId_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return 'org_001';
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  let maxNumber = 0;
+  ids.forEach(id => {
+    const match = String(id).match(/^org_(\d+)$/);
+    if (match) maxNumber = Math.max(maxNumber, Number(match[1]));
+  });
+  return 'org_' + String(maxNumber + 1).padStart(3, '0');
+}
+
+function buildOrgRowFromAnswers_(answers, sheet, response) {
+  const now = new Date();
+  return {
+    id: generateOrgId_(sheet),
+    name: pickAnswer_(answers, '組織名'),
+    name_en: pickAnswer_(answers, '英語名'),
+    icon: pickAnswer_(answers, 'アイコン') || '🏛️',
+    summary: pickAnswer_(answers, '概要'),
+    description: pickAnswer_(answers, '説明'),
+    location_id: '',
+    location_name: pickAnswer_(answers, '所在地'),
+    scenario_ids: pickAnswer_(answers, '関連シナリオ'),
+    memo: pickAnswer_(answers, '備考'),
+    pl_hidden: '',
+    edit_url: response.getEditResponseUrl(),
+    form_response_id: response.getId(),
+    created_at: now,
+    updated_at: now
+  };
+}
+
+/**
+ * 組織フォーム送信トリガーに設定する関数
+ */
+function onOrganizationFormSubmit(e) {
+  const ss = getSpreadsheetFromEvent_(e);
+  const sheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
+  const headers = ensureOrgHeader_(sheet);
+
+  const response = e.response;
+  const answers = getAnswers_(response);
+  const rowData = buildOrgRowFromAnswers_(answers, sheet, response);
+  const row = headers.map(header => rowData[header] ?? '');
+  sheet.appendRow(row);
+}
+
+function getPublicOrganizations_(ss) {
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const adminKeys = new Set([
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+  ]);
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      if (isPlHidden_(record.pl_hidden)) return null;
+      adminKeys.forEach(key => delete record[key]);
+      return record;
+    })
+    .filter(Boolean);
+}
+
+/** KPページ用 — 編集リンク付き組織一覧 */
+function getKpOrganizations_(ss) {
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      return {
+        id: record.id || '',
+        name: record.name || '',
+        name_en: record.name_en || '',
+        icon: record.icon || '🏛️',
+        summary: record.summary || '',
+        pl_hidden: isPlHidden_(record.pl_hidden),
+        edit_url: record.edit_url || ''
+      };
+    })
+    .filter(org => org.id && org.name);
+}
+
+function resetOrganizationSheetForProduction() {
+  const ss = getArchiveSpreadsheet_();
+  const headers = getOrgHeaders_();
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  const archiveName = 'ORGANIZATIONS_archive_' + stamp;
+
+  const existing = ss.getSheetByName('ORGANIZATIONS');
+  if (existing) {
+    if (ss.getSheetByName(archiveName)) {
+      throw new Error(archiveName + ' が既にあります。');
+    }
+    existing.setName(archiveName);
+  }
+
+  const sheet = ss.insertSheet('ORGANIZATIONS');
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+
+  return '完了: 新しい ORGANIZATIONS シートを作成しました。旧データは ' + archiveName + ' にあります。';
+}
+
+function resetNpcSheetForProduction() {
+  const ss = getArchiveSpreadsheet_();
   const headers = getNpcHeaders_();
   const stamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
   const archiveName = 'NPCS_archive_' + stamp;
