@@ -3,14 +3,23 @@
  * 失敗時は data/npcs.json にフォールバック（警告付き）
  */
 window.AppsScriptProvider = {
-  buildNpcUrl(baseUrl) {
+  buildApiUrl(baseUrl, type) {
     const url = (baseUrl || '').trim();
     if (!url) throw new ArchiveLoadError('設定エラー', 'API baseUrl が未設定です');
     const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}type=npcs`;
+    return `${url}${separator}type=${type}`;
   },
 
-  parseNpcJson(text) {
+  buildNpcUrl(baseUrl) {
+    return this.buildApiUrl(baseUrl, 'npcs');
+  },
+
+  buildOrganizationsUrl(baseUrl) {
+    return this.buildApiUrl(baseUrl, 'organizations');
+  },
+
+  parseArrayJson(text, label) {
+    const name = label || 'データ';
     const trimmed = (text || '').trim();
     if (!trimmed) {
       throw new ArchiveLoadError(
@@ -30,7 +39,7 @@ window.AppsScriptProvider = {
       if (!Array.isArray(data)) {
         throw new ArchiveLoadError(
           'スプレッドシート API の応答が不正です',
-          'NPC データは配列形式である必要があります。',
+          `${name}は配列形式である必要があります。`,
           { receivedType: typeof data }
         );
       }
@@ -43,6 +52,14 @@ window.AppsScriptProvider = {
         { cause: err.message, preview: trimmed.slice(0, 120) }
       );
     }
+  },
+
+  parseNpcJson(text) {
+    return this.parseArrayJson(text, 'NPC データ');
+  },
+
+  parseOrganizationsJson(text) {
+    return this.parseArrayJson(text, '組織データ');
   },
 
   fetchNpcsJsonp(url, timeoutMs = 30000) {
@@ -97,7 +114,8 @@ window.AppsScriptProvider = {
     });
   },
 
-  async fetchNpcsDirect(url, timeoutMs = 30000) {
+  async fetchNpcsDirect(url, timeoutMs = 30000, parseFn) {
+    const parse = parseFn || ((text) => this.parseNpcJson(text));
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -118,7 +136,7 @@ window.AppsScriptProvider = {
       }
 
       const text = await res.text();
-      return this.parseNpcJson(text);
+      return parse(text);
     } catch (err) {
       if (err.name === 'AbortError') {
         throw new ArchiveLoadError(
@@ -138,19 +156,19 @@ window.AppsScriptProvider = {
     }
   },
 
-  async fetchNpcs(baseUrl) {
-    const url = this.buildNpcUrl(baseUrl);
+  async fetchArray(baseUrl, type, parseFn, errorTitle) {
+    const url = this.buildApiUrl(baseUrl, type);
     const timeoutMs = window.AppConfig?.api?.timeoutMs || 30000;
+    const parse = parseFn || ((text) => this.parseArrayJson(text));
 
     try {
-      return await this.fetchNpcsDirect(url, timeoutMs);
+      return await this.fetchNpcsDirect(url, timeoutMs, parse);
     } catch (fetchErr) {
       try {
-        const data = await this.fetchNpcsJsonp(url, timeoutMs);
-        return data;
+        return await this.fetchNpcsJsonp(url, timeoutMs);
       } catch (jsonpErr) {
         throw new ArchiveLoadError(
-          fetchErr.title || 'スプレッドシートから NPC を取得できませんでした',
+          fetchErr.title || errorTitle,
           fetchErr.message,
           {
             url,
@@ -161,6 +179,24 @@ window.AppsScriptProvider = {
         );
       }
     }
+  },
+
+  async fetchNpcs(baseUrl) {
+    return this.fetchArray(
+      baseUrl,
+      'npcs',
+      (text) => this.parseNpcJson(text),
+      'スプレッドシートから NPC を取得できませんでした'
+    );
+  },
+
+  async fetchOrganizations(baseUrl) {
+    return this.fetchArray(
+      baseUrl,
+      'organizations',
+      (text) => this.parseOrganizationsJson(text),
+      'スプレッドシートから組織を取得できませんでした'
+    );
   },
 
   async loadNpcsFromJson(jsonConfig) {
@@ -232,6 +268,93 @@ window.AppsScriptProvider = {
       } catch (jsonErr) {
         throw new ArchiveLoadError(
           'NPC データを読み込めません',
+          'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
+          {
+            api: {
+              title: apiErr.title,
+              message: apiErr.message,
+              details: apiErr.details
+            },
+            json: {
+              title: jsonErr.title,
+              message: jsonErr.message,
+              details: jsonErr.details
+            }
+          }
+        );
+      }
+    }
+  },
+
+  async loadOrganizationsFromJson(jsonConfig) {
+    const base = (jsonConfig?.basePath || 'data').replace(/\/$/, '');
+    const url = `${base}/organizations.json`;
+    let res;
+
+    try {
+      res = await fetch(url, { cache: 'no-store' });
+    } catch (networkErr) {
+      throw new ArchiveLoadError(
+        'ローカル組織データに接続できません',
+        `organizations.json を読み込めません（${url}）`,
+        { url, cause: networkErr.message }
+      );
+    }
+
+    if (!res.ok) {
+      throw new ArchiveLoadError(
+        'ローカル組織データの読み込みに失敗しました',
+        `organizations.json — HTTP ${res.status}`,
+        { url, status: res.status }
+      );
+    }
+
+    const data = await res.json();
+    return data.organizations || [];
+  },
+
+  async loadOrganizations(apiConfig, jsonConfig) {
+    if (!apiConfig?.baseUrl) {
+      const organizations = await this.loadOrganizationsFromJson(jsonConfig);
+      return {
+        organizations,
+        source: 'json',
+        notice: {
+          level: 'warning',
+          title: 'API 未設定',
+          message: 'スプレッドシート API URL が未設定のため、ローカル JSON（organizations.json）を表示しています。'
+        }
+      };
+    }
+
+    try {
+      const organizations = await this.fetchOrganizations(apiConfig.baseUrl);
+      const notice = organizations.length === 0
+        ? {
+            level: 'warning',
+            title: '組織データなし',
+            message: 'スプレッドシートに組織が登録されていません。'
+          }
+        : null;
+
+      return { organizations, source: 'api', notice };
+    } catch (apiErr) {
+      try {
+        const organizations = await this.loadOrganizationsFromJson(jsonConfig);
+        return {
+          organizations,
+          source: 'json-fallback',
+          notice: {
+            level: 'error',
+            title: apiErr.title || 'スプレッドシートから組織を取得できませんでした',
+            message: apiErr.message,
+            details: apiErr.details || {},
+            fallback: `ローカル JSON（organizations.json）の ${organizations.length} 件を表示しています。`
+          }
+        };
+      } catch (jsonErr) {
+        throw new ArchiveLoadError(
+          '組織データを読み込めません',
           'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
           {
             api: {

@@ -363,9 +363,9 @@ window.ArchiveNormalize = (function () {
       icon: raw.icon || '🏛️',
       summary: raw.summary || '',
       description: splitParagraphs(raw.description),
-      locationId: raw.locationId || null,
-      locationName: raw.locationName || '',
-      scenarioIds: splitIds(raw.scenarioIds)
+      locationId: raw.locationId || raw.location_id || null,
+      locationName: raw.locationName || raw.location_name || '',
+      scenarioIds: splitIds(raw.scenarioIds || raw.scenario_ids)
     };
   }
 

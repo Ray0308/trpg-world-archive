@@ -189,7 +189,7 @@ organizationForm: 'https://docs.google.com/forms/d/e/xxxxxxxx/viewform',
 
 ## 次のステップ（まだ未実装）
 
-- [ ] PL サイトを `organizations.json` ではなく API から読む
+- [x] PL サイトを `organizations.json` ではなく API から読む
 - [ ] KP ページに組織の「一覧」「編集」
 - [ ] PL 非表示トグル（NPC と同様）
 
