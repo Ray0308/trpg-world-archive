@@ -190,18 +190,44 @@ function splitOrgNames(text) {
     .filter(Boolean);
 }
 
-function resolveOrgsForNpc(npc) {
-  const byId = resolveOrgs(npc.organizationIds);
-  if (byId.length) return byId;
-  const names = splitOrgNames(npc.organizationNames);
-  const matched = [];
-  names.forEach(part => {
-    const org = store.organizations.find(o =>
-      o.name === part || part.includes(o.name) || o.name.includes(part)
-    );
-    if (org && !matched.some(item => item.id === org.id)) matched.push(org);
+function findOrgByNamePart(part) {
+  const p = String(part || '').trim();
+  if (!p) return null;
+  return store.organizations.find(o =>
+    o.name === p || p.includes(o.name) || o.name.includes(p)
+  ) || null;
+}
+
+/** NPC に紐づく組織（ID・名前の両方から解決） */
+function resolveNpcOrganizations(npc) {
+  const seen = new Set();
+  const orgs = [];
+
+  (npc.organizationIds || []).forEach(id => {
+    const org = indexes.orgById.get(id);
+    if (org && !seen.has(org.id)) {
+      seen.add(org.id);
+      orgs.push(org);
+    }
   });
-  return matched;
+
+  splitOrgNames(npc.organizationNames).forEach(part => {
+    const org = findOrgByNamePart(part);
+    if (org && !seen.has(org.id)) {
+      seen.add(org.id);
+      orgs.push(org);
+    }
+  });
+
+  return orgs;
+}
+
+function resolveNpcUnlinkedOrgNames(npc) {
+  return splitOrgNames(npc.organizationNames).filter(part => !findOrgByNamePart(part));
+}
+
+function resolveOrgsForNpc(npc) {
+  return resolveNpcOrganizations(npc);
 }
 
 function resolveScenarios(ids) {
@@ -534,6 +560,7 @@ function renderNpcRelatedSection(npc) {
   }
 
   const blocks = [
+    renderRelatedBlock('所属組織', renderNpcOrgRelatedContent(npc), { alwaysShow: true }),
     renderRelatedBlock('登場シナリオ', scenarioLinks, { alwaysShow: true }),
     renderRelatedBlock('関連NPC', npcLinksCombined, { alwaysShow: true }),
     renderRelatedBlock('関連場所', locationHtml, { alwaysShow: true })
@@ -554,14 +581,45 @@ function renderLinkList(items) {
   return `<ul class="link-list">${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
 }
 
+function renderOrgMemberRow(org) {
+  return `
+    <li class="member-row" data-nav-section="organizations" data-nav-id="${org.id}">
+      <span class="member-row-icon">${renderOrgIcon(org.icon, { variant: 'card' })}</span>
+      <div class="member-info">
+        <span class="member-name">${escapeHtml(org.name)}</span>
+        ${org.summary ? `<span class="member-sub">${escapeHtml(org.summary)}</span>` : ''}
+      </div>
+    </li>
+  `;
+}
+
+function renderNpcOrgRelatedContent(npc) {
+  const orgs = resolveNpcOrganizations(npc);
+  const unlinked = resolveNpcUnlinkedOrgNames(npc);
+  if (!orgs.length && !unlinked.length) return '';
+
+  const rows = [
+    ...orgs.map(org => renderOrgMemberRow(org)),
+    ...unlinked.map(name => `
+      <li class="member-row member-row--static">
+        <span class="member-row-icon org-icon-emoji" aria-hidden="true">🏛️</span>
+        <div class="member-info">
+          <span class="member-name">${escapeHtml(name)}</span>
+        </div>
+      </li>
+    `)
+  ];
+  return `<ul class="member-list member-list--org">${rows.join('')}</ul>`;
+}
+
 function renderNpcOrgDisplay(npc) {
-  const orgs = resolveOrgsForNpc(npc);
+  const orgs = resolveNpcOrganizations(npc);
   if (orgs.length) {
     return orgs.map(o => renderLink(`#organizations/${o.id}`, o.name)).join('、');
   }
-  const names = splitOrgNames(npc.organizationNames);
-  if (names.length) {
-    return names.map(name => escapeHtml(name)).join('、');
+  const unlinked = resolveNpcUnlinkedOrgNames(npc);
+  if (unlinked.length) {
+    return unlinked.map(name => escapeHtml(name)).join('、');
   }
   return '';
 }
@@ -584,6 +642,17 @@ function bindNavigation() {
     el.addEventListener('click', e => {
       e.preventDefault();
       navigate(el.dataset.navSection, el.dataset.navId);
+      closeSidebar();
+    });
+  });
+
+  contentArea.querySelectorAll('a.entity-link[href^="#"]').forEach(el => {
+    el.addEventListener('click', e => {
+      const href = el.getAttribute('href') || '';
+      const parts = href.slice(1).split('/').filter(Boolean);
+      if (!parts.length) return;
+      e.preventDefault();
+      navigate(parts[0], parts[1] || null);
       closeSidebar();
     });
   });

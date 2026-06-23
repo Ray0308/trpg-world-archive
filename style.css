@@ -1406,6 +1406,24 @@ input {
   flex-shrink: 0;
 }
 
+.member-row-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.member-row--static {
+  cursor: default;
+}
+
+.member-row--static:hover {
+  background: var(--bg-panel);
+  border-color: var(--border);
+}
+
 .member-name {
   display: block;
   font-size: 0.88rem;
