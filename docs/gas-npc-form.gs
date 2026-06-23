@@ -2,8 +2,8 @@
  * YOKOFOLIA — フォーム → スプレッドシート → 公開 API
  *
  * NPC:  トリガー onNpcFormSubmit（NPC登録フォーム）— この GAS に紐づける
- * 組織: トリガー onOrganizationFormSubmit（組織登録フォーム）— **組織フォーム側** に
- *       docs/gas-org-form-bound.gs を貼る（NPC フォーム紐づけ GAS では組織送信が動かない）
+ * 組織: トリガー onSpreadsheetFormSubmit（スプレッドシートから・フォーム送信時）
+ *       → 入力PJ に1本。組織フォームの回答を ORGANIZATIONS に転記
  * 両フォームの回答先は **同じスプレッドシート** にすること
  */
 
@@ -283,7 +283,7 @@ function doGet(e) {
   const kpMode = e && e.parameter && e.parameter.kp === '1';
 
   if (type === 'version') {
-    return jsonResponse_({ api_version: '2026-06-24-npc-org-link' }, callback);
+    return jsonResponse_({ api_version: '2026-06-24-org-transfer-fix' }, callback);
   }
 
   if (type === 'npcs') {
@@ -467,6 +467,83 @@ function getSpreadsheetFromEvent_(e) {
   return getArchiveSpreadsheet_();
 }
 
+function getSpreadsheetFromSubmitEvent_(e) {
+  if (e && e.source && typeof e.source.getId === 'function') {
+    const ss = e.source;
+    rememberArchiveSpreadsheet_(ss);
+    return ss;
+  }
+  return getSpreadsheetFromEvent_(e);
+}
+
+function isOrganizationFormTitle_(title) {
+  return /組織/.test(String(title));
+}
+
+function normalizeSheetHeader_(title) {
+  const t = normalizeTitle_(title);
+  return t === 'タイムスタンプ' ? '' : t;
+}
+
+function findOrgResponseSheet_(ss) {
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const width = Math.max(sheet.getLastColumn(), 1);
+    const headers = sheet.getRange(1, 1, 1, width).getValues()[0]
+      .map(h => normalizeSheetHeader_(h))
+      .filter(Boolean);
+    if (headers.indexOf('組織名') >= 0) return sheet;
+  }
+  return null;
+}
+
+function answersFromNamedValues_(namedValues) {
+  const answers = {};
+  Object.keys(namedValues || {}).forEach(key => {
+    const k = normalizeSheetHeader_(key);
+    if (!k) return;
+    const v = namedValues[key];
+    answers[k] = Array.isArray(v) ? v[0] : v;
+  });
+  return answers;
+}
+
+function answersFromResponseSheetRow_(responseSheet, rowIndex) {
+  const width = Math.max(responseSheet.getLastColumn(), 1);
+  const headers = responseSheet.getRange(1, 1, 1, width).getValues()[0]
+    .map(h => normalizeSheetHeader_(h));
+  const values = responseSheet.getRange(rowIndex, 1, 1, width).getValues()[0];
+  const answers = {};
+  headers.forEach((header, index) => {
+    if (header) answers[header] = values[index];
+  });
+  return answers;
+}
+
+function isOrgResponseAlreadyImported_(orgSheet, formResponseId) {
+  if (!formResponseId) return false;
+  const headers = readSheetHeaders_(orgSheet);
+  const idx = headers.indexOf('form_response_id');
+  if (idx < 0) return false;
+  const lastRow = orgSheet.getLastRow();
+  if (lastRow <= 1) return false;
+  const values = orgSheet.getRange(2, idx + 1, lastRow - 1, 1).getValues().flat();
+  return values.some(v => String(v).trim() === String(formResponseId).trim());
+}
+
+function isOrgNameAlreadyImported_(orgSheet, name) {
+  const n = String(name || '').trim();
+  if (!n) return false;
+  const headers = readSheetHeaders_(orgSheet);
+  const idx = headers.indexOf('name');
+  if (idx < 0) return false;
+  const lastRow = orgSheet.getLastRow();
+  if (lastRow <= 1) return false;
+  const values = orgSheet.getRange(2, idx + 1, lastRow - 1, 1).getValues().flat();
+  return values.some(v => String(v).trim() === n);
+}
+
 function getOrgHeaders_() {
   return [
     'id',
@@ -525,8 +602,10 @@ function generateOrgId_(sheet) {
   return 'org_' + String(maxNumber + 1).padStart(3, '0');
 }
 
-function buildOrgRowFromAnswers_(answers, sheet, response) {
+function buildOrgRowFromAnswers_(answers, sheet, meta) {
   const now = new Date();
+  const m = meta || {};
+  const response = m.response;
   return {
     id: generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
@@ -538,26 +617,183 @@ function buildOrgRowFromAnswers_(answers, sheet, response) {
     scenario_ids: pickAnswer_(answers, '関連シナリオ'),
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
-    edit_url: response.getEditResponseUrl(),
-    form_response_id: response.getId(),
+    edit_url: m.editUrl || (response ? response.getEditResponseUrl() : ''),
+    form_response_id: m.formResponseId || (response ? response.getId() : ''),
     created_at: now,
     updated_at: now
   };
 }
 
+function appendOrganizationFromAnswers_(ss, answers, meta) {
+  rememberArchiveSpreadsheet_(ss);
+  const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
+  const headers = ensureOrgHeader_(orgSheet);
+  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta);
+
+  if (!String(rowData.name || '').trim()) {
+    Logger.log('ORG skip: 組織名が空');
+    return null;
+  }
+  if (rowData.form_response_id &&
+      isOrgResponseAlreadyImported_(orgSheet, rowData.form_response_id)) {
+    Logger.log('ORG skip duplicate response: ' + rowData.form_response_id);
+    return null;
+  }
+
+  const row = headers.map(header => rowData[header] ?? '');
+  orgSheet.appendRow(row);
+  Logger.log('ORG imported: ' + rowData.id + ' / ' + rowData.name);
+  return rowData.id;
+}
+
 /**
- * 組織フォーム送信トリガーに設定する関数
+ * 組織フォーム送信 → ORGANIZATIONS 転記（3通りのイベント形式に対応）
+ */
+function processOrganizationSubmitFromEvent_(e) {
+  if (!e) {
+    Logger.log('ORG skip: event なし');
+    return;
+  }
+
+  const ss = getSpreadsheetFromSubmitEvent_(e);
+
+  if (e.response) {
+    const title = e.response.getSource().getTitle();
+    if (!isOrganizationFormTitle_(title)) {
+      Logger.log('ORG skip form: ' + title);
+      return;
+    }
+    appendOrganizationFromAnswers_(ss, getAnswers_(e.response), { response: e.response });
+    return;
+  }
+
+  if (e.namedValues) {
+    const answers = answersFromNamedValues_(e.namedValues);
+    if (!pickAnswer_(answers, '組織名')) {
+      Logger.log('ORG skip namedValues: 組織名なし');
+      return;
+    }
+    appendOrganizationFromAnswers_(ss, answers, {});
+    return;
+  }
+
+  if (e.range) {
+    const sheet = e.range.getSheet();
+    const rowIndex = e.range.getRow();
+    if (rowIndex < 2) return;
+    const answers = answersFromResponseSheetRow_(sheet, rowIndex);
+    if (!pickAnswer_(answers, '組織名')) {
+      Logger.log('ORG skip range: ' + sheet.getName() + ' 行' + rowIndex);
+      return;
+    }
+    appendOrganizationFromAnswers_(ss, answers, {});
+    return;
+  }
+
+  Logger.log('ORG skip: 処理できる event データなし');
+}
+
+/**
+ * トリガー: スプレッドシートから → フォーム送信時（組織転記）
+ * 入力PJ に追加。スプレッドシートは TRPG World Archive DB を選択。
+ */
+function onSpreadsheetFormSubmit(e) {
+  try {
+    processOrganizationSubmitFromEvent_(e);
+  } catch (err) {
+    Logger.log('onSpreadsheetFormSubmit ERROR: ' + (err.message || err));
+    throw err;
+  }
+}
+
+/**
+ * @deprecated 組織フォーム側トリガー用。onSpreadsheetFormSubmit を推奨。
  */
 function onOrganizationFormSubmit(e) {
-  const ss = getSpreadsheetFromEvent_(e);
-  const sheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
-  const headers = ensureOrgHeader_(sheet);
+  processOrganizationSubmitFromEvent_(e);
+}
 
-  const response = e.response;
-  const answers = getAnswers_(response);
-  const rowData = buildOrgRowFromAnswers_(answers, sheet, response);
-  const row = headers.map(header => rowData[header] ?? '');
-  sheet.appendRow(row);
+/**
+ * 診断（▶ 実行）。結果は実行ログに出ます。
+ */
+function checkOrgSetup() {
+  const ss = getArchiveSpreadsheet_();
+  const responseSheet = findOrgResponseSheet_(ss);
+  const orgSheet = ss.getSheetByName('ORGANIZATIONS');
+  const lines = [
+    'スプレッドシート: ' + ss.getName(),
+    '組織の回答シート: ' + (responseSheet
+      ? responseSheet.getName() + '（' + Math.max(0, responseSheet.getLastRow() - 1) + '件）'
+      : '見つかりません'),
+    'ORGANIZATIONS: ' + (orgSheet ? Math.max(0, orgSheet.getLastRow() - 1) + '件' : 'まだ無い')
+  ];
+  const msg = lines.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 回答シートの最後の1行を手動取り込み
+ */
+function importLastOrgResponse() {
+  const ss = getArchiveSpreadsheet_();
+  const responseSheet = findOrgResponseSheet_(ss);
+  if (!responseSheet) {
+    const msg = '「組織名」列がある回答シートが見つかりません';
+    Logger.log(msg);
+    return msg;
+  }
+  const lastRow = responseSheet.getLastRow();
+  if (lastRow < 2) {
+    const msg = '組織フォームの回答がまだありません';
+    Logger.log(msg);
+    return msg;
+  }
+  const answers = answersFromResponseSheetRow_(responseSheet, lastRow);
+  const id = appendOrganizationFromAnswers_(ss, answers, {});
+  const msg = id
+    ? '取り込み: ' + id + ' / ' + pickAnswer_(answers, '組織名')
+    : '取り込みスキップ（重複または組織名空）';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 回答シートの未取り込み行を一括取り込み（▶ で1回実行）
+ */
+function importAllOrgResponses() {
+  const ss = getArchiveSpreadsheet_();
+  const responseSheet = findOrgResponseSheet_(ss);
+  if (!responseSheet) {
+    const msg = '組織の回答シートが見つかりません';
+    Logger.log(msg);
+    return msg;
+  }
+
+  const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
+  const lastRow = responseSheet.getLastRow();
+  let imported = 0;
+  let skipped = 0;
+
+  for (let row = 2; row <= lastRow; row++) {
+    const answers = answersFromResponseSheetRow_(responseSheet, row);
+    const name = pickAnswer_(answers, '組織名');
+    if (!name) {
+      skipped++;
+      continue;
+    }
+    if (isOrgNameAlreadyImported_(orgSheet, name)) {
+      skipped++;
+      continue;
+    }
+    const id = appendOrganizationFromAnswers_(ss, answers, {});
+    if (id) imported++;
+    else skipped++;
+  }
+
+  const msg = '一括取り込み: ' + imported + ' 件追加 / ' + skipped + ' 件スキップ';
+  Logger.log(msg);
+  return msg;
 }
 
 function getPublicOrganizations_(ss) {
