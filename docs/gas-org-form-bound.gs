@@ -22,7 +22,12 @@ function getAnswers_(response) {
   const answers = {};
   response.getItemResponses().forEach(itemResponse => {
     const title = normalizeTitle_(itemResponse.getItem().getTitle());
-    answers[title] = normalizeAnswerValue_(itemResponse.getResponse());
+    const raw = itemResponse.getResponse();
+    if (Array.isArray(raw) && title === 'アイコン') {
+      answers[title] = raw;
+    } else {
+      answers[title] = normalizeAnswerValue_(raw);
+    }
   });
   return answers;
 }
@@ -56,11 +61,33 @@ function pickAnswer_(answers, ...keys) {
   return '';
 }
 
+function toDriveFileUrl_(value) {
+  if (!value) return '';
+  if (Array.isArray(value)) {
+    const fileId = value[0];
+    return fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : '';
+  }
+  const text = String(value).trim();
+  if (!text || /^\[Ljava\.lang\.Object;@/i.test(text)) return '';
+  if (text.startsWith('http')) {
+    const m = text.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+    return text;
+  }
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(text)) {
+    return `https://drive.google.com/uc?export=view&id=${text}`;
+  }
+  return '';
+}
+
 function normalizeOrgIcon_(raw) {
+  if (raw == null || raw === '') return '🏛️';
+  const driveUrl = toDriveFileUrl_(raw);
+  if (driveUrl) return driveUrl;
   const s = normalizeAnswerValue_(raw);
   if (!s) return '🏛️';
   if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '🏛️';
-  if (/^https?:\/\//i.test(s)) return s;
+  if (/^https?:\/\//i.test(s)) return toDriveFileUrl_(s) || s;
   if (s.length <= 8) return s;
   return '🏛️';
 }
@@ -207,7 +234,7 @@ function buildOrgRowFromAnswers_(answers, sheet, meta) {
   return {
     id: generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
-    icon: normalizeOrgIcon_(pickAnswer_(answers, 'アイコン')),
+    icon: normalizeOrgIcon_(answers['アイコン'] != null ? answers['アイコン'] : pickAnswer_(answers, 'アイコン')),
     summary: pickAnswer_(answers, '概要'),
     description: pickAnswer_(answers, '説明'),
     location_id: '',

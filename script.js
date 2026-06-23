@@ -352,13 +352,19 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function orgIconFallbackSvg() {
+  return 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text x="2" y="26" font-size="22">🏛️</text></svg>'
+  );
+}
+
 function renderOrgIcon(icon) {
   const value = String(icon || '').trim();
   if (!value || /\[?Ljava\.lang\.Object;@/i.test(value)) {
     return '🏛️';
   }
   if (/^https?:\/\//i.test(value)) {
-    return `<img src="${escapeHtml(value)}" alt="" class="org-icon-img" width="28" height="28" loading="lazy" decoding="async">`;
+    return renderImg(value, orgIconFallbackSvg(), { className: 'org-icon-img', alt: '' });
   }
   if (value.length > 8) return '🏛️';
   return escapeHtml(value || '🏛️');

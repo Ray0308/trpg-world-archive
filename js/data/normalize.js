@@ -368,7 +368,14 @@ window.ArchiveNormalize = (function () {
   function cleanOrgIcon(value) {
     const s = cleanOrgText(value);
     if (!s) return '🏛️';
-    if (/^https?:\/\//i.test(s)) return s;
+    if (/^https?:\/\//i.test(s)) {
+      const m = s.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+      if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+      return s;
+    }
+    if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) {
+      return `https://drive.google.com/uc?export=view&id=${s}`;
+    }
     if (s.length <= 8) return s;
     return '🏛️';
   }
