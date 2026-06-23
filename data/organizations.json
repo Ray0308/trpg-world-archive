@@ -1,30 +1,3 @@
 {
-  "organizations": [
-    {
-      "id": "org-miskatonic-univ",
-      "name": "ミスカトニック大学",
-      "nameEn": "Miskatonic University",
-      "icon": "🏛️",
-      "locationId": "loc-miskatonic-museum",
-      "summary": "アーカムに存在する大学。考古学・民俗学・医学など多様な学部を擁する名門の私立大学。",
-      "description": [
-        "1880年に設立された私立大学。キャンパス内には考古学博物館をはじめ、膨大な蔵書を誇る図書館がある。",
-        "表向きは普通の総合大学だが、禁断の知識に触れる研究者も少なくない。"
-      ],
-      "scenarioIds": ["scn-lost-city", "scn-yellow-invite"]
-    },
-    {
-      "id": "org-japan-archaeology",
-      "name": "日本考古学協会",
-      "nameEn": "Japan Archaeological Society",
-      "icon": "🔬",
-      "locationId": null,
-      "summary": "日本国内の考古学研究を推進する学術団体。",
-      "description": [
-        "国内外の考古学者が所属し、学会誌の発行や発掘調査の支援を行っている。",
-        "フィル・ミラーは移住後、同協会賞を受賞している。"
-      ],
-      "scenarioIds": ["scn-lost-city"]
-    }
-  ]
+  "organizations": []
 }

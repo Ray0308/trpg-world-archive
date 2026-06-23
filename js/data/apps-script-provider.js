@@ -349,13 +349,7 @@ window.AppsScriptProvider = {
 
       const organizations = this.mergeOrganizations(apiOrgs, jsonOrgs);
       let notice = null;
-      if (apiOrgs.length === 0 && jsonOrgs.length > 0) {
-        notice = {
-          level: 'warning',
-          title: '組織APIが空です',
-          message: 'サンプルデータ（organizations.json）を表示しています。フォーム登録分が反映されない場合は GAS を確認してください。'
-        };
-      } else if (organizations.length === 0) {
+      if (apiOrgs.length === 0) {
         notice = {
           level: 'warning',
           title: '組織データなし',

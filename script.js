@@ -887,16 +887,18 @@ function renderOrgDetail(org) {
         ` : renderEmpty('所属NPCは登録されていません')}
       </section>
 
-      ${scenarios.length ? `
       <section class="detail-section detail-section--compact">
-        <h2 class="section-heading">関連シナリオ</h2>
+        <h2 class="section-heading">関連情報</h2>
         <div class="related-grid">
-          ${renderLinkList(
-            scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
+          ${renderRelatedBlock(
+            '関連シナリオ',
+            scenarios.length
+              ? renderLinkList(scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)))
+              : '',
+            { alwaysShow: true }
           )}
         </div>
       </section>
-      ` : ''}
     </article>
   `;
 }
