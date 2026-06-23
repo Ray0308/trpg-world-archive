@@ -349,7 +349,6 @@ function getOrgHeaders_() {
   return [
     'id',
     'name',
-    'name_en',
     'icon',
     'summary',
     'description',
@@ -409,7 +408,6 @@ function buildOrgRowFromAnswers_(answers, sheet, response) {
   return {
     id: generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
-    name_en: pickAnswer_(answers, '英語名'),
     icon: pickAnswer_(answers, 'アイコン') || '🏛️',
     summary: pickAnswer_(answers, '概要'),
     description: pickAnswer_(answers, '説明'),
@@ -486,7 +484,6 @@ function getKpOrganizations_(ss) {
       return {
         id: record.id || '',
         name: record.name || '',
-        name_en: record.name_en || '',
         icon: record.icon || '🏛️',
         summary: record.summary || '',
         pl_hidden: isPlHidden_(record.pl_hidden),

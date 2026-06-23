@@ -56,7 +56,7 @@ form_response_id, created_at, updated_at, pl_hidden
 組織フォーム手順: `docs/organization-form-setup.md`
 
 ```
-id, name, name_en, icon, summary, description, location_id, location_name,
+id, name, icon, summary, description, location_id, location_name,
 scenario_ids, memo, pl_hidden, edit_url, form_response_id, created_at, updated_at
 ```
 
