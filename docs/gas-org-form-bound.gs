@@ -99,6 +99,138 @@ function readSheetHeaders_(sheet) {
     .filter(Boolean);
 }
 
+function splitList_(value) {
+  if (!value) return [];
+  return String(value)
+    .split(/[,、|]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function npcNameMatches_(part, npcName) {
+  const p = String(part || '').trim();
+  const name = String(npcName || '').trim();
+  if (!p || !name) return false;
+  return name === p || p.indexOf(name) >= 0 || name.indexOf(p) >= 0;
+}
+
+/**
+ * 所属NPC（名前）から NPCS シートを引いて ID を解決
+ */
+function resolveNpcIdsFromNames_(ss, namesText) {
+  const parts = splitList_(namesText);
+  if (!parts.length) return '';
+
+  const sheet = ss.getSheetByName('NPCS');
+  if (!sheet || sheet.getLastRow() <= 1) return '';
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const idIdx = headers.indexOf('id');
+  const nameIdx = headers.indexOf('name');
+  if (idIdx < 0 || nameIdx < 0) return '';
+
+  const npcs = values.slice(1)
+    .filter(row => row[idIdx])
+    .map(row => ({
+      id: String(row[idIdx]).trim(),
+      name: String(row[nameIdx] || '').trim()
+    }));
+
+  const matched = [];
+  const seen = new Set();
+  parts.forEach(part => {
+    npcs.forEach(npc => {
+      if (npcNameMatches_(part, npc.name) && !seen.has(npc.id)) {
+        seen.add(npc.id);
+        matched.push(npc.id);
+      }
+    });
+  });
+  return matched.join(', ');
+}
+
+function mergeCsvIds_(current, addIds) {
+  const set = new Set(splitList_(current));
+  (addIds || []).forEach(id => {
+    const t = String(id || '').trim();
+    if (t) set.add(t);
+  });
+  return [...set].join(', ');
+}
+
+function mergeCsvNames_(current, addNames) {
+  const parts = splitList_(current);
+  const seen = new Set(parts.map(p => p.toLowerCase()));
+  (addNames || []).forEach(name => {
+    const t = String(name || '').trim();
+    if (t && !seen.has(t.toLowerCase())) {
+      parts.push(t);
+      seen.add(t.toLowerCase());
+    }
+  });
+  return parts.join(', ');
+}
+
+function readNpcSheetHeaders_(sheet) {
+  const width = Math.max(sheet.getLastColumn(), 1);
+  return sheet.getRange(1, 1, 1, width).getValues()[0]
+    .map(h => String(h).trim())
+    .filter(Boolean);
+}
+
+/**
+ * 組織登録時: ORGANIZATIONS の所属NPC → NPCS の organization_ids / organization_names を更新
+ */
+function linkNpcsToOrganization_(ss, orgId, orgName, memberNpcNamesText, memberNpcIdsText) {
+  const npcIds = splitList_(memberNpcIdsText);
+  if (!npcIds.length) {
+    if (memberNpcNamesText) {
+      Logger.log('ORG link warn: NPC名に一致なし — 「' + memberNpcNamesText + '」');
+    }
+    return 0;
+  }
+
+  const npcSheet = ss.getSheetByName('NPCS');
+  if (!npcSheet || npcSheet.getLastRow() <= 1) {
+    Logger.log('ORG link skip: NPCS が空');
+    return 0;
+  }
+
+  const headers = readNpcSheetHeaders_(npcSheet);
+  const idIdx = headers.indexOf('id');
+  const orgIdsIdx = headers.indexOf('organization_ids');
+  const orgNamesIdx = headers.indexOf('organization_names');
+  if (idIdx < 0 || orgIdsIdx < 0) return 0;
+
+  const targetIds = new Set(npcIds);
+  let updated = 0;
+  const lastRow = npcSheet.getLastRow();
+
+  for (let row = 2; row <= lastRow; row++) {
+    const npcId = String(npcSheet.getRange(row, idIdx + 1).getValue() || '').trim();
+    if (!targetIds.has(npcId)) continue;
+
+    const curIds = String(npcSheet.getRange(row, orgIdsIdx + 1).getValue() || '').trim();
+    const newIds = mergeCsvIds_(curIds, [orgId]);
+    if (newIds !== curIds) {
+      npcSheet.getRange(row, orgIdsIdx + 1).setValue(newIds);
+      updated++;
+    }
+
+    if (orgNamesIdx >= 0 && orgName) {
+      const curNames = String(npcSheet.getRange(row, orgNamesIdx + 1).getValue() || '').trim();
+      const newNames = mergeCsvNames_(curNames, [orgName]);
+      if (newNames !== curNames) {
+        npcSheet.getRange(row, orgNamesIdx + 1).setValue(newNames);
+      }
+    }
+  }
+
+  Logger.log('ORG link NPCs: ' + updated + ' 行更新 (' + orgId + ')');
+  return updated;
+}
+
 function getOrgHeaders_() {
   return [
     'id',
@@ -109,6 +241,8 @@ function getOrgHeaders_() {
     'location_id',
     'location_name',
     'scenario_ids',
+    'member_npc_names',
+    'member_npc_ids',
     'memo',
     'pl_hidden',
     'edit_url',
@@ -227,10 +361,12 @@ function isOrgNameAlreadyImported_(orgSheet, name) {
   return values.some(v => String(v).trim() === n);
 }
 
-function buildOrgRowFromAnswers_(answers, sheet, meta) {
+function buildOrgRowFromAnswers_(answers, sheet, meta, ss) {
   const now = new Date();
   const m = meta || {};
   const response = m.response;
+  const memberNpcNames = pickAnswer_(answers, '所属NPC');
+  const memberNpcIds = ss ? resolveNpcIdsFromNames_(ss, memberNpcNames) : '';
   return {
     id: generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
@@ -240,6 +376,8 @@ function buildOrgRowFromAnswers_(answers, sheet, meta) {
     location_id: '',
     location_name: pickAnswer_(answers, '所在地'),
     scenario_ids: pickAnswer_(answers, '関連シナリオ'),
+    member_npc_names: memberNpcNames,
+    member_npc_ids: memberNpcIds,
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
@@ -254,7 +392,7 @@ function buildOrgRowFromAnswers_(answers, sheet, meta) {
 function appendOrganizationFromAnswers_(ss, answers, meta) {
   const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
   const headers = ensureOrgHeader_(orgSheet);
-  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta);
+  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta, ss);
 
   if (!String(rowData.name || '').trim()) {
     Logger.log('ORG skip: 組織名が空');
@@ -268,6 +406,13 @@ function appendOrganizationFromAnswers_(ss, answers, meta) {
 
   const row = headers.map(header => rowData[header] ?? '');
   orgSheet.appendRow(row);
+  linkNpcsToOrganization_(
+    ss,
+    rowData.id,
+    rowData.name,
+    rowData.member_npc_names,
+    rowData.member_npc_ids
+  );
   Logger.log('ORG imported: ' + rowData.id + ' / ' + rowData.name);
   return rowData.id;
 }
@@ -396,6 +541,68 @@ function fixOrgSheetGarbageValues() {
   }
 
   const msg = '修正完了: ' + fixed + ' 行';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 全組織行の所属NPCを NPCS に再反映（▶ で1回実行・列追加後の修復用）
+ */
+function syncAllOrgMemberNpcLinks() {
+  const form = FormApp.getActiveForm();
+  if (!form) {
+    const msg = '組織PJ から実行してください';
+    Logger.log(msg);
+    return msg;
+  }
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const orgSheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!orgSheet || orgSheet.getLastRow() <= 1) {
+    const msg = 'ORGANIZATIONS が空です';
+    Logger.log(msg);
+    return msg;
+  }
+
+  ensureOrgHeader_(orgSheet);
+  const headers = readSheetHeaders_(orgSheet);
+  const idIdx = headers.indexOf('id');
+  const nameIdx = headers.indexOf('name');
+  const memberNamesIdx = headers.indexOf('member_npc_names');
+  const memberIdsIdx = headers.indexOf('member_npc_ids');
+  if (idIdx < 0 || nameIdx < 0) {
+    const msg = 'id / name 列が見つかりません';
+    Logger.log(msg);
+    return msg;
+  }
+
+  let linked = 0;
+  let resolved = 0;
+  for (let row = 2; row <= orgSheet.getLastRow(); row++) {
+    const orgId = String(orgSheet.getRange(row, idIdx + 1).getValue() || '').trim();
+    const orgName = String(orgSheet.getRange(row, nameIdx + 1).getValue() || '').trim();
+    if (!orgId || !orgName) continue;
+
+    let memberNames = memberNamesIdx >= 0
+      ? String(orgSheet.getRange(row, memberNamesIdx + 1).getValue() || '').trim()
+      : '';
+    let memberIds = memberIdsIdx >= 0
+      ? String(orgSheet.getRange(row, memberIdsIdx + 1).getValue() || '').trim()
+      : '';
+
+    if (memberNames && !memberIds) {
+      memberIds = resolveNpcIdsFromNames_(ss, memberNames);
+      if (memberIds && memberIdsIdx >= 0) {
+        orgSheet.getRange(row, memberIdsIdx + 1).setValue(memberIds);
+        resolved++;
+      }
+    }
+
+    if (memberIds) {
+      linked += linkNpcsToOrganization_(ss, orgId, orgName, memberNames, memberIds);
+    }
+  }
+
+  const msg = '所属NPCリンク完了: NPC ' + linked + ' 行更新 / ID解決 ' + resolved + ' 組織';
   Logger.log(msg);
   return msg;
 }

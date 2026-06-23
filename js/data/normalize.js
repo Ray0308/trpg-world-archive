@@ -349,7 +349,9 @@ window.ArchiveNormalize = (function () {
       description: splitParagraphs(descriptionText),
       locationId: row.locationId || null,
       locationName: row['所在地'] || row.locationName || '',
-      scenarioIds: splitIds(row.scenarioIds || row['関連シナリオ'])
+      scenarioIds: splitIds(row.scenarioIds || row['関連シナリオ']),
+      memberNpcNames: splitIds(row.memberNpcNames || row.member_npc_names || row['所属NPC']),
+      memberNpcIds: splitIds(row.memberNpcIds || row.member_npc_ids)
     };
   }
 
@@ -392,7 +394,9 @@ window.ArchiveNormalize = (function () {
       description: splitParagraphs(cleanOrgText(raw.description) || raw.description),
       locationId: raw.locationId || raw.location_id || null,
       locationName: cleanOrgText(raw.location_name || raw.locationName),
-      scenarioIds: splitIds(raw.scenarioIds || raw.scenario_ids)
+      scenarioIds: splitIds(raw.scenarioIds || raw.scenario_ids),
+      memberNpcNames: splitIds(raw.member_npc_names || raw.memberNpcNames),
+      memberNpcIds: splitIds(raw.member_npc_ids || raw.memberNpcIds)
     };
   }
 
@@ -526,6 +530,18 @@ window.ArchiveNormalize = (function () {
           indexes.npcsByOrgId.set(orgId, []);
         }
         indexes.npcsByOrgId.get(orgId).push(npc);
+      });
+    });
+
+    data.organizations.forEach(org => {
+      (org.memberNpcIds || []).forEach(npcId => {
+        const npc = indexes.npcById.get(npcId);
+        if (!npc) return;
+        if (!indexes.npcsByOrgId.has(org.id)) {
+          indexes.npcsByOrgId.set(org.id, []);
+        }
+        const members = indexes.npcsByOrgId.get(org.id);
+        if (!members.some(m => m.id === npcId)) members.push(npc);
       });
     });
 

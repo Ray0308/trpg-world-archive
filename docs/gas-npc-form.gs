@@ -569,6 +569,8 @@ function getOrgHeaders_() {
     'location_id',
     'location_name',
     'scenario_ids',
+    'member_npc_names',
+    'member_npc_ids',
     'memo',
     'pl_hidden',
     'edit_url',
