@@ -22,7 +22,7 @@
     plIndex: appRoot + 'index.html',
     kpPage: appRoot + 'kp.html',
     npcForm: 'https://docs.google.com/forms/d/e/1FAIpQLSfscXkMnmrSczHr957jNrwon1ZGDQixceyAOmJx26xGQ1Zucw/viewform',
-    organizationForm: '#', // 組織フォーム作成後に URL を設定（docs/organization-form-setup.md）
+    organizationForm: 'https://docs.google.com/forms/d/e/1FAIpQLSdOio3knxLlXFAPz8TWeq-Yjsy-N2xjMkHyySjJC7KOxUN3zA/viewform',
     scenarioForm: '#',
     pcForm: '#',
 
