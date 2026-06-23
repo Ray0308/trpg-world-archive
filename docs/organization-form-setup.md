@@ -223,7 +223,7 @@ organizationForm: 'https://docs.google.com/forms/d/e/xxxxxxxx/viewform',
 ## 次のステップ（まだ未実装）
 
 - [x] PL サイトを `organizations.json` ではなく API から読む
-- [ ] KP ページに組織の「一覧」「編集」
+- [x] KP ページに組織の「一覧」「編集」「表示設定」
 - [ ] PL 非表示トグル（NPC と同様）
 
 フォームとシートが動いたら、上記を順に実装します。

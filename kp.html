@@ -37,42 +37,42 @@
         <div class="kp-card-grid" id="kpCardGrid"></div>
       </main>
 
-      <div class="kp-modal" id="kpNpcPicker" hidden aria-hidden="true">
-        <div class="kp-modal-backdrop" data-kp-close="kpNpcPicker"></div>
-        <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpNpcPickerTitle">
+      <div class="kp-modal" id="kpEntityPicker" hidden aria-hidden="true">
+        <div class="kp-modal-backdrop" data-kp-close="kpEntityPicker"></div>
+        <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpEntityPickerTitle">
           <header class="kp-modal-header">
-            <h2 class="kp-modal-title" id="kpNpcPickerTitle">NPCを編集</h2>
-            <button type="button" class="kp-modal-close" data-kp-close="kpNpcPicker" aria-label="閉じる">
+            <h2 class="kp-modal-title" id="kpEntityPickerTitle">編集</h2>
+            <button type="button" class="kp-modal-close" data-kp-close="kpEntityPicker" aria-label="閉じる">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
             </button>
           </header>
           <div class="kp-modal-search">
-            <input type="search" id="kpNpcSearch" placeholder="名前・ふりがなで検索..." aria-label="NPC検索">
+            <input type="search" id="kpEntityPickerSearch" placeholder="検索..." aria-label="検索">
           </div>
-          <div class="kp-modal-body" id="kpNpcPickerBody">
+          <div class="kp-modal-body" id="kpEntityPickerBody">
             <p class="kp-modal-status">読み込み中...</p>
           </div>
         </div>
       </div>
 
-      <div class="kp-modal" id="kpNpcList" hidden aria-hidden="true">
-        <div class="kp-modal-backdrop" data-kp-close="kpNpcList"></div>
-        <div class="kp-modal-panel kp-modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="kpNpcListTitle">
+      <div class="kp-modal" id="kpEntityList" hidden aria-hidden="true">
+        <div class="kp-modal-backdrop" data-kp-close="kpEntityList"></div>
+        <div class="kp-modal-panel kp-modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="kpEntityListTitle">
           <header class="kp-modal-header">
-            <h2 class="kp-modal-title" id="kpNpcListTitle">NPC一覧（KP用）</h2>
-            <button type="button" class="kp-modal-close" data-kp-close="kpNpcList" aria-label="閉じる">
+            <h2 class="kp-modal-title" id="kpEntityListTitle">一覧（KP用）</h2>
+            <button type="button" class="kp-modal-close" data-kp-close="kpEntityList" aria-label="閉じる">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
             </button>
           </header>
-          <p class="kp-modal-hint">非表示の NPC も含めてすべて表示します。PLサイトに出すかどうかは「表示設定」で変更できます。</p>
+          <p class="kp-modal-hint" id="kpEntityListHint"></p>
           <div class="kp-npc-list-head">
-            <p class="kp-npc-list-summary" id="kpNpcListSummary"></p>
+            <p class="kp-npc-list-summary" id="kpEntityListSummary"></p>
             <div class="kp-modal-search kp-modal-search--list">
-              <input type="search" id="kpNpcListSearch" placeholder="名前・ふりがな・職業で検索..." aria-label="NPC検索">
+              <input type="search" id="kpEntityListSearch" placeholder="検索..." aria-label="検索">
             </div>
             <div class="kp-npc-list-filters" role="tablist" aria-label="表示フィルター">
               <button type="button" class="kp-npc-list-filter is-active" data-kp-list-filter="all" role="tab" aria-selected="true">すべて</button>
@@ -80,28 +80,28 @@
               <button type="button" class="kp-npc-list-filter" data-kp-list-filter="hidden" role="tab" aria-selected="false">非表示</button>
             </div>
           </div>
-          <div class="kp-modal-body kp-modal-body--list" id="kpNpcListBody">
+          <div class="kp-modal-body kp-modal-body--list" id="kpEntityListBody">
             <p class="kp-modal-status">読み込み中...</p>
           </div>
         </div>
       </div>
 
-      <div class="kp-modal" id="kpNpcVisibility" hidden aria-hidden="true">
-        <div class="kp-modal-backdrop" data-kp-close="kpNpcVisibility"></div>
-        <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpNpcVisibilityTitle">
+      <div class="kp-modal" id="kpEntityVisibility" hidden aria-hidden="true">
+        <div class="kp-modal-backdrop" data-kp-close="kpEntityVisibility"></div>
+        <div class="kp-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kpEntityVisibilityTitle">
           <header class="kp-modal-header">
-            <h2 class="kp-modal-title" id="kpNpcVisibilityTitle">PLサイトの表示設定</h2>
-            <button type="button" class="kp-modal-close" data-kp-close="kpNpcVisibility" aria-label="閉じる">
+            <h2 class="kp-modal-title" id="kpEntityVisibilityTitle">PLサイトの表示設定</h2>
+            <button type="button" class="kp-modal-close" data-kp-close="kpEntityVisibility" aria-label="閉じる">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
             </button>
           </header>
-          <p class="kp-modal-hint">オフにした NPC は PL サイト（閲覧ページ）に表示されません。</p>
+          <p class="kp-modal-hint" id="kpEntityVisibilityHint"></p>
           <div class="kp-modal-search">
-            <input type="search" id="kpNpcVisibilitySearch" placeholder="名前・ふりがなで検索..." aria-label="NPC検索">
+            <input type="search" id="kpEntityVisibilitySearch" placeholder="検索..." aria-label="検索">
           </div>
-          <div class="kp-modal-body" id="kpNpcVisibilityBody">
+          <div class="kp-modal-body" id="kpEntityVisibilityBody">
             <p class="kp-modal-status">読み込み中...</p>
           </div>
         </div>
@@ -123,6 +123,6 @@
   <script src="js/config.js"></script>
   <script src="js/image-utils.js"></script>
   <script src="js/links.js"></script>
-  <script src="kp.js"></script>
+  <script src="kp.js?v=20260624h"></script>
 </body>
 </html>

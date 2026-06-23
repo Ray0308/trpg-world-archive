@@ -315,6 +315,21 @@ function doGet(e) {
     }
   }
 
+  if (type === 'org-visibility') {
+    const id = String((e.parameter && e.parameter.id) || '').trim();
+    const hiddenParam = e.parameter && e.parameter.hidden;
+    if (!id) {
+      return jsonResponse_({ error: 'missing id' }, callback);
+    }
+    const hidden = hiddenParam === '1' || hiddenParam === 'true';
+    try {
+      const result = setOrgPlHidden_(ss, id, hidden);
+      return jsonResponse_(result, callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
   if (type === 'chaugner-ranking') {
     return jsonResponse_(getChaugnerRanking_(ss), callback);
   }
@@ -364,6 +379,29 @@ function setNpcPlHidden_(ss, npcId, hidden) {
     }
   }
   throw new Error('NPC が見つかりません: ' + npcId);
+}
+
+function setOrgPlHidden_(ss, orgId, hidden) {
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet) throw new Error('ORGANIZATIONS シートがありません');
+
+  const headers = ensureOrgHeader_(sheet);
+  const idCol = headers.indexOf('id') + 1;
+  const hiddenCol = headers.indexOf('pl_hidden') + 1;
+  if (idCol < 1 || hiddenCol < 1) throw new Error('pl_hidden 列がありません');
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol - 1]).trim() === String(orgId).trim()) {
+      sheet.getRange(i + 1, hiddenCol).setValue(plHiddenCellValue_(hidden));
+      const updatedCol = headers.indexOf('updated_at') + 1;
+      if (updatedCol > 0) {
+        sheet.getRange(i + 1, updatedCol).setValue(new Date());
+      }
+      return { ok: true, id: orgId, pl_hidden: hidden };
+    }
+  }
+  throw new Error('組織が見つかりません: ' + orgId);
 }
 
 /** KPページ用 — 編集リンク付きの最小NPC一覧 */

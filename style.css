@@ -1991,6 +1991,20 @@ input {
   background: var(--bg-input);
 }
 
+.kp-picker-icon-emoji {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.65rem;
+  line-height: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
 .kp-picker-body {
   min-width: 0;
   flex: 1;
