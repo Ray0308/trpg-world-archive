@@ -1,8 +1,9 @@
 /**
  * YOKOFOLIA — フォーム → スプレッドシート → 公開 API
  *
- * NPC:  トリガー onNpcFormSubmit（NPC登録フォーム）
- * 組織: トリガー onOrganizationFormSubmit（組織登録フォーム）
+ * NPC:  トリガー onNpcFormSubmit（NPC登録フォーム）— この GAS に紐づける
+ * 組織: トリガー onOrganizationFormSubmit（組織登録フォーム）— **組織フォーム側** に
+ *       docs/gas-org-form-bound.gs を貼る（NPC フォーム紐づけ GAS では組織送信が動かない）
  * 両フォームの回答先は **同じスプレッドシート** にすること
  */
 
