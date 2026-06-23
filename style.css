@@ -1251,6 +1251,14 @@ input {
   margin-bottom: 0.4rem;
 }
 
+.org-icon-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  display: block;
+}
+
 .org-card-name {
   font-size: 0.9rem;
   font-weight: 700;

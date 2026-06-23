@@ -62,9 +62,9 @@ window.AppsScriptProvider = {
     return this.parseArrayJson(text, '組織データ');
   },
 
-  fetchNpcsJsonp(url, timeoutMs = 30000) {
+  fetchNpcsJsonp(url, timeoutMs = 30000, label = 'npcs') {
     return new Promise((resolve, reject) => {
-      const callbackName = `_gasNpcCb_${Date.now()}`;
+      const callbackName = `_gasCb_${label}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const separator = url.includes('?') ? '&' : '?';
       const script = document.createElement('script');
       let timer;
@@ -165,7 +165,7 @@ window.AppsScriptProvider = {
       return await this.fetchNpcsDirect(url, timeoutMs, parse);
     } catch (fetchErr) {
       try {
-        return await this.fetchNpcsJsonp(url, timeoutMs);
+        return await this.fetchNpcsJsonp(url, timeoutMs, type);
       } catch (jsonpErr) {
         throw new ArchiveLoadError(
           fetchErr.title || errorTitle,
@@ -286,6 +286,17 @@ window.AppsScriptProvider = {
     }
   },
 
+  mergeOrganizations(apiOrgs, jsonOrgs) {
+    const map = new Map();
+    (jsonOrgs || []).forEach(org => {
+      if (org?.id) map.set(org.id, org);
+    });
+    (apiOrgs || []).forEach(org => {
+      if (org?.id) map.set(org.id, org);
+    });
+    return [...map.values()];
+  },
+
   async loadOrganizationsFromJson(jsonConfig) {
     const base = (jsonConfig?.basePath || 'data').replace(/\/$/, '');
     const url = `${base}/organizations.json`;
@@ -328,16 +339,35 @@ window.AppsScriptProvider = {
     }
 
     try {
-      const organizations = await this.fetchOrganizations(apiConfig.baseUrl);
-      const notice = organizations.length === 0
-        ? {
-            level: 'warning',
-            title: '組織データなし',
-            message: 'スプレッドシートに組織が登録されていません。'
-          }
-        : null;
+      const apiOrgs = await this.fetchOrganizations(apiConfig.baseUrl);
+      let jsonOrgs = [];
+      try {
+        jsonOrgs = await this.loadOrganizationsFromJson(jsonConfig);
+      } catch (_) {
+        jsonOrgs = [];
+      }
 
-      return { organizations, source: 'api', notice };
+      const organizations = this.mergeOrganizations(apiOrgs, jsonOrgs);
+      let notice = null;
+      if (apiOrgs.length === 0 && jsonOrgs.length > 0) {
+        notice = {
+          level: 'warning',
+          title: '組織APIが空です',
+          message: 'サンプルデータ（organizations.json）を表示しています。フォーム登録分が反映されない場合は GAS を確認してください。'
+        };
+      } else if (organizations.length === 0) {
+        notice = {
+          level: 'warning',
+          title: '組織データなし',
+          message: 'スプレッドシートに組織が登録されていません。'
+        };
+      }
+
+      return {
+        organizations,
+        source: apiOrgs.length ? 'api' : 'json',
+        notice
+      };
     } catch (apiErr) {
       try {
         const organizations = await this.loadOrganizationsFromJson(jsonConfig);

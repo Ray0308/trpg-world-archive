@@ -352,6 +352,14 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function renderOrgIcon(icon) {
+  const value = String(icon || '🏛️').trim();
+  if (/^https?:\/\//i.test(value)) {
+    return `<img src="${escapeHtml(value)}" alt="" class="org-icon-img" width="28" height="28" loading="lazy" decoding="async">`;
+  }
+  return escapeHtml(value || '🏛️');
+}
+
 function renderLink(href, label, sub = '') {
   return `<a href="${href}" class="entity-link">${escapeHtml(label)}${sub ? `<span class="link-sub">${escapeHtml(sub)}</span>` : ''}</a>`;
 }
@@ -784,7 +792,7 @@ function renderOrgCard(org, active) {
     <article class="org-card ${active ? 'active' : ''}"
              data-nav-section="organizations"
              data-nav-id="${org.id}">
-      <span class="org-card-icon">${org.icon || '🏛️'}</span>
+      <span class="org-card-icon">${renderOrgIcon(org.icon)}</span>
       <h3 class="org-card-name">${escapeHtml(org.name)}</h3>
       <p class="org-card-summary">${escapeHtml(org.summary || '')}</p>
       <p class="org-card-meta">所属NPC ${members.length} 名${preview ? ` — ${preview}` : ''}</p>
@@ -800,7 +808,7 @@ function renderOrgDetail(org) {
   return `
     <article class="entity-detail">
       <header class="detail-header detail-header--compact">
-        <span class="detail-org-icon">${org.icon || '🏛️'}</span>
+        <span class="detail-org-icon">${renderOrgIcon(org.icon)}</span>
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(org.name)}</h1>
           ${org.nameEn ? `<p class="detail-meta">${escapeHtml(org.nameEn)}</p>` : ''}
