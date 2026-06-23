@@ -443,12 +443,16 @@ function checkOrgSetup() {
   const spreadsheet = SpreadsheetApp.openById(form.getDestinationId());
   const responseSheet = findOrgResponseSheet_(spreadsheet);
   const orgSheet = spreadsheet.getSheetByName('ORGANIZATIONS');
+  const orgHeaders = orgSheet ? readSheetHeaders_(orgSheet) : [];
+  const hasMemberNpcCols = orgHeaders.indexOf('member_npc_names') >= 0 &&
+    orgHeaders.indexOf('member_npc_ids') >= 0;
   const msg = [
     'DBPJ: ' + spreadsheet.getName(),
     '組織の回答シート: ' + (responseSheet
       ? responseSheet.getName() + '（' + Math.max(0, responseSheet.getLastRow() - 1) + '件）'
       : '見つかりません'),
-    'ORGANIZATIONS: ' + (orgSheet ? Math.max(0, orgSheet.getLastRow() - 1) + '件' : 'まだ無い')
+    'ORGANIZATIONS: ' + (orgSheet ? Math.max(0, orgSheet.getLastRow() - 1) + '件' : 'まだ無い'),
+    'member_npc 列: ' + (hasMemberNpcCols ? 'あり' : 'なし → migrateOrgSheetForMemberNpc を実行')
   ].join('\n');
   Logger.log(msg);
   return msg;
@@ -545,17 +549,128 @@ function fixOrgSheetGarbageValues() {
   return msg;
 }
 
+/** 組織PJ から DBPJ を開く（▶ 実行用） */
+function getOrgSpreadsheet_() {
+  const form = FormApp.getActiveForm();
+  if (!form) {
+    throw new Error('組織PJ（組織フォームのスクリプトエディタ）から実行してください');
+  }
+  return SpreadsheetApp.openById(form.getDestinationId());
+}
+
+function findOrgRowByName_(orgSheet, orgName) {
+  const headers = readSheetHeaders_(orgSheet);
+  const nameIdx = headers.indexOf('name');
+  if (nameIdx < 0) return -1;
+  const target = String(orgName || '').trim();
+  for (let row = 2; row <= orgSheet.getLastRow(); row++) {
+    if (String(orgSheet.getRange(row, nameIdx + 1).getValue() || '').trim() === target) {
+      return row;
+    }
+  }
+  return -1;
+}
+
+/**
+ * ORGANIZATIONS に不足列（member_npc_names 等）を追加（▶ で1回実行）
+ * 手動で列を足す必要はありません。
+ */
+function upgradeOrgSheet() {
+  const ss = getOrgSpreadsheet_();
+  const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
+  const before = readSheetHeaders_(orgSheet);
+  const after = ensureOrgHeader_(orgSheet);
+  const added = after.filter(h => !before.includes(h));
+  const msg = added.length
+    ? 'ORGANIZATIONS に列を追加しました: ' + added.join(', ')
+    : 'ORGANIZATIONS の列はすでに最新です（追加なし）';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * フォーム回答シートの「所属NPC」を既存 ORGANIZATIONS 行へコピー（▶ で1回実行）
+ */
+function backfillMemberNpcFromResponseSheet() {
+  const ss = getOrgSpreadsheet_();
+  const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
+  ensureOrgHeader_(orgSheet);
+
+  const responseSheet = findOrgResponseSheet_(ss);
+  if (!responseSheet) {
+    const msg = '組織の回答シートが見つかりません';
+    Logger.log(msg);
+    return msg;
+  }
+
+  const orgHeaders = readSheetHeaders_(orgSheet);
+  const memberNamesIdx = orgHeaders.indexOf('member_npc_names');
+  const memberIdsIdx = orgHeaders.indexOf('member_npc_ids');
+  if (memberNamesIdx < 0 || memberIdsIdx < 0) {
+    const msg = 'member_npc 列がありません。先に upgradeOrgSheet を実行してください';
+    Logger.log(msg);
+    return msg;
+  }
+
+  let filled = 0;
+  let skipped = 0;
+  const lastRow = responseSheet.getLastRow();
+
+  for (let row = 2; row <= lastRow; row++) {
+    const answers = answersFromResponseSheetRow_(responseSheet, row);
+    const orgName = pickAnswer_(answers, '組織名');
+    const memberNames = pickAnswer_(answers, '所属NPC');
+    if (!orgName || !memberNames) {
+      skipped++;
+      continue;
+    }
+
+    const orgRow = findOrgRowByName_(orgSheet, orgName);
+    if (orgRow < 0) {
+      skipped++;
+      continue;
+    }
+
+    const memberIds = resolveNpcIdsFromNames_(ss, memberNames);
+    orgSheet.getRange(orgRow, memberNamesIdx + 1).setValue(memberNames);
+    orgSheet.getRange(orgRow, memberIdsIdx + 1).setValue(memberIds);
+    filled++;
+    Logger.log('反映: ' + orgName + ' → ' + memberNames);
+  }
+
+  const msg = '回答シートから所属NPCを反映: ' + filled + ' 組織 / スキップ ' + skipped;
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 所属NPC対応のシート移行（▶ で1回実行）
+ * 1. ORGANIZATIONS に列追加
+ * 2. 回答シートから所属NPCを既存行へコピー
+ * 3. NPCS の organization_ids を更新
+ */
+function migrateOrgSheetForMemberNpc() {
+  const msg = [
+    upgradeOrgSheet(),
+    backfillMemberNpcFromResponseSheet(),
+    syncAllOrgMemberNpcLinks()
+  ].join('\n');
+  Logger.log('--- migrateOrgSheetForMemberNpc ---\n' + msg);
+  return msg;
+}
+
 /**
  * 全組織行の所属NPCを NPCS に再反映（▶ で1回実行・列追加後の修復用）
  */
 function syncAllOrgMemberNpcLinks() {
-  const form = FormApp.getActiveForm();
-  if (!form) {
-    const msg = '組織PJ から実行してください';
+  let ss;
+  try {
+    ss = getOrgSpreadsheet_();
+  } catch (err) {
+    const msg = err.message || String(err);
     Logger.log(msg);
     return msg;
   }
-  const ss = SpreadsheetApp.openById(form.getDestinationId());
   const orgSheet = ss.getSheetByName('ORGANIZATIONS');
   if (!orgSheet || orgSheet.getLastRow() <= 1) {
     const msg = 'ORGANIZATIONS が空です';
