@@ -47,7 +47,21 @@
       linkKey: 'scenarioForm',
       icon: '📜',
       name: 'シナリオ登録フォーム',
-      description: 'シナリオの名称、概要、年代、関連情報を登録するフォーム。'
+      description: 'シナリオ名・概要・年代と、登場NPC・組織などを名前で登録するフォーム（ID不要）。',
+      apiType: 'scenarios',
+      visibilityApiType: 'scenario-visibility',
+      pickerTitle: 'シナリオを編集',
+      listTitle: 'シナリオ一覧（KP用）',
+      visibilityTitle: 'PLサイトの表示設定（シナリオ）',
+      listHint: '非表示のシナリオも含めてすべて表示します。PLサイトに出すかどうかは「表示設定」で変更できます。',
+      visibilityHint: 'オフにしたシナリオは PL サイト（閲覧ページ）に表示されません。',
+      pickerSearchPlaceholder: 'シナリオ名・概要で検索...',
+      listSearchPlaceholder: 'シナリオ名・年代・概要で検索...',
+      visibilitySearchPlaceholder: 'シナリオ名・概要で検索...',
+      plSection: 'scenarios',
+      emptyLabel: 'シナリオ',
+      editable: true,
+      visibilityControl: true
     },
     pc: {
       linkKey: 'pcForm',
@@ -61,8 +75,8 @@
 
   const EXTERNAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
 
-  const entityCache = { npc: null, org: null };
-  const entityLoadError = { npc: null, org: null };
+  const entityCache = { npc: null, org: null, scenario: null };
+  const entityLoadError = { npc: null, org: null, scenario: null };
   let activeEntity = 'npc';
   let listFilter = 'all';
 
@@ -211,6 +225,10 @@
     }
   }
 
+  function getEntityItemLabel(entity, item) {
+    return entity === 'scenario' ? (item.title || '') : (item.name || '');
+  }
+
   async function loadKpEntities(entity) {
     if (entityCache[entity]) return entityCache[entity];
     if (entityLoadError[entity]) throw entityLoadError[entity];
@@ -230,7 +248,9 @@
       ]);
       entityCache[entity] = entity === 'npc'
         ? mergeNpcImages(kpItems, publicItems)
-        : mergeOrgIcons(kpItems, publicItems);
+        : entity === 'org'
+          ? mergeOrgIcons(kpItems, publicItems)
+          : kpItems.map(item => ({ ...item, pl_hidden: Boolean(item.pl_hidden) }));
       return entityCache[entity];
     } catch (err) {
       entityLoadError[entity] = err;
@@ -383,14 +403,25 @@
     return `<span class="kp-picker-icon-emoji" aria-hidden="true">${escapeHtml(icon || '🏛️')}</span>`;
   }
 
+  function renderScenarioThumb() {
+    return `<span class="kp-picker-icon-emoji" aria-hidden="true">📜</span>`;
+  }
+
   function renderEntityThumb(entity, item) {
-    return entity === 'org' ? renderOrgThumb(item) : renderNpcThumb(item);
+    if (entity === 'org') return renderOrgThumb(item);
+    if (entity === 'scenario') return renderScenarioThumb();
+    return renderNpcThumb(item);
   }
 
   function filterEntities(entity, items, query) {
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter(item => {
+      if (entity === 'scenario') {
+        return (item.title || '').toLowerCase().includes(q) ||
+          (item.era || '').toLowerCase().includes(q) ||
+          (item.summary || '').toLowerCase().includes(q);
+      }
       if (entity === 'org') {
         return (item.name || '').toLowerCase().includes(q) ||
           (item.summary || '').toLowerCase().includes(q);
@@ -434,6 +465,32 @@
                 <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
               </div>
             </div>
+            <p class="kp-npc-card-job">${escapeHtml(item.summary || '概要未設定')}</p>
+          </div>
+          <div class="kp-npc-card-actions">
+            ${hasEdit
+              ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
+              : '<span class="kp-npc-card-note">編集URLなし</span>'}
+            ${hidden
+              ? '<span class="kp-npc-card-note">PL未掲載</span>'
+              : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
+          </div>
+        </li>
+      `;
+    }
+
+    if (entity === 'scenario') {
+      return `
+        <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+          ${renderScenarioThumb()}
+          <div class="kp-npc-card-main">
+            <div class="kp-npc-card-top">
+              <p class="kp-npc-card-name">${escapeHtml(item.title || '名称未設定')}</p>
+              <div class="kp-npc-card-badges">
+                <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
+              </div>
+            </div>
+            ${item.era ? `<p class="kp-npc-card-furi">${escapeHtml(item.era)}</p>` : ''}
             <p class="kp-npc-card-job">${escapeHtml(item.summary || '概要未設定')}</p>
           </div>
           <div class="kp-npc-card-actions">
@@ -571,12 +628,16 @@
           const attrs = hasEdit
             ? ` type="button" data-edit-url="${escapeAttr(item.edit_url)}"`
             : ' aria-disabled="true"';
-          const sub = entity === 'org'
-            ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
-            : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
-          const meta = entity === 'org'
-            ? ''
-            : `<span class="kp-picker-meta">
+          const sub = entity === 'scenario'
+            ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
+            : entity === 'org'
+              ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
+              : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
+          const meta = entity === 'scenario'
+            ? (item.summary ? `<span class="kp-picker-meta"><span>${escapeHtml(item.summary)}</span></span>` : '')
+            : entity === 'org'
+              ? ''
+              : `<span class="kp-picker-meta">
                 ${item.occupation ? `<span>${escapeHtml(item.occupation)}</span>` : ''}
                 ${item.status ? `<span class="list-item-badge ${statusBadgeClass(item.status)}">${escapeHtml(item.status)}</span>` : ''}
               </span>`;
@@ -586,7 +647,7 @@
               <${tag} class="kp-picker-item${disabled}"${attrs} role="option">
                 ${renderEntityThumb(entity, item)}
                 <span class="kp-picker-body">
-                  <span class="kp-picker-name">${escapeHtml(item.name)}</span>
+                  <span class="kp-picker-name">${escapeHtml(getEntityItemLabel(entity, item))}</span>
                   ${sub}
                   ${meta}
                   ${hasEdit ? '' : '<span class="kp-picker-note">編集URLなし</span>'}
@@ -620,16 +681,18 @@
         ${items.map(item => {
           const hidden = Boolean(item.pl_hidden);
           const rowClass = hidden ? ' kp-visibility-row--hidden' : '';
-          const sub = entity === 'org'
-            ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
-            : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
+          const sub = entity === 'scenario'
+            ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
+            : entity === 'org'
+              ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
+              : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
 
           return `
             <li>
               <div class="kp-picker-item kp-visibility-row${rowClass}" data-item-id="${escapeAttr(item.id)}">
                 ${renderEntityThumb(entity, item)}
                 <span class="kp-picker-body">
-                  <span class="kp-picker-name">${escapeHtml(item.name)}</span>
+                  <span class="kp-picker-name">${escapeHtml(getEntityItemLabel(entity, item))}</span>
                   ${sub}
                   <span class="kp-picker-meta">
                     ${hidden ? '<span class="kp-visibility-label kp-visibility-label--off">PL非表示</span>' : '<span class="kp-visibility-label">PL表示中</span>'}

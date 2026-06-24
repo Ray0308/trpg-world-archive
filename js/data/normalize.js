@@ -406,10 +406,14 @@ window.ArchiveNormalize = (function () {
       title: row['名称'] || row.title || '',
       era: row['年代'] || row.era || '',
       summary: row['概要'] || row.summary || '',
-      npcIds: splitIds(row.npcIds || row['登場NPC']),
-      organizationIds: splitIds(row.organizationIds || row['登場組織']),
-      pcIds: splitIds(row.pcIds || row['関連PC']),
-      relatedScenarioIds: splitIds(row.relatedScenarioIds || row['関連シナリオ'])
+      npcIds: splitIds(row.npcIds || row.npc_ids || row['登場NPC']),
+      organizationIds: splitIds(row.organizationIds || row.organization_ids || row['登場組織']),
+      pcIds: splitIds(row.pcIds || row.pc_ids || row['関連PC']),
+      relatedScenarioIds: splitIds(row.relatedScenarioIds || row.related_scenario_ids || row['関連シナリオ']),
+      npcNames: splitIds(row.npc_names || row.npcNames),
+      organizationNames: splitIds(row.organization_names || row.organizationNames),
+      pcNames: splitIds(row.pc_names || row.pcNames),
+      relatedScenarioNames: splitIds(row.related_scenario_names || row.relatedScenarioNames)
     };
   }
 
@@ -421,10 +425,14 @@ window.ArchiveNormalize = (function () {
       title: raw.title || '',
       era: raw.era || '',
       summary: raw.summary || '',
-      npcIds: splitIds(raw.npcIds),
-      organizationIds: splitIds(raw.organizationIds),
-      pcIds: splitIds(raw.pcIds),
-      relatedScenarioIds: splitIds(raw.relatedScenarioIds)
+      npcIds: splitIds(raw.npcIds || raw.npc_ids),
+      organizationIds: splitIds(raw.organizationIds || raw.organization_ids),
+      pcIds: splitIds(raw.pcIds || raw.pc_ids),
+      relatedScenarioIds: splitIds(raw.relatedScenarioIds || raw.related_scenario_ids),
+      npcNames: splitIds(raw.npc_names || raw.npcNames),
+      organizationNames: splitIds(raw.organization_names || raw.organizationNames),
+      pcNames: splitIds(raw.pc_names || raw.pcNames),
+      relatedScenarioNames: splitIds(raw.related_scenario_names || raw.relatedScenarioNames)
     };
   }
 
@@ -508,6 +516,68 @@ window.ArchiveNormalize = (function () {
     }));
   }
 
+  function entityNameMatches(part, fullName) {
+    const p = String(part || '').trim();
+    const name = String(fullName || '').trim();
+    if (!p || !name) return false;
+    return name === p || p.includes(name) || name.includes(p);
+  }
+
+  function resolveIdsFromNameParts(parts, entities, getLabel) {
+    const ids = new Set();
+    (parts || []).forEach(part => {
+      const p = String(part || '').trim();
+      if (!p) return;
+      entities.forEach(entity => {
+        if (entityNameMatches(p, getLabel(entity))) ids.add(entity.id);
+      });
+    });
+    return ids;
+  }
+
+  /** 名前のみ入力されたシナリオの関連 ID を補完（GAS 未解決時のサイト側フォールバック） */
+  function enrichScenarios(scenarios, npcs, organizations, pcs) {
+    return scenarios.map(scenario => {
+      const npcIds = new Set((scenario.npcIds || []).filter(Boolean));
+      resolveIdsFromNameParts(scenario.npcNames, npcs, n => n.name).forEach(id => npcIds.add(id));
+
+      const organizationIds = new Set((scenario.organizationIds || []).filter(Boolean));
+      resolveIdsFromNameParts(scenario.organizationNames, organizations, o => o.name)
+        .forEach(id => organizationIds.add(id));
+
+      const pcIds = new Set((scenario.pcIds || []).filter(Boolean));
+      resolveIdsFromNameParts(scenario.pcNames, pcs, p => p.name).forEach(id => pcIds.add(id));
+
+      const relatedScenarioIds = new Set((scenario.relatedScenarioIds || []).filter(Boolean));
+      (scenario.relatedScenarioNames || []).forEach(part => {
+        const p = String(part || '').trim();
+        if (!p) return;
+        if (/^scn_\d+$/i.test(p)) {
+          const found = scenarios.find(s => String(s.id).toLowerCase() === p.toLowerCase());
+          if (found) relatedScenarioIds.add(found.id);
+          return;
+        }
+        scenarios.forEach(other => {
+          if (other.id === scenario.id) return;
+          if (entityNameMatches(p, other.title)) relatedScenarioIds.add(other.id);
+        });
+      });
+
+      const {
+        npcNames, organizationNames, pcNames, relatedScenarioNames,
+        ...rest
+      } = scenario;
+
+      return {
+        ...rest,
+        npcIds: [...npcIds],
+        organizationIds: [...organizationIds],
+        pcIds: [...pcIds],
+        relatedScenarioIds: [...relatedScenarioIds]
+      };
+    });
+  }
+
   function buildIndexes(data) {
     const indexes = {
       npcById: new Map(),
@@ -560,12 +630,19 @@ window.ArchiveNormalize = (function () {
       (raw.npcs || []).map(normalizeNpc),
       organizations
     );
+    const pcs = (raw.pcs || []).map(normalizePc);
+    const scenarios = enrichScenarios(
+      (raw.scenarios || []).map(normalizeScenario),
+      npcs,
+      organizations,
+      pcs
+    );
 
     return {
       npcs,
       organizations,
-      scenarios: (raw.scenarios || []).map(normalizeScenario),
-      pcs: (raw.pcs || []).map(normalizePc),
+      scenarios,
+      pcs,
       locations
     };
   }

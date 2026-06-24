@@ -288,12 +288,14 @@ function doGet(e) {
 
   if (type === 'version') {
     return jsonResponse_({
-      api_version: '2026-06-24-kp-org-visibility',
+      api_version: '2026-06-25-scenarios',
       capabilities: [
         'npcs',
         'organizations',
+        'scenarios',
         'npc-visibility',
         'org-visibility',
+        'scenario-visibility',
         'chaugner-ranking',
         'chaugner-score'
       ]
@@ -307,6 +309,11 @@ function doGet(e) {
 
   if (type === 'organizations') {
     const data = kpMode ? getKpOrganizations_(ss) : getPublicOrganizations_(ss);
+    return jsonResponse_(data, callback);
+  }
+
+  if (type === 'scenarios') {
+    const data = kpMode ? getKpScenarios_(ss) : getPublicScenarios_(ss);
     return jsonResponse_(data, callback);
   }
 
@@ -334,6 +341,21 @@ function doGet(e) {
     const hidden = hiddenParam === '1' || hiddenParam === 'true';
     try {
       const result = setOrgPlHidden_(ss, id, hidden);
+      return jsonResponse_(result, callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'scenario-visibility') {
+    const id = String((e.parameter && e.parameter.id) || '').trim();
+    const hiddenParam = e.parameter && e.parameter.hidden;
+    if (!id) {
+      return jsonResponse_({ error: 'missing id' }, callback);
+    }
+    const hidden = hiddenParam === '1' || hiddenParam === 'true';
+    try {
+      const result = setScenarioPlHidden_(ss, id, hidden);
       return jsonResponse_(result, callback);
     } catch (err) {
       return jsonResponse_({ error: err.message || String(err) }, callback);
@@ -412,6 +434,78 @@ function setOrgPlHidden_(ss, orgId, hidden) {
     }
   }
   throw new Error('組織が見つかりません: ' + orgId);
+}
+
+function setScenarioPlHidden_(ss, scenarioId, hidden) {
+  const sheet = ss.getSheetByName('SCENARIOS');
+  if (!sheet) throw new Error('SCENARIOS シートがありません');
+
+  const headers = ensureScenarioHeader_(sheet);
+  const idCol = headers.indexOf('id') + 1;
+  const hiddenCol = headers.indexOf('pl_hidden') + 1;
+  if (idCol < 1 || hiddenCol < 1) throw new Error('pl_hidden 列がありません');
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol - 1]).trim() === String(scenarioId).trim()) {
+      sheet.getRange(i + 1, hiddenCol).setValue(plHiddenCellValue_(hidden));
+      const updatedCol = headers.indexOf('updated_at') + 1;
+      if (updatedCol > 0) {
+        sheet.getRange(i + 1, updatedCol).setValue(new Date());
+      }
+      return { ok: true, id: scenarioId, pl_hidden: hidden };
+    }
+  }
+  throw new Error('シナリオが見つかりません: ' + scenarioId);
+}
+
+function getScenarioHeaders_() {
+  return [
+    'id',
+    'title',
+    'era',
+    'summary',
+    'npc_names',
+    'npc_ids',
+    'organization_names',
+    'organization_ids',
+    'pc_names',
+    'pc_ids',
+    'related_scenario_names',
+    'related_scenario_ids',
+    'memo',
+    'pl_hidden',
+    'edit_url',
+    'form_response_id',
+    'created_at',
+    'updated_at'
+  ];
+}
+
+function ensureScenarioHeader_(sheet) {
+  const headers = getScenarioHeaders_();
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const firstRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const isEmpty = firstRow.every(value => value === '');
+
+  if (isEmpty) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers;
+  }
+
+  const present = new Set(
+    firstRow.map(h => String(h).trim()).filter(Boolean)
+  );
+
+  headers.forEach(name => {
+    if (!present.has(name)) {
+      const col = sheet.getLastColumn() + 1;
+      sheet.getRange(1, col).setValue(name);
+      present.add(name);
+    }
+  });
+
+  return readSheetHeaders_(sheet);
 }
 
 /** KPページ用 — 編集リンク付きの最小NPC一覧 */
@@ -915,6 +1009,61 @@ function getKpOrganizations_(ss) {
       };
     })
     .filter(org => org.id && org.name);
+}
+
+function getPublicScenarios_(ss) {
+  const sheet = ss.getSheetByName('SCENARIOS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const adminKeys = new Set([
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+  ]);
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      if (isPlHidden_(record.pl_hidden)) return null;
+      adminKeys.forEach(key => delete record[key]);
+      return record;
+    })
+    .filter(Boolean);
+}
+
+/** KPページ用 — 編集リンク付きシナリオ一覧 */
+function getKpScenarios_(ss) {
+  const sheet = ss.getSheetByName('SCENARIOS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      return {
+        id: record.id || '',
+        title: record.title || '',
+        era: record.era || '',
+        summary: record.summary || '',
+        pl_hidden: isPlHidden_(record.pl_hidden),
+        edit_url: record.edit_url || ''
+      };
+    })
+    .filter(sc => sc.id && sc.title);
 }
 
 function resetOrganizationSheetForProduction() {

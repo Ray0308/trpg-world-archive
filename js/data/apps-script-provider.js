@@ -62,6 +62,10 @@ window.AppsScriptProvider = {
     return this.parseArrayJson(text, '組織データ');
   },
 
+  parseScenariosJson(text) {
+    return this.parseArrayJson(text, 'シナリオデータ');
+  },
+
   fetchNpcsJsonp(url, timeoutMs = 30000, label = 'npcs') {
     return new Promise((resolve, reject) => {
       const callbackName = `_gasCb_${label}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -196,6 +200,15 @@ window.AppsScriptProvider = {
       'organizations',
       (text) => this.parseOrganizationsJson(text),
       'スプレッドシートから組織を取得できませんでした'
+    );
+  },
+
+  async fetchScenarios(baseUrl) {
+    return this.fetchArray(
+      baseUrl,
+      'scenarios',
+      (text) => this.parseScenariosJson(text),
+      'スプレッドシートからシナリオを取得できませんでした'
     );
   },
 
@@ -379,6 +392,117 @@ window.AppsScriptProvider = {
       } catch (jsonErr) {
         throw new ArchiveLoadError(
           '組織データを読み込めません',
+          'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
+          {
+            api: {
+              title: apiErr.title,
+              message: apiErr.message,
+              details: apiErr.details
+            },
+            json: {
+              title: jsonErr.title,
+              message: jsonErr.message,
+              details: jsonErr.details
+            }
+          }
+        );
+      }
+    }
+  },
+
+  mergeScenarios(apiScenarios, jsonScenarios) {
+    const map = new Map();
+    (jsonScenarios || []).forEach(sc => {
+      if (sc?.id) map.set(sc.id, sc);
+    });
+    (apiScenarios || []).forEach(sc => {
+      if (sc?.id) map.set(sc.id, sc);
+    });
+    return [...map.values()];
+  },
+
+  async loadScenariosFromJson(jsonConfig) {
+    const base = (jsonConfig?.basePath || 'data').replace(/\/$/, '');
+    const url = `${base}/scenarios.json`;
+    let res;
+
+    try {
+      res = await fetch(url, { cache: 'no-store' });
+    } catch (networkErr) {
+      throw new ArchiveLoadError(
+        'ローカルシナリオデータに接続できません',
+        `scenarios.json を読み込めません（${url}）`,
+        { url, cause: networkErr.message }
+      );
+    }
+
+    if (!res.ok) {
+      throw new ArchiveLoadError(
+        'ローカルシナリオデータの読み込みに失敗しました',
+        `scenarios.json — HTTP ${res.status}`,
+        { url, status: res.status }
+      );
+    }
+
+    const data = await res.json();
+    return data.scenarios || [];
+  },
+
+  async loadScenarios(apiConfig, jsonConfig) {
+    if (!apiConfig?.baseUrl) {
+      const scenarios = await this.loadScenariosFromJson(jsonConfig);
+      return {
+        scenarios,
+        source: 'json',
+        notice: {
+          level: 'warning',
+          title: 'API 未設定',
+          message: 'スプレッドシート API URL が未設定のため、ローカル JSON（scenarios.json）を表示しています。'
+        }
+      };
+    }
+
+    try {
+      const apiScenarios = await this.fetchScenarios(apiConfig.baseUrl);
+      let jsonScenarios = [];
+      try {
+        jsonScenarios = await this.loadScenariosFromJson(jsonConfig);
+      } catch (_) {
+        jsonScenarios = [];
+      }
+
+      const scenarios = this.mergeScenarios(apiScenarios, jsonScenarios);
+      let notice = null;
+      if (apiScenarios.length === 0) {
+        notice = {
+          level: 'warning',
+          title: 'シナリオデータなし',
+          message: 'スプレッドシートにシナリオが登録されていません。'
+        };
+      }
+
+      return {
+        scenarios,
+        source: apiScenarios.length ? 'api' : 'json',
+        notice
+      };
+    } catch (apiErr) {
+      try {
+        const scenarios = await this.loadScenariosFromJson(jsonConfig);
+        return {
+          scenarios,
+          source: 'json-fallback',
+          notice: {
+            level: 'error',
+            title: apiErr.title || 'スプレッドシートからシナリオを取得できませんでした',
+            message: apiErr.message,
+            details: apiErr.details || {},
+            fallback: `ローカル JSON（scenarios.json）の ${scenarios.length} 件を表示しています。`
+          }
+        };
+      } catch (jsonErr) {
+        throw new ArchiveLoadError(
+          'シナリオデータを読み込めません',
           'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
           {
             api: {
