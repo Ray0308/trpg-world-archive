@@ -1229,6 +1229,46 @@ input {
   max-width: 36rem;
 }
 
+.file-detail-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+}
+
+.file-open-actions {
+  margin: 0;
+}
+
+.file-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.file-open-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+.list-empty {
+  list-style: none;
+  padding: 1rem 0.75rem;
+}
+
 .detail-section--compact {
   padding-bottom: 0.5rem;
 }

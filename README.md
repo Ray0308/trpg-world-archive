@@ -9,7 +9,7 @@
 
 | 機能 | 状態 |
 |------|------|
-| PLサイト（ホーム・NPC・組織・シナリオ・PC） | ✅ |
+| PLサイト（ホーム・NPC・組織・シナリオ・PC・資料） | ✅ |
 | NPC登録（Googleフォーム → GAS API） | ✅ |
 | KPページ（登録・編集・一覧・PL表示設定） | ✅ |
 | チャウグナー・ラン（オマケゲーム + ランキング） | ✅ |
@@ -20,6 +20,7 @@
 ```
 NPC:  Googleフォーム → GAS → NPCSシート → API → サイト
 他:   data/*.json を GitHub に push → サイト
+資料: files/ にファイルを置き data/files.json に1行追加 → push
 ゲーム: chaugner-run.js → 同じ GAS → CHAUGNER_SCORES シート
 ```
 
@@ -68,6 +69,8 @@ data/
   npcs.json             … NPC API 失敗時のフォールバック
   organizations.json
   scenarios.json
+  files.json            … PL向け資料一覧（url は files/ 内 or 外部リンク）
+files/                  … 配布用 PDF・画像など（GitHub に commit）
   pcs.json
   locations.json
 docs/

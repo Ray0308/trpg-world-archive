@@ -454,6 +454,18 @@ window.ArchiveNormalize = (function () {
     };
   }
 
+  function normalizeFile(raw) {
+    raw = stripAdminFields(raw);
+    return {
+      id: raw.id,
+      title: String(raw.title || raw.name || '').trim(),
+      summary: String(raw.summary || raw.description || '').trim(),
+      category: String(raw.category || raw.type || '').trim(),
+      url: String(raw.url || '').trim(),
+      updated: String(raw.updated || raw.updated_at || '').trim()
+    };
+  }
+
   function normalizeLocation(raw) {
     return {
       id: raw.id,
@@ -514,6 +526,7 @@ window.ArchiveNormalize = (function () {
       orgById: new Map(),
       scenarioById: new Map(),
       pcById: new Map(),
+      fileById: new Map(),
       locationById: new Map(),
       npcsByOrgId: new Map()
     };
@@ -522,6 +535,7 @@ window.ArchiveNormalize = (function () {
     data.organizations.forEach(org => indexes.orgById.set(org.id, org));
     data.scenarios.forEach(sc => indexes.scenarioById.set(sc.id, sc));
     data.pcs.forEach(pc => indexes.pcById.set(pc.id, pc));
+    data.files.forEach(file => indexes.fileById.set(file.id, file));
     data.locations.forEach(loc => indexes.locationById.set(loc.id, loc));
 
     data.npcs.forEach(npc => {
@@ -566,6 +580,7 @@ window.ArchiveNormalize = (function () {
       organizations,
       scenarios: (raw.scenarios || []).map(normalizeScenario),
       pcs: (raw.pcs || []).map(normalizePc),
+      files: (raw.files || []).map(normalizeFile).filter(f => f.id && f.title && f.url),
       locations
     };
   }
@@ -575,6 +590,7 @@ window.ArchiveNormalize = (function () {
     normalizeOrganization,
     normalizeScenario,
     normalizePc,
+    normalizeFile,
     normalizeArchiveData,
     buildIndexes,
     splitIds,
