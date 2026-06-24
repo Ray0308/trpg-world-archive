@@ -1327,20 +1327,29 @@ function renderNoticeBanner() {
   const existing = document.getElementById('noticeBanner');
   if (existing) existing.remove();
 
-  if (!loadMeta.notices?.length) return;
+  const notices = (loadMeta.notices || []).filter(notice => {
+    if (notice.level === 'warning') return false;
+    if (notice.level !== 'error') return false;
+    if (loadMeta.npcSource === 'api' && loadMeta.scenarioSource === 'json-fallback') {
+      return false;
+    }
+    return true;
+  });
+
+  if (!notices.length) return;
 
   const banner = document.createElement('div');
   banner.id = 'noticeBanner';
   banner.className = 'notice-banner';
 
-  banner.innerHTML = loadMeta.notices.map(() => {
+  banner.innerHTML = notices.map(notice => {
     const isFallback = loadMeta.npcSource === 'json-fallback';
-    const title = isFallback
+    const title = notice.title || (isFallback
       ? '最新データを読み込めませんでした'
-      : 'お知らせ';
-    const message = isFallback
+      : 'データの読み込みに問題が発生しました');
+    const message = notice.message || (isFallback
       ? '表示されている NPC 情報が最新でない場合があります。しばらくしてから再度お試しください。'
-      : 'データの読み込みに問題が発生しました。';
+      : 'しばらくしてからページを再読み込みしてください。');
 
     return `
       <div class="notice-item notice-warning">

@@ -36,7 +36,14 @@ window.AppsScriptProvider = {
     }
     try {
       const data = JSON.parse(trimmed);
-      if (!Array.isArray(data)) {
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        if (data.error === 'unknown type') {
+          throw new ArchiveLoadError(
+            'API 未対応のデータ種別',
+            `API が type=${data.type || '?'} に未対応です。`,
+            { unknownType: data.type || '', apiNotReady: true }
+          );
+        }
         throw new ArchiveLoadError(
           'スプレッドシート API の応答が不正です',
           `${name}は配列形式である必要があります。`,
@@ -489,6 +496,9 @@ window.AppsScriptProvider = {
     } catch (apiErr) {
       try {
         const scenarios = await this.loadScenariosFromJson(jsonConfig);
+        if (apiErr.details?.apiNotReady && apiErr.details?.unknownType === 'scenarios') {
+          return { scenarios, source: 'json', notice: null };
+        }
         return {
           scenarios,
           source: 'json-fallback',
