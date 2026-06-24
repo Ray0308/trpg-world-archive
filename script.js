@@ -30,7 +30,9 @@ const indexes = {
   scenarioById: new Map(),
   pcById: new Map(),
   locationById: new Map(),
-  npcsByOrgId: new Map()
+  npcsByOrgId: new Map(),
+  scenariosByNpcId: new Map(),
+  scenariosByOrgId: new Map()
 };
 
 let route = { section: 'npcs', id: null };
@@ -60,6 +62,8 @@ async function loadData() {
   indexes.pcById = built.pcById;
   indexes.locationById = built.locationById;
   indexes.npcsByOrgId = built.npcsByOrgId;
+  indexes.scenariosByNpcId = built.scenariosByNpcId;
+  indexes.scenariosByOrgId = built.scenariosByOrgId;
 
   loadMeta = meta || { npcSource: '', notices: [] };
 }
@@ -232,6 +236,28 @@ function resolveOrgsForNpc(npc) {
 
 function resolveScenarios(ids) {
   return (ids || []).map(id => indexes.scenarioById.get(id)).filter(Boolean);
+}
+
+function mergeScenariosById(...lists) {
+  const byId = new Map();
+  lists.flat().forEach(sc => {
+    if (sc?.id) byId.set(sc.id, sc);
+  });
+  return [...byId.values()].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
+}
+
+function scenariosForNpc(npc) {
+  return mergeScenariosById(
+    resolveScenarios(npc.scenarioIds),
+    indexes.scenariosByNpcId.get(npc.id) || []
+  );
+}
+
+function scenariosForOrg(org) {
+  return mergeScenariosById(
+    resolveScenarios(org.scenarioIds),
+    indexes.scenariosByOrgId.get(org.id) || []
+  );
 }
 
 function resolvePcs(ids) {
@@ -535,7 +561,7 @@ function splitParagraphs(text) {
 
 function renderNpcRelatedSection(npc) {
   const scenarioLinks = renderLinkListIfAny(
-    resolveScenarios(npc.scenarioIds).map(sc =>
+    scenariosForNpc(npc).map(sc =>
       renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)
     )
   );
@@ -930,7 +956,7 @@ function renderOrgCard(org, active) {
 
 function renderOrgDetail(org) {
   const members = orgMembers(org.id);
-  const scenarios = resolveScenarios(org.scenarioIds);
+  const scenarios = scenariosForOrg(org);
   const location = org.locationId ? indexes.locationById.get(org.locationId) : null;
   const locationLabel = location ? `${location.icon || '📍'} ${location.name}` : (org.locationName ? `📍 ${org.locationName}` : '');
   const descriptionOnly = (org.description || []).filter(Boolean);

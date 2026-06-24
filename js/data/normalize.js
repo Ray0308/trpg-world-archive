@@ -585,7 +585,9 @@ window.ArchiveNormalize = (function () {
       scenarioById: new Map(),
       pcById: new Map(),
       locationById: new Map(),
-      npcsByOrgId: new Map()
+      npcsByOrgId: new Map(),
+      scenariosByNpcId: new Map(),
+      scenariosByOrgId: new Map()
     };
 
     data.npcs.forEach(npc => indexes.npcById.set(npc.id, npc));
@@ -617,6 +619,52 @@ window.ArchiveNormalize = (function () {
 
     indexes.npcsByOrgId.forEach(members => {
       members.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    });
+
+    function addScenarioToNpc(npcId, scenario) {
+      if (!npcId || !scenario) return;
+      if (!indexes.npcById.has(npcId)) return;
+      if (!indexes.scenariosByNpcId.has(npcId)) {
+        indexes.scenariosByNpcId.set(npcId, []);
+      }
+      const list = indexes.scenariosByNpcId.get(npcId);
+      if (!list.some(item => item.id === scenario.id)) list.push(scenario);
+    }
+
+    function addScenarioToOrg(orgId, scenario) {
+      if (!orgId || !scenario) return;
+      if (!indexes.orgById.has(orgId)) return;
+      if (!indexes.scenariosByOrgId.has(orgId)) {
+        indexes.scenariosByOrgId.set(orgId, []);
+      }
+      const list = indexes.scenariosByOrgId.get(orgId);
+      if (!list.some(item => item.id === scenario.id)) list.push(scenario);
+    }
+
+    data.npcs.forEach(npc => {
+      (npc.scenarioIds || []).forEach(scId => {
+        const scenario = indexes.scenarioById.get(scId);
+        if (scenario) addScenarioToNpc(npc.id, scenario);
+      });
+    });
+
+    data.scenarios.forEach(scenario => {
+      (scenario.npcIds || []).forEach(npcId => addScenarioToNpc(npcId, scenario));
+      (scenario.organizationIds || []).forEach(orgId => addScenarioToOrg(orgId, scenario));
+    });
+
+    data.organizations.forEach(org => {
+      (org.scenarioIds || []).forEach(scId => {
+        const scenario = indexes.scenarioById.get(scId);
+        if (scenario) addScenarioToOrg(org.id, scenario);
+      });
+    });
+
+    indexes.scenariosByNpcId.forEach(list => {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
+    });
+    indexes.scenariosByOrgId.forEach(list => {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
     });
 
     return indexes;

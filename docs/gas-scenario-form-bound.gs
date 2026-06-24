@@ -286,6 +286,94 @@ function isScenarioTitleAlreadyImported_(sheet, title) {
   return values.some(v => String(v).trim() === t);
 }
 
+function mergeCsvIds_(current, addIds) {
+  const set = new Set(splitList_(current));
+  (addIds || []).forEach(id => {
+    const t = String(id || '').trim();
+    if (t) set.add(t);
+  });
+  return [...set].join(', ');
+}
+
+function readNpcSheetHeaders_(sheet) {
+  const width = Math.max(sheet.getLastColumn(), 1);
+  return sheet.getRange(1, 1, 1, width).getValues()[0]
+    .map(h => String(h).trim())
+    .filter(Boolean);
+}
+
+/** シナリオ登録時: SCENARIOS の登場NPC → NPCS の scenario_ids を更新 */
+function linkNpcsToScenario_(ss, scenarioId, npcIdsText) {
+  const npcIds = splitList_(npcIdsText);
+  if (!npcIds.length) return 0;
+
+  const npcSheet = ss.getSheetByName('NPCS');
+  if (!npcSheet || npcSheet.getLastRow() <= 1) {
+    Logger.log('SCN link skip: NPCS が空');
+    return 0;
+  }
+
+  const headers = readNpcSheetHeaders_(npcSheet);
+  const idIdx = headers.indexOf('id');
+  const scenarioIdsIdx = headers.indexOf('scenario_ids');
+  if (idIdx < 0 || scenarioIdsIdx < 0) return 0;
+
+  const targetIds = new Set(npcIds);
+  let updated = 0;
+  const lastRow = npcSheet.getLastRow();
+
+  for (let row = 2; row <= lastRow; row++) {
+    const npcId = String(npcSheet.getRange(row, idIdx + 1).getValue() || '').trim();
+    if (!targetIds.has(npcId)) continue;
+
+    const curIds = String(npcSheet.getRange(row, scenarioIdsIdx + 1).getValue() || '').trim();
+    const newIds = mergeCsvIds_(curIds, [scenarioId]);
+    if (newIds !== curIds) {
+      npcSheet.getRange(row, scenarioIdsIdx + 1).setValue(newIds);
+      updated++;
+    }
+  }
+
+  Logger.log('SCN link NPCs: ' + updated + ' 行更新 (' + scenarioId + ')');
+  return updated;
+}
+
+/** シナリオ登録時: SCENARIOS の登場組織 → ORGANIZATIONS の scenario_ids を更新 */
+function linkOrgsToScenario_(ss, scenarioId, orgIdsText) {
+  const orgIds = splitList_(orgIdsText);
+  if (!orgIds.length) return 0;
+
+  const orgSheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!orgSheet || orgSheet.getLastRow() <= 1) {
+    Logger.log('SCN link skip: ORGANIZATIONS が空');
+    return 0;
+  }
+
+  const headers = readSheetHeaders_(orgSheet);
+  const idIdx = headers.indexOf('id');
+  const scenarioIdsIdx = headers.indexOf('scenario_ids');
+  if (idIdx < 0 || scenarioIdsIdx < 0) return 0;
+
+  const targetIds = new Set(orgIds);
+  let updated = 0;
+  const lastRow = orgSheet.getLastRow();
+
+  for (let row = 2; row <= lastRow; row++) {
+    const orgId = String(orgSheet.getRange(row, idIdx + 1).getValue() || '').trim();
+    if (!targetIds.has(orgId)) continue;
+
+    const curIds = String(orgSheet.getRange(row, scenarioIdsIdx + 1).getValue() || '').trim();
+    const newIds = mergeCsvIds_(curIds, [scenarioId]);
+    if (newIds !== curIds) {
+      orgSheet.getRange(row, scenarioIdsIdx + 1).setValue(newIds);
+      updated++;
+    }
+  }
+
+  Logger.log('SCN link orgs: ' + updated + ' 行更新 (' + scenarioId + ')');
+  return updated;
+}
+
 function buildScenarioRowFromAnswers_(answers, sheet, meta, ss) {
   const now = new Date();
   const m = meta || {};
@@ -348,6 +436,8 @@ function appendScenarioFromAnswers_(ss, answers, meta) {
 
   const row = headers.map(header => rowData[header] ?? '');
   scSheet.appendRow(row);
+  linkNpcsToScenario_(ss, rowData.id, rowData.npc_ids);
+  linkOrgsToScenario_(ss, rowData.id, rowData.organization_ids);
   Logger.log('SCN imported: ' + rowData.id + ' / ' + rowData.title);
   return rowData.id;
 }
