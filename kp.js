@@ -770,6 +770,32 @@
     });
   }
 
+  function renderFilesDriveSection() {
+    const section = document.getElementById('kpFilesDrive');
+    if (!section) return;
+
+    const url = String(window.AppLinks?.filesDriveFolder || '').trim();
+    const ready = url && url !== '#';
+
+    section.innerHTML = `
+      <h2 class="kp-section-title" id="kpFilesDriveTitle">資料フォルダ</h2>
+      <article class="kp-card kp-card--drive">
+        <span class="kp-card-icon">📁</span>
+        <h3 class="kp-card-name">PL向け資料置き場（Google ドライブ）</h3>
+        <p class="kp-card-desc">
+          ハンドアウト・地図・画像などをフォルダにドラッグ＆ドロップするだけでOKです。
+          PLサイトの「資料」から同じフォルダが開きます。フォームや Git は不要です。
+        </p>
+        <div class="kp-card-actions">
+          ${ready
+            ? `<a href="${escapeAttr(url)}" class="kp-card-btn" target="_blank" rel="noopener noreferrer">フォルダを開く${EXTERNAL_ICON}</a>`
+            : '<span class="kp-card-btn kp-card-btn--disabled" aria-disabled="true">URL未設定（links.js）</span>'}
+        </div>
+      </article>
+    `;
+  }
+
   renderCards();
+  renderFilesDriveSection();
   bindModal();
 })();

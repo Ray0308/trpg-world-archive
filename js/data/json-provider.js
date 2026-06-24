@@ -34,13 +34,12 @@ window.JsonDataProvider = {
 
   async load(config) {
     const base = (config?.basePath || 'data').replace(/\/$/, '');
-    const [npcs, organizations, scenarios, pcs, locations, files] = await Promise.all([
+    const [npcs, organizations, scenarios, pcs, locations] = await Promise.all([
       this.fetchJson(base, 'npcs.json'),
       this.fetchJson(base, 'organizations.json'),
       this.fetchJson(base, 'scenarios.json'),
       this.fetchJson(base, 'pcs.json'),
-      this.fetchJson(base, 'locations.json'),
-      this.fetchJson(base, 'files.json').catch(() => ({ files: [] }))
+      this.fetchJson(base, 'locations.json')
     ]);
 
     return {
@@ -48,8 +47,7 @@ window.JsonDataProvider = {
       organizations: organizations.organizations || [],
       scenarios: scenarios.scenarios || [],
       pcs: pcs.pcs || [],
-      locations: locations.locations || [],
-      files: files.files || []
+      locations: locations.locations || []
     };
   }
 };

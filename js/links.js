@@ -26,6 +26,9 @@
     scenarioForm: '#',
     pcForm: '#',
 
+    /** PL/KP 共通 — 配布資料の Google ドライブフォルダ（リンクを知っている人が閲覧できる共有設定にすること） */
+    filesDriveFolder: '#',
+
     /** 外部ツール・コミュニティ（# は未設定） */
     cocofolia: 'https://ccfolia.com/',
     iachara: 'https://iachara.com/',

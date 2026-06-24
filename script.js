@@ -21,8 +21,7 @@ const store = {
   organizations: [],
   scenarios: [],
   pcs: [],
-  locations: [],
-  files: []
+  locations: []
 };
 
 const indexes = {
@@ -30,7 +29,6 @@ const indexes = {
   orgById: new Map(),
   scenarioById: new Map(),
   pcById: new Map(),
-  fileById: new Map(),
   locationById: new Map(),
   npcsByOrgId: new Map()
 };
@@ -55,13 +53,11 @@ async function loadData() {
   store.scenarios = data.scenarios;
   store.pcs = data.pcs;
   store.locations = data.locations;
-  store.files = data.files;
 
   indexes.npcById = built.npcById;
   indexes.orgById = built.orgById;
   indexes.scenarioById = built.scenarioById;
   indexes.pcById = built.pcById;
-  indexes.fileById = built.fileById;
   indexes.locationById = built.locationById;
   indexes.npcsByOrgId = built.npcsByOrgId;
 
@@ -304,7 +300,6 @@ function getActiveEntity() {
     case 'organizations': return indexes.orgById.get(route.id);
     case 'scenarios': return indexes.scenarioById.get(route.id);
     case 'pcs': return indexes.pcById.get(route.id);
-    case 'files': return indexes.fileById.get(route.id);
     default: return null;
   }
 }
@@ -387,48 +382,9 @@ function filterPcs(query) {
   );
 }
 
-function filterFiles(query) {
-  return sortFiles(store.files.filter(file =>
-    matchesQuery(file.title, query) ||
-    matchesQuery(file.summary, query) ||
-    matchesQuery(file.category, query)
-  ));
-}
-
-function sortFiles(files) {
-  return [...files].sort((a, b) => {
-    const dateA = Date.parse(a.updated || '') || 0;
-    const dateB = Date.parse(b.updated || '') || 0;
-    if (dateB !== dateA) return dateB - dateA;
-    return (a.title || '').localeCompare(b.title || '', 'ja');
-  });
-}
-
-function resolveFileUrl(url) {
-  const raw = String(url || '').trim();
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) return raw;
-  const root = window.AppConfig?.appRoot || '';
-  return `${root}${raw.replace(/^\//, '')}`;
-}
-
-function fileTypeIcon(file) {
-  const url = String(file.url || '').toLowerCase();
-  if (/\.(png|jpe?g|gif|webp|svg)(\?|$)/.test(url)) return '🖼️';
-  if (/\.pdf(\?|$)/.test(url)) return '📄';
-  if (/\.(mp3|wav|ogg|m4a)(\?|$)/.test(url)) return '🎵';
-  if (/\.(mp4|webm|mov)(\?|$)/.test(url)) return '🎬';
-  if (/\.(zip|rar|7z)(\?|$)/.test(url)) return '🗜️';
-  if (/^https?:\/\//.test(url)) return '🔗';
-  return '📎';
-}
-
-function formatFileUpdated(value) {
-  const text = String(value || '').trim();
-  if (!text) return '';
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return text;
-  return date.toLocaleDateString('ja-JP');
+function getFilesDriveUrl() {
+  const url = String(window.AppLinks?.filesDriveFolder || '').trim();
+  return url && url !== '#' ? url : '';
 }
 
 function escapeHtml(str) {
@@ -783,9 +739,8 @@ function renderHomeView() {
     { section: 'npcs', icon: '🧑‍🤝‍🧑', label: 'NPC', count: store.npcs.length, sub: '登録済み' },
     { section: 'organizations', icon: '🏛️', label: 'ORGANIZATION', count: store.organizations.length, sub: '組織' },
     { section: 'scenarios', icon: '📜', label: 'SCENARIO', count: store.scenarios.length, sub: 'シナリオ' },
-    { section: 'pcs', icon: '👤', label: 'PLAYER', count: store.pcs.length, sub: 'PC' },
-    { section: 'files', icon: '📁', label: 'FILES', count: store.files.length, sub: '資料' }
-  ].filter(card => card.section !== 'files' || card.count > 0);
+    { section: 'pcs', icon: '👤', label: 'PLAYER', count: store.pcs.length, sub: 'PC' }
+  ];
 
   const externalLinks = COMMUNITY_LINKS;
 
@@ -830,13 +785,11 @@ function renderHomeView() {
             <span class="portal-explore-name">PC</span>
             <span class="portal-explore-desc">プレイヤーキャラクター一覧</span>
           </a>
-          ${store.files.length ? `
           <a href="#files" class="portal-explore-card" data-nav-section="files">
             <span class="portal-explore-icon">📁</span>
             <span class="portal-explore-name">資料</span>
-            <span class="portal-explore-desc">ハンドアウト・画像などの配布ファイル</span>
+            <span class="portal-explore-desc">ハンドアウト・画像など（Google ドライブ）</span>
           </a>
-          ` : ''}
         </div>
       </section>
 
@@ -1241,82 +1194,33 @@ function renderPcsView() {
   bindNavigation();
 }
 
-/* ---- Files View ---- */
-
-function renderFileListItem(file, active) {
-  const updated = formatFileUpdated(file.updated);
-  return `
-    <li class="list-item ${active ? 'active' : ''}"
-        data-nav-section="files"
-        data-nav-id="${file.id}"
-        role="option">
-      <span class="list-icon">${fileTypeIcon(file)}</span>
-      <div class="list-item-info">
-        <div class="list-item-name">${escapeHtml(file.title)}</div>
-        <div class="list-item-sub">${escapeHtml([file.category, updated].filter(Boolean).join(' · '))}</div>
-      </div>
-    </li>
-  `;
-}
-
-function renderFileDetail(file) {
-  const fileUrl = resolveFileUrl(file.url);
-  const updated = formatFileUpdated(file.updated);
-  const meta = [file.category, updated].filter(Boolean);
-
-  return `
-    <article class="entity-detail entity-detail--file">
-      <header class="detail-header detail-header--compact">
-        <span class="detail-org-icon file-detail-icon">${fileTypeIcon(file)}</span>
-        <div class="detail-header-body">
-          <h1 class="detail-title">${escapeHtml(file.title)}</h1>
-          ${meta.length ? `<p class="detail-meta">${escapeHtml(meta.join(' · '))}</p>` : ''}
-        </div>
-      </header>
-
-      ${file.summary ? `
-      <section class="detail-section">
-        <h2 class="section-heading">説明</h2>
-        <div class="prose"><p>${escapeHtml(file.summary)}</p></div>
-      </section>
-      ` : ''}
-
-      <section class="detail-section detail-section--compact">
-        <h2 class="section-heading">ファイル</h2>
-        ${fileUrl ? `
-          <p class="file-open-actions">
-            <a href="${escapeAttr(fileUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">開く / ダウンロード</a>
-          </p>
-        ` : renderEmpty('ファイル URL が設定されていません')}
-      </section>
-    </article>
-  `;
-}
+/* ---- Files (Google Drive) ---- */
 
 function renderFilesView() {
-  const query = getSearchQuery();
-  const filtered = filterFiles(query);
-  const activeId = getActiveId(filtered);
-  const activeFile = activeId ? indexes.fileById.get(activeId) : null;
+  const driveUrl = getFilesDriveUrl();
 
-  const listHtml = `
-    <div class="panel-header">
-      <h2 class="panel-title">資料</h2>
-      <span class="panel-count">${filtered.length} 件</span>
+  contentArea.innerHTML = `
+    <div class="files-drive-page">
+      <section class="files-drive-hero">
+        <span class="files-drive-icon" aria-hidden="true">📁</span>
+        <h1 class="files-drive-title">資料</h1>
+        <p class="files-drive-lead">
+          ハンドアウト・地図・画像などの配布資料は Google ドライブにまとめています。
+          フォルダ内のファイルを開いて閲覧・ダウンロードできます。
+        </p>
+      </section>
+      <section class="files-drive-actions">
+        ${driveUrl ? `
+          <a href="${escapeAttr(driveUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">
+            資料フォルダを開く
+          </a>
+          <p class="files-drive-note">Google ドライブが新しいタブで開きます。</p>
+        ` : `
+          <p class="empty-note">資料フォルダの URL が未設定です。<br>KP にお問い合わせください。</p>
+        `}
+      </section>
     </div>
-    <ul class="entity-list" role="listbox">
-      ${filtered.length
-        ? filtered.map(file => renderFileListItem(file, file.id === activeId)).join('')
-        : `<li class="list-empty">${renderEmpty('資料はまだ登録されていません')}</li>`}
-    </ul>
   `;
-
-  const detailHtml = activeFile
-    ? renderFileDetail(activeFile)
-    : `<div class="detail-empty"><p>${filtered.length ? '資料を選択してください' : '資料がありません'}</p></div>`;
-
-  contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
-  bindNavigation();
 }
 
 /* ---- Global Search Results ---- */
@@ -1332,12 +1236,11 @@ function renderGlobalSearchResults() {
     npcs: filterNpcs(query),
     organizations: filterOrganizations(query),
     scenarios: filterScenarios(query),
-    pcs: filterPcs(query),
-    files: filterFiles(query)
+    pcs: filterPcs(query)
   };
 
   const total = results.npcs.length + results.organizations.length +
-    results.scenarios.length + results.pcs.length + results.files.length;
+    results.scenarios.length + results.pcs.length;
 
   const section = (title, items, sectionName, renderItem) => {
     if (!items.length) return '';
@@ -1375,12 +1278,6 @@ function renderGlobalSearchResults() {
         <li class="search-result-item" data-nav-section="pcs" data-nav-id="${pc.id}">
           <span class="list-icon">👤</span>
           <div><strong>${escapeHtml(pc.name)}</strong><span>${escapeHtml(pc.playerName || '')}</span></div>
-        </li>
-      `)}
-      ${section('資料', results.files, 'files', file => `
-        <li class="search-result-item" data-nav-section="files" data-nav-id="${file.id}">
-          <span class="list-icon">${fileTypeIcon(file)}</span>
-          <div><strong>${escapeHtml(file.title)}</strong><span>${escapeHtml(file.summary || file.category || '')}</span></div>
         </li>
       `)}
       ${total === 0 ? renderEmpty('該当する項目がありません') : ''}
