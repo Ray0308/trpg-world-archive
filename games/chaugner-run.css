@@ -107,12 +107,44 @@ body {
   background: #1a1a1a;
 }
 
+.cr-game-area {
+  position: relative;
+  z-index: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .cr-canvas {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 800 / 320;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  touch-action: manipulation;
+}
+
+/* プレイ中 — ゲームエリアを操作パッド化、ページスクロール等を抑制 */
+html.cr-is-playing,
+body.cr-is-playing {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+body.cr-is-playing .cr-game-area,
+body.cr-is-playing .cr-canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cr-overlay {
+  z-index: 1;
 }
 
 .cr-overlay {
@@ -220,6 +252,9 @@ body {
   color: var(--cr-text);
   font-family: inherit;
   font-size: 1rem;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .cr-input:focus {
@@ -240,6 +275,8 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(232, 72, 122, 0.25);
 }
 
 .cr-btn--primary {

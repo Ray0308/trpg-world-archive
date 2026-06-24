@@ -25,6 +25,7 @@
   const NAME_MAX_LEN = 12;
 
   const canvas = document.getElementById('gameCanvas');
+  const gameArea = document.getElementById('gameArea');
   const ctx = canvas.getContext('2d');
   const startScreen = document.getElementById('startScreen');
   const gameOverScreen = document.getElementById('gameOverScreen');
@@ -264,6 +265,90 @@
     inputHeld = false;
   }
 
+  function isInteractiveTarget(el) {
+    if (!el || !el.closest) return false;
+    return Boolean(el.closest(
+      'input, textarea, button, a, label, select, [contenteditable="true"], .cr-overlay'
+    ));
+  }
+
+  function isGamePointerTarget(el) {
+    if (!el || !gameArea) return false;
+    return gameArea.contains(el);
+  }
+
+  function setPlayingUi(active) {
+    document.documentElement.classList.toggle('cr-is-playing', active);
+    document.body.classList.toggle('cr-is-playing', active);
+    if (!active) pressEnd();
+  }
+
+  function handleGamePointerDown(e) {
+    if (state !== 'playing') return;
+    if (!isGamePointerTarget(e.target)) return;
+    if (isInteractiveTarget(e.target)) return;
+    e.preventDefault();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+    pressStart();
+  }
+
+  function handleGamePointerUp(e) {
+    if (state !== 'playing') return;
+    e.preventDefault();
+    pressEnd();
+  }
+
+  function suppressGameTouchDefaults(e) {
+    if (state !== 'playing') return;
+    if (!isGamePointerTarget(e.target)) return;
+    if (isInteractiveTarget(e.target)) return;
+    e.preventDefault();
+  }
+
+  function blockGameContextMenu(e) {
+    if (state !== 'playing') return;
+    if (isGamePointerTarget(e.target) && !isInteractiveTarget(e.target)) {
+      e.preventDefault();
+    }
+  }
+
+  function blockGameSelect(e) {
+    if (state !== 'playing') return;
+    if (isGamePointerTarget(e.target) && !isInteractiveTarget(e.target)) {
+      e.preventDefault();
+    }
+  }
+
+  function setupGameInput() {
+    if (!gameArea) return;
+
+    gameArea.addEventListener('pointerdown', handleGamePointerDown);
+    gameArea.addEventListener('pointerup', handleGamePointerUp);
+    gameArea.addEventListener('pointercancel', handleGamePointerUp);
+    gameArea.addEventListener('pointerleave', e => {
+      if (state !== 'playing') return;
+      if (e.pointerType === 'mouse' && e.buttons === 0) pressEnd();
+    });
+
+    gameArea.addEventListener('touchstart', suppressGameTouchDefaults, { passive: false });
+    gameArea.addEventListener('touchmove', suppressGameTouchDefaults, { passive: false });
+    gameArea.addEventListener('touchend', suppressGameTouchDefaults, { passive: false });
+    gameArea.addEventListener('touchcancel', suppressGameTouchDefaults, { passive: false });
+
+    gameArea.addEventListener('contextmenu', blockGameContextMenu);
+    gameArea.addEventListener('selectstart', blockGameSelect);
+    gameArea.addEventListener('dragstart', blockGameSelect);
+
+    document.addEventListener('contextmenu', blockGameContextMenu);
+    window.addEventListener('blur', () => {
+      if (state === 'playing') pressEnd();
+    });
+  }
+
   function updatePlayer(dt) {
     if (player.onGround) {
       player.vy = 0;
@@ -452,6 +537,7 @@
     playerName = name;
     resetGame();
     state = 'playing';
+    setPlayingUi(true);
     startScreen.hidden = true;
     gameOverScreen.hidden = true;
     scoreHud.hidden = false;
@@ -463,6 +549,7 @@
 
   async function endGame() {
     state = 'gameover';
+    setPlayingUi(false);
     if (animId) {
       cancelAnimationFrame(animId);
       animId = null;
@@ -497,6 +584,7 @@
 
   function showStartScreen() {
     state = 'start';
+    setPlayingUi(false);
     startScreen.hidden = false;
     gameOverScreen.hidden = true;
     scoreHud.hidden = true;
@@ -534,17 +622,7 @@
     }
   });
 
-  canvas.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    pressStart();
-  });
-
-  canvas.addEventListener('pointerup', e => {
-    e.preventDefault();
-    pressEnd();
-  });
-
-  canvas.addEventListener('pointercancel', pressEnd);
+  setupGameInput();
 
   function resizeCanvas() {
     const wrap = canvas.parentElement;
