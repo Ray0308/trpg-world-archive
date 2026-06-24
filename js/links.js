@@ -27,7 +27,7 @@
     pcForm: '#',
 
     /** PL/KP 共通 — 配布資料の Google ドライブフォルダ（リンクを知っている人が閲覧できる共有設定にすること） */
-    filesDriveFolder: '#',
+    filesDriveFolder: 'https://drive.google.com/drive/folders/1Wh-1nA_FKheUc9V3DdmbcWTVnlfzVfAb?usp=sharing',
 
     /** 外部ツール・コミュニティ（# は未設定） */
     cocofolia: 'https://ccfolia.com/',
