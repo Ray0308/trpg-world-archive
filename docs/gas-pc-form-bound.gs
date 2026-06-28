@@ -157,9 +157,9 @@ function buildPcRowFromAnswers_(answers, sheet, meta) {
 
   return {
     id: generatePcId_(sheet),
-    name: pickAnswer_(answers, 'PC名'),
-    player_name: pickAnswer_(answers, 'プレイヤー名'),
-    sheet_url: normalizeSheetUrl_(pickAnswer_(answers, 'キャラシURL')),
+    name: pickAnswer_(answers, 'PC名', 'PC名（キャラクター名）'),
+    player_name: pickAnswer_(answers, 'プレイヤー名', 'プレイヤー名（あなたの名前・ハンドルネーム）'),
+    sheet_url: normalizeSheetUrl_(pickAnswer_(answers, 'キャラシURL', 'キャラシURL（いあキャラの共有）')),
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
