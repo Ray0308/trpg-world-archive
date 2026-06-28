@@ -564,6 +564,50 @@ window.ArchiveNormalize = (function () {
     return ids;
   }
 
+  function resolveIdsFromNamesOrIds(parts, entities, getLabel) {
+    const ids = new Set();
+    const byId = new Map(entities.map(entity => [String(entity.id || ''), entity]));
+
+    (parts || []).forEach(part => {
+      const p = String(part || '').trim();
+      if (!p) return;
+      if (byId.has(p)) {
+        ids.add(p);
+        return;
+      }
+      entities.forEach(entity => {
+        if (entityNameMatches(p, getLabel(entity))) ids.add(entity.id);
+      });
+    });
+
+    return [...ids];
+  }
+
+  function linkOrganizationsMemberNpcs(organizations, npcs) {
+    return organizations.map(org => ({
+      ...org,
+      memberNpcIds: resolveIdsFromNamesOrIds(
+        [...(org.memberNpcIds || []), ...(org.memberNpcNames || [])],
+        npcs,
+        npc => npc.name
+      )
+    }));
+  }
+
+  function linkNpcsScenarioIds(npcs, scenarios) {
+    return npcs.map(npc => ({
+      ...npc,
+      scenarioIds: resolveIdsFromNamesOrIds(npc.scenarioIds || [], scenarios, sc => sc.title)
+    }));
+  }
+
+  function linkOrganizationsScenarioIds(organizations, scenarios) {
+    return organizations.map(org => ({
+      ...org,
+      scenarioIds: resolveIdsFromNamesOrIds(org.scenarioIds || [], scenarios, sc => sc.title)
+    }));
+  }
+
   /** 名前のみ入力されたシナリオの関連 ID を補完（GAS 未解決時のサイト側フォールバック） */
   function enrichScenarios(scenarios, npcs, organizations, pcs) {
     return scenarios.map(scenario => {
@@ -733,11 +777,11 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizeArchiveData(raw) {
-    const organizations = (raw.organizations || []).map(normalizeOrganization);
+    let organizations = (raw.organizations || []).map(normalizeOrganization);
     let locations = (raw.locations || []).map(normalizeLocation);
     locations = enrichLocations(organizations, locations);
     const pcs = (raw.pcs || []).map(normalizePc);
-    const npcs = linkNpcsContactablePcs(
+    let npcs = linkNpcsContactablePcs(
       linkNpcsToOrganizations(
         (raw.npcs || []).map(normalizeNpc),
         organizations
@@ -750,6 +794,11 @@ window.ArchiveNormalize = (function () {
       organizations,
       pcs
     );
+    organizations = linkOrganizationsScenarioIds(
+      linkOrganizationsMemberNpcs(organizations, npcs),
+      scenarios
+    );
+    npcs = linkNpcsScenarioIds(npcs, scenarios);
 
     return {
       npcs,
