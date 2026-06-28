@@ -50,6 +50,11 @@ function pickAnswer_(answers, ...keys) {
   return '';
 }
 
+function normalizeSheetHeader_(title) {
+  const t = normalizeTitle_(title);
+  return t === 'タイムスタンプ' ? '' : t;
+}
+
 function readSheetHeaders_(sheet) {
   const width = Math.max(sheet.getLastColumn(), 1);
   return sheet.getRange(1, 1, 1, width).getValues()[0]
@@ -124,7 +129,7 @@ function generatePcId_(sheet) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return 'pc_001';
 
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const ids = sheet.getRange(2, 1, lastRow, 1).getValues().flat();
   let maxNumber = 0;
   ids.forEach(id => {
     const match = String(id).match(/^pc_(\d+)$/i);
@@ -146,8 +151,28 @@ function isPcResponseAlreadyImported_(sheet, formResponseId) {
   if (idx < 0) return false;
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return false;
-  const values = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues().flat();
+  const values = sheet.getRange(2, idx + 1, lastRow, 1).getValues().flat();
   return values.some(v => String(v).trim() === String(formResponseId).trim());
+}
+
+function isPcAlreadyImportedByName_(sheet, name, playerName) {
+  const n = String(name || '').trim();
+  const p = String(playerName || '').trim();
+  if (!n || !p) return false;
+
+  const headers = readSheetHeaders_(sheet);
+  const nameIdx = headers.indexOf('name');
+  const playerIdx = headers.indexOf('player_name');
+  if (nameIdx < 0 || playerIdx < 0) return false;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+
+  const rows = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+  return rows.some(row =>
+    String(row[nameIdx] || '').trim() === n &&
+    String(row[playerIdx] || '').trim() === p
+  );
 }
 
 function buildPcRowFromAnswers_(answers, sheet, meta) {
@@ -189,6 +214,10 @@ function appendPcFromAnswers_(ss, answers, meta) {
     Logger.log('PC skip duplicate: ' + rowData.form_response_id);
     return null;
   }
+  if (isPcAlreadyImportedByName_(pcSheet, rowData.name, rowData.player_name)) {
+    Logger.log('PC skip duplicate name: ' + rowData.name);
+    return null;
+  }
 
   const row = headers.map(header => rowData[header] ?? '');
   pcSheet.appendRow(row);
@@ -198,9 +227,14 @@ function appendPcFromAnswers_(ss, answers, meta) {
 
 function onPcFormSubmit(e) {
   try {
+    if (!e || !e.response) {
+      Logger.log('onPcFormSubmit skip: e.response なし');
+      return;
+    }
     const ss = getSpreadsheetFromEvent_(e);
     const response = e.response;
     const answers = getAnswers_(response);
+    Logger.log('onPcFormSubmit answers: ' + JSON.stringify(answers));
     appendPcFromAnswers_(ss, answers, { response: response });
   } catch (err) {
     Logger.log('onPcFormSubmit ERROR: ' + (err.message || err));
@@ -208,21 +242,140 @@ function onPcFormSubmit(e) {
   }
 }
 
-function checkPcSetup() {
+function findPcResponseSheet_(ss) {
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const width = Math.max(sheet.getLastColumn(), 1);
+    const headers = sheet.getRange(1, 1, 1, width).getValues()[0]
+      .map(h => normalizeTitle_(String(h).trim()))
+      .filter(Boolean);
+    if (headers.some(h => h === 'PC名' || h.indexOf('PC名') === 0)) {
+      return sheet;
+    }
+  }
+  return null;
+}
+
+function answersFromResponseSheetRow_(responseSheet, rowIndex) {
+  const width = Math.max(responseSheet.getLastColumn(), 1);
+  const headers = responseSheet.getRange(1, 1, 1, width).getValues()[0]
+    .map(h => normalizeTitle_(String(h).trim()));
+  const values = responseSheet.getRange(rowIndex, 1, rowIndex, width).getValues()[0];
+  const answers = {};
+  headers.forEach((header, index) => {
+    if (header) answers[header] = values[index];
+  });
+  return answers;
+}
+
+/**
+ * トリガーが動いていないときの救済 — 「フォームの回答」シートから PCS へ転記
+ * PC PJ のスクリプトエディタから ▶ 実行
+ */
+function importFromPcResponseSheet() {
   const form = FormApp.getActiveForm();
-  if (!form) {
-    const msg = 'PC PJ（PC フォームのスクリプトエディタ）から実行してください';
+  const ss = form
+    ? SpreadsheetApp.openById(form.getDestinationId())
+    : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    const msg = 'スプレッドシートを取得できません';
     Logger.log(msg);
     return msg;
   }
-  const spreadsheet = SpreadsheetApp.openById(form.getDestinationId());
-  const pcSheet = spreadsheet.getSheetByName('PCS');
-  const msg = [
-    'DBPJ: ' + spreadsheet.getName(),
-    'PCS: ' + (pcSheet ? Math.max(0, pcSheet.getLastRow() - 1) + '件' : 'まだ無い')
-  ].join('\n');
+
+  const responseSheet = findPcResponseSheet_(ss);
+  if (!responseSheet) {
+    const msg = 'PC の回答シートが見つかりません（質問に「PC名」があるシートを探します）';
+    Logger.log(msg);
+    return msg;
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  const lastRow = responseSheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const answers = answersFromResponseSheetRow_(responseSheet, row);
+    const id = appendPcFromAnswers_(ss, answers, {
+      formResponseId: 'sheet-row-' + responseSheet.getName() + '-' + row
+    });
+    if (id) imported++;
+    else skipped++;
+  }
+
+  const msg = '回答シートから転記: ' + imported + ' 件 / スキップ ' + skipped +
+    '（' + responseSheet.getName() + '）';
   Logger.log(msg);
   return msg;
+}
+
+/**
+ * フォーム送信トリガーを自動設定（PC PJ から ▶ 実行）
+ */
+function setupPcFormTrigger() {
+  const form = FormApp.getActiveForm();
+  if (!form) {
+    throw new Error('PC入力フォーム → スクリプトエディタ（PC PJ）から実行してください');
+  }
+
+  ScriptApp.getProjectTriggers().forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'onPcFormSubmit') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  ScriptApp.newTrigger('onPcFormSubmit')
+    .forForm(form)
+    .onFormSubmit()
+    .create();
+
+  const msg = 'トリガー設定完了: onPcFormSubmit（フォーム送信時）';
+  Logger.log(msg);
+  return msg;
+}
+
+function diagnosePcForm() {
+  const form = FormApp.getActiveForm();
+  const lines = [];
+
+  if (!form) {
+    lines.push('NG: PCフォームのスクリプトエディタから実行してください');
+    Logger.log(lines.join('\n'));
+    return lines.join('\n');
+  }
+
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const triggers = ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'onPcFormSubmit');
+  const responseSheet = findPcResponseSheet_(ss);
+  const pcSheet = ss.getSheetByName('PCS');
+  const responses = form.getResponses();
+
+  lines.push('フォーム: ' + form.getTitle());
+  lines.push('DBPJ: ' + ss.getName());
+  lines.push('onPcFormSubmit トリガー: ' + triggers.length + ' 件' +
+    (triggers.length ? '' : ' ← 0 なら setupPcFormTrigger を実行'));
+  lines.push('回答シート: ' + (responseSheet
+    ? responseSheet.getName() + '（' + Math.max(0, responseSheet.getLastRow() - 1) + '件）'
+    : '見つかりません'));
+  lines.push('PCS: ' + (pcSheet
+    ? Math.max(0, pcSheet.getLastRow() - 1) + ' 件'
+    : 'まだ無い'));
+  lines.push('FormApp.getResponses(): ' + responses.length + ' 件');
+
+  if (responses.length) {
+    const answers = getAnswers_(responses[responses.length - 1]);
+    lines.push('直近の回答キー: ' + Object.keys(answers).join(' / '));
+    lines.push('直近の回答: ' + JSON.stringify(answers));
+  }
+
+  const msg = lines.join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+function checkPcSetup() {
+  return diagnosePcForm();
 }
 
 function importAllPcResponses() {
@@ -235,12 +388,14 @@ function importAllPcResponses() {
   const ss = SpreadsheetApp.openById(form.getDestinationId());
   const responses = form.getResponses();
   let imported = 0;
+  let skipped = 0;
   responses.forEach(response => {
     const answers = getAnswers_(response);
     const id = appendPcFromAnswers_(ss, answers, { response: response });
     if (id) imported++;
+    else skipped++;
   });
-  const msg = '取り込み完了: ' + imported + ' 件';
+  const msg = 'FormApp から取り込み: ' + imported + ' 件 / スキップ ' + skipped;
   Logger.log(msg);
   return msg;
 }
