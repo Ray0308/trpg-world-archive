@@ -129,7 +129,7 @@ function generatePcId_(sheet) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return 'pc_001';
 
-  const ids = sheet.getRange(2, 1, lastRow, 1).getValues().flat();
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
   let maxNumber = 0;
   ids.forEach(id => {
     const match = String(id).match(/^pc_(\d+)$/i);
@@ -151,7 +151,7 @@ function isPcResponseAlreadyImported_(sheet, formResponseId) {
   if (idx < 0) return false;
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return false;
-  const values = sheet.getRange(2, idx + 1, lastRow, 1).getValues().flat();
+  const values = sheet.getRange(2, idx + 1, lastRow - 1, 1).getValues().flat();
   return values.some(v => String(v).trim() === String(formResponseId).trim());
 }
 
@@ -168,7 +168,7 @@ function isPcAlreadyImportedByName_(sheet, name, playerName) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return false;
 
-  const rows = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+  const rows = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
   return rows.some(row =>
     String(row[nameIdx] || '').trim() === n &&
     String(row[playerIdx] || '').trim() === p
@@ -261,7 +261,7 @@ function answersFromResponseSheetRow_(responseSheet, rowIndex) {
   const width = Math.max(responseSheet.getLastColumn(), 1);
   const headers = responseSheet.getRange(1, 1, 1, width).getValues()[0]
     .map(h => normalizeTitle_(String(h).trim()));
-  const values = responseSheet.getRange(rowIndex, 1, rowIndex, width).getValues()[0];
+  const values = responseSheet.getRange(rowIndex, 1, 1, width).getValues()[0];
   const answers = {};
   headers.forEach((header, index) => {
     if (header) answers[header] = values[index];

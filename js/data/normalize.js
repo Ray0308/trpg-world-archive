@@ -518,21 +518,31 @@ window.ArchiveNormalize = (function () {
     }));
   }
 
-  function resolveContactablePcIdsForNpc(npc, pcs) {
+  function resolveContactablePcLinksForNpc(npc, pcs) {
     const ids = new Set((npc.contactablePcIds || []).filter(Boolean));
+    const unresolvedNames = [];
     splitIds(npc.contactablePcNames).forEach(part => {
+      let matched = false;
       pcs.forEach(pc => {
-        if (entityNameMatches(part, pc.name)) ids.add(pc.id);
+        if (entityNameMatches(part, pc.name)) {
+          ids.add(pc.id);
+          matched = true;
+        }
       });
+      if (!matched) unresolvedNames.push(part);
     });
-    return [...ids];
+    return { ids: [...ids], unresolvedNames };
   }
 
   function linkNpcsContactablePcs(npcs, pcs) {
-    return npcs.map(npc => ({
-      ...npc,
-      contactablePcIds: resolveContactablePcIdsForNpc(npc, pcs)
-    }));
+    return npcs.map(npc => {
+      const resolved = resolveContactablePcLinksForNpc(npc, pcs);
+      return {
+        ...npc,
+        contactablePcIds: resolved.ids,
+        contactablePcNames: resolved.unresolvedNames
+      };
+    });
   }
 
   function entityNameMatches(part, fullName) {
