@@ -439,8 +439,9 @@ window.ArchiveNormalize = (function () {
   function normalizePcRow(row) {
     return {
       id: row.id,
-      name: row['名前'] || row.name || '',
-      playerName: row['プレイヤー名'] || row.playerName || '',
+      name: row['名前'] || row.name || row['PC名'] || '',
+      playerName: row['プレイヤー名'] || row.player_name || row.playerName || '',
+      sheetUrl: row.sheet_url || row.sheetUrl || row['キャラシURL'] || '',
       description: row['説明'] || row.description || '',
       affiliation: row.affiliation || row['所属'] || '',
       relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC'])
@@ -449,13 +450,14 @@ window.ArchiveNormalize = (function () {
 
   function normalizePc(raw) {
     raw = stripAdminFields(raw);
-    if (raw['プレイヤー名'] !== undefined || raw['説明'] !== undefined) {
+    if (raw['プレイヤー名'] !== undefined || raw.player_name !== undefined || raw['PC名'] !== undefined) {
       return normalizePcRow(raw);
     }
     return {
       id: raw.id,
       name: raw.name || '',
-      playerName: raw.playerName || '',
+      playerName: raw.playerName || raw.player_name || '',
+      sheetUrl: raw.sheetUrl || raw.sheet_url || '',
       description: raw.description || '',
       affiliation: raw.affiliation || '',
       relatedNpcIds: splitIds(raw.relatedNpcIds)
@@ -513,6 +515,23 @@ window.ArchiveNormalize = (function () {
     return npcs.map(npc => ({
       ...npc,
       organizationIds: resolveOrganizationIdsForNpc(npc, organizations)
+    }));
+  }
+
+  function resolveContactablePcIdsForNpc(npc, pcs) {
+    const ids = new Set((npc.contactablePcIds || []).filter(Boolean));
+    splitIds(npc.contactablePcNames).forEach(part => {
+      pcs.forEach(pc => {
+        if (entityNameMatches(part, pc.name)) ids.add(pc.id);
+      });
+    });
+    return [...ids];
+  }
+
+  function linkNpcsContactablePcs(npcs, pcs) {
+    return npcs.map(npc => ({
+      ...npc,
+      contactablePcIds: resolveContactablePcIdsForNpc(npc, pcs)
     }));
   }
 
@@ -587,7 +606,9 @@ window.ArchiveNormalize = (function () {
       locationById: new Map(),
       npcsByOrgId: new Map(),
       scenariosByNpcId: new Map(),
-      scenariosByOrgId: new Map()
+      scenariosByOrgId: new Map(),
+      npcsByPcId: new Map(),
+      scenariosByPcId: new Map()
     };
 
     data.npcs.forEach(npc => indexes.npcById.set(npc.id, npc));
@@ -641,6 +662,26 @@ window.ArchiveNormalize = (function () {
       if (!list.some(item => item.id === scenario.id)) list.push(scenario);
     }
 
+    function addScenarioToPc(pcId, scenario) {
+      if (!pcId || !scenario) return;
+      if (!indexes.pcById.has(pcId)) return;
+      if (!indexes.scenariosByPcId.has(pcId)) {
+        indexes.scenariosByPcId.set(pcId, []);
+      }
+      const list = indexes.scenariosByPcId.get(pcId);
+      if (!list.some(item => item.id === scenario.id)) list.push(scenario);
+    }
+
+    function addNpcToPc(pcId, npc) {
+      if (!pcId || !npc) return;
+      if (!indexes.pcById.has(pcId)) return;
+      if (!indexes.npcsByPcId.has(pcId)) {
+        indexes.npcsByPcId.set(pcId, []);
+      }
+      const list = indexes.npcsByPcId.get(pcId);
+      if (!list.some(item => item.id === npc.id)) list.push(npc);
+    }
+
     data.npcs.forEach(npc => {
       (npc.scenarioIds || []).forEach(scId => {
         const scenario = indexes.scenarioById.get(scId);
@@ -651,6 +692,11 @@ window.ArchiveNormalize = (function () {
     data.scenarios.forEach(scenario => {
       (scenario.npcIds || []).forEach(npcId => addScenarioToNpc(npcId, scenario));
       (scenario.organizationIds || []).forEach(orgId => addScenarioToOrg(orgId, scenario));
+      (scenario.pcIds || []).forEach(pcId => addScenarioToPc(pcId, scenario));
+    });
+
+    data.npcs.forEach(npc => {
+      (npc.contactablePcIds || []).forEach(pcId => addNpcToPc(pcId, npc));
     });
 
     data.organizations.forEach(org => {
@@ -666,6 +712,12 @@ window.ArchiveNormalize = (function () {
     indexes.scenariosByOrgId.forEach(list => {
       list.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
     });
+    indexes.scenariosByPcId.forEach(list => {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ja'));
+    });
+    indexes.npcsByPcId.forEach(list => {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    });
 
     return indexes;
   }
@@ -674,11 +726,14 @@ window.ArchiveNormalize = (function () {
     const organizations = (raw.organizations || []).map(normalizeOrganization);
     let locations = (raw.locations || []).map(normalizeLocation);
     locations = enrichLocations(organizations, locations);
-    const npcs = linkNpcsToOrganizations(
-      (raw.npcs || []).map(normalizeNpc),
-      organizations
-    );
     const pcs = (raw.pcs || []).map(normalizePc);
+    const npcs = linkNpcsContactablePcs(
+      linkNpcsToOrganizations(
+        (raw.npcs || []).map(normalizeNpc),
+        organizations
+      ),
+      pcs
+    );
     const scenarios = enrichScenarios(
       (raw.scenarios || []).map(normalizeScenario),
       npcs,

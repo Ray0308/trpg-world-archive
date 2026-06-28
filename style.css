@@ -1243,6 +1243,21 @@ input {
   margin: 0;
 }
 
+.pc-register-banner {
+  margin: 0 0.75rem 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(232, 72, 122, 0.06);
+}
+
+.pc-register-lead {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 0.75rem;
+}
+
 .file-open-btn {
   display: inline-flex;
   align-items: center;

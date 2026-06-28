@@ -288,14 +288,16 @@ function doGet(e) {
 
   if (type === 'version') {
     return jsonResponse_({
-      api_version: '2026-06-25-scenarios',
+      api_version: '2026-06-26-pcs',
       capabilities: [
         'npcs',
         'organizations',
         'scenarios',
+        'pcs',
         'npc-visibility',
         'org-visibility',
         'scenario-visibility',
+        'pc-visibility',
         'chaugner-ranking',
         'chaugner-score'
       ]
@@ -314,6 +316,11 @@ function doGet(e) {
 
   if (type === 'scenarios') {
     const data = kpMode ? getKpScenarios_(ss) : getPublicScenarios_(ss);
+    return jsonResponse_(data, callback);
+  }
+
+  if (type === 'pcs') {
+    const data = kpMode ? getKpPcs_(ss) : getPublicPcs_(ss);
     return jsonResponse_(data, callback);
   }
 
@@ -356,6 +363,21 @@ function doGet(e) {
     const hidden = hiddenParam === '1' || hiddenParam === 'true';
     try {
       const result = setScenarioPlHidden_(ss, id, hidden);
+      return jsonResponse_(result, callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'pc-visibility') {
+    const id = String((e.parameter && e.parameter.id) || '').trim();
+    const hiddenParam = e.parameter && e.parameter.hidden;
+    if (!id) {
+      return jsonResponse_({ error: 'missing id' }, callback);
+    }
+    const hidden = hiddenParam === '1' || hiddenParam === 'true';
+    try {
+      const result = setPcPlHidden_(ss, id, hidden);
       return jsonResponse_(result, callback);
     } catch (err) {
       return jsonResponse_({ error: err.message || String(err) }, callback);
@@ -457,6 +479,72 @@ function setScenarioPlHidden_(ss, scenarioId, hidden) {
     }
   }
   throw new Error('シナリオが見つかりません: ' + scenarioId);
+}
+
+function getPcHeaders_() {
+  return [
+    'id',
+    'name',
+    'player_name',
+    'sheet_url',
+    'memo',
+    'pl_hidden',
+    'edit_url',
+    'form_response_id',
+    'created_at',
+    'updated_at'
+  ];
+}
+
+function ensurePcHeader_(sheet) {
+  const headers = getPcHeaders_();
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const firstRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const isEmpty = firstRow.every(value => value === '');
+
+  if (isEmpty) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers;
+  }
+
+  const present = new Set(
+    firstRow.map(h => String(h).trim()).filter(Boolean)
+  );
+
+  headers.forEach(name => {
+    if (!present.has(name)) {
+      const col = sheet.getLastColumn() + 1;
+      sheet.getRange(1, col).setValue(name);
+      present.add(name);
+    }
+  });
+
+  return sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+    .map(h => String(h).trim())
+    .filter(Boolean);
+}
+
+function setPcPlHidden_(ss, pcId, hidden) {
+  const sheet = ss.getSheetByName('PCS');
+  if (!sheet) throw new Error('PCS シートがありません');
+
+  const headers = ensurePcHeader_(sheet);
+  const idCol = headers.indexOf('id') + 1;
+  const hiddenCol = headers.indexOf('pl_hidden') + 1;
+  if (idCol < 1 || hiddenCol < 1) throw new Error('pl_hidden 列がありません');
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol - 1]).trim() === String(pcId).trim()) {
+      sheet.getRange(i + 1, hiddenCol).setValue(plHiddenCellValue_(hidden));
+      const updatedCol = headers.indexOf('updated_at') + 1;
+      if (updatedCol > 0) {
+        sheet.getRange(i + 1, updatedCol).setValue(new Date());
+      }
+      return { ok: true, id: pcId, pl_hidden: hidden };
+    }
+  }
+  throw new Error('PC が見つかりません: ' + pcId);
 }
 
 function getScenarioHeaders_() {
@@ -1064,6 +1152,61 @@ function getKpScenarios_(ss) {
       };
     })
     .filter(sc => sc.id && sc.title);
+}
+
+function getPublicPcs_(ss) {
+  const sheet = ss.getSheetByName('PCS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const adminKeys = new Set([
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+  ]);
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      if (isPlHidden_(record.pl_hidden)) return null;
+      adminKeys.forEach(key => delete record[key]);
+      return record;
+    })
+    .filter(Boolean);
+}
+
+/** KPページ用 — 編集リンク付き PC 一覧 */
+function getKpPcs_(ss) {
+  const sheet = ss.getSheetByName('PCS');
+  if (!sheet) return [];
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+
+  return values.slice(1)
+    .filter(row => row[0])
+    .map(row => {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = row[index];
+      });
+      return {
+        id: record.id || '',
+        name: record.name || '',
+        player_name: record.player_name || '',
+        sheet_url: record.sheet_url || '',
+        pl_hidden: isPlHidden_(record.pl_hidden),
+        edit_url: record.edit_url || ''
+      };
+    })
+    .filter(pc => pc.id && pc.name);
 }
 
 function resetOrganizationSheetForProduction() {

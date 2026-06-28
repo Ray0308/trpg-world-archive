@@ -73,6 +73,10 @@ window.AppsScriptProvider = {
     return this.parseArrayJson(text, 'シナリオデータ');
   },
 
+  parsePcsJson(text) {
+    return this.parseArrayJson(text, 'PC データ');
+  },
+
   fetchNpcsJsonp(url, timeoutMs = 30000, label = 'npcs') {
     return new Promise((resolve, reject) => {
       const callbackName = `_gasCb_${label}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -216,6 +220,15 @@ window.AppsScriptProvider = {
       'scenarios',
       (text) => this.parseScenariosJson(text),
       'スプレッドシートからシナリオを取得できませんでした'
+    );
+  },
+
+  async fetchPcs(baseUrl) {
+    return this.fetchArray(
+      baseUrl,
+      'pcs',
+      (text) => this.parsePcsJson(text),
+      'スプレッドシートから PC を取得できませんでした'
     );
   },
 
@@ -513,6 +526,120 @@ window.AppsScriptProvider = {
       } catch (jsonErr) {
         throw new ArchiveLoadError(
           'シナリオデータを読み込めません',
+          'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
+          {
+            api: {
+              title: apiErr.title,
+              message: apiErr.message,
+              details: apiErr.details
+            },
+            json: {
+              title: jsonErr.title,
+              message: jsonErr.message,
+              details: jsonErr.details
+            }
+          }
+        );
+      }
+    }
+  },
+
+  mergePcs(apiPcs, jsonPcs) {
+    const map = new Map();
+    (jsonPcs || []).forEach(pc => {
+      if (pc?.id) map.set(pc.id, pc);
+    });
+    (apiPcs || []).forEach(pc => {
+      if (pc?.id) map.set(pc.id, pc);
+    });
+    return [...map.values()];
+  },
+
+  async loadPcsFromJson(jsonConfig) {
+    const base = (jsonConfig?.basePath || 'data').replace(/\/$/, '');
+    const url = `${base}/pcs.json`;
+    let res;
+
+    try {
+      res = await fetch(url, { cache: 'no-store' });
+    } catch (networkErr) {
+      throw new ArchiveLoadError(
+        'ローカル PC データに接続できません',
+        `pcs.json を読み込めません（${url}）`,
+        { url, cause: networkErr.message }
+      );
+    }
+
+    if (!res.ok) {
+      throw new ArchiveLoadError(
+        'ローカル PC データの読み込みに失敗しました',
+        `pcs.json — HTTP ${res.status}`,
+        { url, status: res.status }
+      );
+    }
+
+    const data = await res.json();
+    return data.pcs || [];
+  },
+
+  async loadPcs(apiConfig, jsonConfig) {
+    if (!apiConfig?.baseUrl) {
+      const pcs = await this.loadPcsFromJson(jsonConfig);
+      return {
+        pcs,
+        source: 'json',
+        notice: {
+          level: 'warning',
+          title: 'API 未設定',
+          message: 'スプレッドシート API URL が未設定のため、ローカル JSON（pcs.json）を表示しています。'
+        }
+      };
+    }
+
+    try {
+      const apiPcs = await this.fetchPcs(apiConfig.baseUrl);
+      let jsonPcs = [];
+      try {
+        jsonPcs = await this.loadPcsFromJson(jsonConfig);
+      } catch (_) {
+        jsonPcs = [];
+      }
+
+      const pcs = this.mergePcs(apiPcs, jsonPcs);
+      let notice = null;
+      if (apiPcs.length === 0) {
+        notice = {
+          level: 'warning',
+          title: 'PC データなし',
+          message: 'スプレッドシートに PC が登録されていません。'
+        };
+      }
+
+      return {
+        pcs,
+        source: apiPcs.length ? 'api' : 'json',
+        notice
+      };
+    } catch (apiErr) {
+      try {
+        const pcs = await this.loadPcsFromJson(jsonConfig);
+        if (apiErr.details?.apiNotReady && apiErr.details?.unknownType === 'pcs') {
+          return { pcs, source: 'json', notice: null };
+        }
+        return {
+          pcs,
+          source: 'json-fallback',
+          notice: {
+            level: 'error',
+            title: apiErr.title || 'スプレッドシートから PC を取得できませんでした',
+            message: apiErr.message,
+            details: apiErr.details || {},
+            fallback: `ローカル JSON（pcs.json）の ${pcs.length} 件を表示しています。`
+          }
+        };
+      } catch (jsonErr) {
+        throw new ArchiveLoadError(
+          'PC データを読み込めません',
           'スプレッドシート API とローカル JSON の両方から取得に失敗しました。',
           {
             api: {

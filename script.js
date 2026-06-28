@@ -32,7 +32,9 @@ const indexes = {
   locationById: new Map(),
   npcsByOrgId: new Map(),
   scenariosByNpcId: new Map(),
-  scenariosByOrgId: new Map()
+  scenariosByOrgId: new Map(),
+  npcsByPcId: new Map(),
+  scenariosByPcId: new Map()
 };
 
 let route = { section: 'npcs', id: null };
@@ -64,6 +66,8 @@ async function loadData() {
   indexes.npcsByOrgId = built.npcsByOrgId;
   indexes.scenariosByNpcId = built.scenariosByNpcId;
   indexes.scenariosByOrgId = built.scenariosByOrgId;
+  indexes.npcsByPcId = built.npcsByPcId;
+  indexes.scenariosByPcId = built.scenariosByPcId;
 
   loadMeta = meta || { npcSource: '', notices: [] };
 }
@@ -260,6 +264,14 @@ function scenariosForOrg(org) {
   );
 }
 
+function npcsForPc(pc) {
+  return indexes.npcsByPcId.get(pc.id) || [];
+}
+
+function scenariosForPc(pc) {
+  return indexes.scenariosByPcId.get(pc.id) || [];
+}
+
 function resolvePcs(ids) {
   return (ids || []).map(id => indexes.pcById.get(id)).filter(Boolean);
 }
@@ -410,6 +422,11 @@ function filterPcs(query) {
 
 function getFilesDriveUrl() {
   const url = String(window.AppLinks?.filesDriveFolder || '').trim();
+  return url && url !== '#' ? url : '';
+}
+
+function getPcFormUrl() {
+  const url = String(window.AppLinks?.pcForm || '').trim();
   return url && url !== '#' ? url : '';
 }
 
@@ -1147,10 +1164,9 @@ function renderPcListItem(pc, active) {
 }
 
 function renderPcDetail(pc) {
-  const relatedNpcs = resolveNpcs(pc.relatedNpcIds);
-  const scenarios = store.scenarios.filter(sc =>
-    (sc.pcIds || []).includes(pc.id)
-  );
+  const relatedNpcs = npcsForPc(pc);
+  const scenarios = scenariosForPc(pc);
+  const sheetUrl = String(pc.sheetUrl || '').trim();
 
   return `
     <article class="entity-detail">
@@ -1163,11 +1179,12 @@ function renderPcDetail(pc) {
       </header>
 
       <section class="detail-section">
-        <h2 class="section-heading">基本情報</h2>
-        <dl class="info-grid info-grid--compact">
-          <div class="info-row"><dt>プレイヤー名</dt><dd>${escapeHtml(pc.playerName || '—')}</dd></div>
-          <div class="info-row"><dt>所属</dt><dd>${escapeHtml(pc.affiliation || '—')}</dd></div>
-        </dl>
+        <h2 class="section-heading">キャラクターシート</h2>
+        ${sheetUrl ? `
+          <a href="${escapeAttr(sheetUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">
+            キャラシを開く
+          </a>
+        ` : `<p class="detail-meta">キャラシ URL が未登録です。</p>`}
       </section>
 
       ${pc.description ? `
@@ -1177,20 +1194,27 @@ function renderPcDetail(pc) {
       </section>
       ` : ''}
 
+      ${pc.affiliation ? `
+      <section class="detail-section detail-section--compact">
+        <h2 class="section-heading">所属</h2>
+        <p>${escapeHtml(pc.affiliation)}</p>
+      </section>
+      ` : ''}
+
       <section class="detail-section">
-        <h2 class="section-heading">関連NPC</h2>
+        <h2 class="section-heading">連絡可能NPC</h2>
         ${relatedNpcs.length ? `
           <ul class="member-list member-list--compact">
             ${relatedNpcs.map(npc => renderNpcMemberRow(npc)).join('')}
           </ul>
-        ` : renderEmpty()}
+        ` : renderEmpty('NPCフォームの「連絡可能PC」から自動で表示されます')}
       </section>
 
       <section class="detail-section">
         <h2 class="section-heading">関連シナリオ</h2>
-        ${renderLinkList(
-          scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era))
-        )}
+        ${scenarios.length
+          ? renderLinkList(scenarios.map(sc => renderLink(`#scenarios/${sc.id}`, sc.title, sc.era)))
+          : renderEmpty('シナリオフォームの「関連PC」から自動で表示されます')}
       </section>
     </article>
   `;
@@ -1201,12 +1225,23 @@ function renderPcsView() {
   const filtered = filterPcs(query);
   const activeId = getActiveId(filtered);
   const activePc = activeId ? indexes.pcById.get(activeId) : null;
+  const pcFormUrl = getPcFormUrl();
+
+  const registerHtml = pcFormUrl ? `
+    <div class="pc-register-banner">
+      <p class="pc-register-lead">自分の PC を台帳に登録できます（PC名・プレイヤー名・キャラシURL）。</p>
+      <a href="${escapeAttr(pcFormUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">
+        PCを登録する
+      </a>
+    </div>
+  ` : '';
 
   const listHtml = `
     <div class="panel-header">
       <h2 class="panel-title">PC</h2>
       <span class="panel-count">${filtered.length} 件</span>
     </div>
+    ${registerHtml}
     <ul class="entity-list">
       ${filtered.map(pc => renderPcListItem(pc, pc.id === activeId)).join('')}
     </ul>
@@ -1357,6 +1392,9 @@ function renderNoticeBanner() {
     if (notice.level === 'warning') return false;
     if (notice.level !== 'error') return false;
     if (loadMeta.npcSource === 'api' && loadMeta.scenarioSource === 'json-fallback') {
+      return false;
+    }
+    if (loadMeta.npcSource === 'api' && loadMeta.pcSource === 'json-fallback') {
       return false;
     }
     return true;

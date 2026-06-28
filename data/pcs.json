@@ -1,28 +1,3 @@
 {
-  "pcs": [
-    {
-      "id": "pc-takahashi",
-      "name": "高橋誠",
-      "playerName": "Player A",
-      "description": "ミスカトニック大学の客員研究員。フィル・ミラーと考古学調査で協力関係にある。",
-      "affiliation": "ミスカトニック大学（客員研究員）",
-      "relatedNpcIds": ["phil-miller"]
-    },
-    {
-      "id": "pc-tanaka",
-      "name": "田中太郎",
-      "playerName": "Player B",
-      "description": "アーカムを拠点とする私立探偵。超常現象に関する案件も請け負う。",
-      "affiliation": "私立探偵事務所",
-      "relatedNpcIds": ["phil-miller", "james-blackwood"]
-    },
-    {
-      "id": "pc-kanzaki",
-      "name": "神崎蓮",
-      "playerName": "Player C",
-      "description": "東京大学民俗学研究室所属。田中雪の後輩で、フィールドワークに参加している。",
-      "affiliation": "東京大学（民俗学研究室）",
-      "relatedNpcIds": ["phil-miller", "yuki-tanaka"]
-    }
-  ]
+  "pcs": []
 }

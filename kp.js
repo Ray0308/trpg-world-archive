@@ -67,7 +67,21 @@
       linkKey: 'pcForm',
       icon: '👤',
       name: 'PC登録フォーム',
-      description: 'PCの名前、プレイヤー名、説明、関連NPCを登録するフォーム。'
+      description: 'PL向け — PC名・プレイヤー名・キャラシURLを登録。関連づけはシナリオ・NPCフォームから自動。',
+      apiType: 'pcs',
+      visibilityApiType: 'pc-visibility',
+      pickerTitle: 'PCを編集',
+      listTitle: 'PC一覧（KP用）',
+      visibilityTitle: 'PLサイトの表示設定（PC）',
+      listHint: '非表示の PC も含めてすべて表示します。登録は PL がフォームから行います。',
+      visibilityHint: 'オフにした PC は PL サイト（閲覧ページ）に表示されません。',
+      pickerSearchPlaceholder: 'PC名・プレイヤー名で検索...',
+      listSearchPlaceholder: 'PC名・プレイヤー名で検索...',
+      visibilitySearchPlaceholder: 'PC名・プレイヤー名で検索...',
+      plSection: 'pcs',
+      emptyLabel: 'PC',
+      editable: true,
+      visibilityControl: true
     }
   };
 
@@ -75,8 +89,8 @@
 
   const EXTERNAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
 
-  const entityCache = { npc: null, org: null, scenario: null };
-  const entityLoadError = { npc: null, org: null, scenario: null };
+  const entityCache = { npc: null, org: null, scenario: null, pc: null };
+  const entityLoadError = { npc: null, org: null, scenario: null, pc: null };
   let activeEntity = 'npc';
   let listFilter = 'all';
 
@@ -226,7 +240,9 @@
   }
 
   function getEntityItemLabel(entity, item) {
-    return entity === 'scenario' ? (item.title || '') : (item.name || '');
+    if (entity === 'scenario') return item.title || '';
+    if (entity === 'pc') return item.name || '';
+    return item.name || '';
   }
 
   async function loadKpEntities(entity) {
@@ -250,7 +266,12 @@
         ? mergeNpcImages(kpItems, publicItems)
         : entity === 'org'
           ? mergeOrgIcons(kpItems, publicItems)
-          : kpItems.map(item => ({ ...item, pl_hidden: Boolean(item.pl_hidden) }));
+          : kpItems.map(item => ({
+            ...item,
+            name: item.name || '',
+            player_name: item.player_name || item.playerName || '',
+            pl_hidden: Boolean(item.pl_hidden)
+          }));
       return entityCache[entity];
     } catch (err) {
       entityLoadError[entity] = err;
@@ -407,9 +428,14 @@
     return `<span class="kp-picker-icon-emoji" aria-hidden="true">📜</span>`;
   }
 
+  function renderPcThumb() {
+    return `<span class="kp-picker-icon-emoji" aria-hidden="true">👤</span>`;
+  }
+
   function renderEntityThumb(entity, item) {
     if (entity === 'org') return renderOrgThumb(item);
     if (entity === 'scenario') return renderScenarioThumb();
+    if (entity === 'pc') return renderPcThumb();
     return renderNpcThumb(item);
   }
 
@@ -417,6 +443,10 @@
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter(item => {
+      if (entity === 'pc') {
+        return (item.name || '').toLowerCase().includes(q) ||
+          (item.player_name || item.playerName || '').toLowerCase().includes(q);
+      }
       if (entity === 'scenario') {
         return (item.title || '').toLowerCase().includes(q) ||
           (item.era || '').toLowerCase().includes(q) ||
@@ -492,6 +522,32 @@
             </div>
             ${item.era ? `<p class="kp-npc-card-furi">${escapeHtml(item.era)}</p>` : ''}
             <p class="kp-npc-card-job">${escapeHtml(item.summary || '概要未設定')}</p>
+          </div>
+          <div class="kp-npc-card-actions">
+            ${hasEdit
+              ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
+              : '<span class="kp-npc-card-note">編集URLなし</span>'}
+            ${hidden
+              ? '<span class="kp-npc-card-note">PL未掲載</span>'
+              : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
+          </div>
+        </li>
+      `;
+    }
+
+    if (entity === 'pc') {
+      const player = item.player_name || item.playerName || '';
+      return `
+        <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+          ${renderPcThumb()}
+          <div class="kp-npc-card-main">
+            <div class="kp-npc-card-top">
+              <p class="kp-npc-card-name">${escapeHtml(item.name || '名称未設定')}</p>
+              <div class="kp-npc-card-badges">
+                <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
+              </div>
+            </div>
+            ${player ? `<p class="kp-npc-card-furi">${escapeHtml(player)}</p>` : ''}
           </div>
           <div class="kp-npc-card-actions">
             ${hasEdit
@@ -628,14 +684,18 @@
           const attrs = hasEdit
             ? ` type="button" data-edit-url="${escapeAttr(item.edit_url)}"`
             : ' aria-disabled="true"';
-          const sub = entity === 'scenario'
-            ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
-            : entity === 'org'
-              ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
-              : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
+          const sub = entity === 'pc'
+            ? ((item.player_name || item.playerName)
+              ? `<span class="kp-picker-sub">${escapeHtml(item.player_name || item.playerName)}</span>`
+              : '')
+            : entity === 'scenario'
+              ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
+              : entity === 'org'
+                ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
+                : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
           const meta = entity === 'scenario'
             ? (item.summary ? `<span class="kp-picker-meta"><span>${escapeHtml(item.summary)}</span></span>` : '')
-            : entity === 'org'
+            : (entity === 'org' || entity === 'pc')
               ? ''
               : `<span class="kp-picker-meta">
                 ${item.occupation ? `<span>${escapeHtml(item.occupation)}</span>` : ''}
@@ -681,11 +741,15 @@
         ${items.map(item => {
           const hidden = Boolean(item.pl_hidden);
           const rowClass = hidden ? ' kp-visibility-row--hidden' : '';
-          const sub = entity === 'scenario'
-            ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
-            : entity === 'org'
-              ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
-              : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
+          const sub = entity === 'pc'
+            ? ((item.player_name || item.playerName)
+              ? `<span class="kp-picker-sub">${escapeHtml(item.player_name || item.playerName)}</span>`
+              : '')
+            : entity === 'scenario'
+              ? (item.era ? `<span class="kp-picker-sub">${escapeHtml(item.era)}</span>` : '')
+              : entity === 'org'
+                ? (item.summary ? `<span class="kp-picker-sub">${escapeHtml(item.summary)}</span>` : '')
+                : (item.furigana ? `<span class="kp-picker-sub">${escapeHtml(item.furigana)}</span>` : '');
 
           return `
             <li>
