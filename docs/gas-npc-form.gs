@@ -487,6 +487,7 @@ function getPcHeaders_() {
     'name',
     'player_name',
     'sheet_url',
+    'image_url',
     'memo',
     'pl_hidden',
     'edit_url',
@@ -1202,6 +1203,7 @@ function getKpPcs_(ss) {
         name: record.name || '',
         player_name: record.player_name || '',
         sheet_url: record.sheet_url || '',
+        image_url: record.image_url || '',
         pl_hidden: isPlHidden_(record.pl_hidden),
         edit_url: record.edit_url || ''
       };

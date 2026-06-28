@@ -5,7 +5,7 @@
  *   NPCPJ  … docs/gas-npc-form.gs（公開 API）
  *   PC PJ  … このファイル（フォーム送信 → PCS 転記）
  *
- * PL が PC名・プレイヤー名・キャラシURL を登録します。
+ * PL が PC名・プレイヤー名・キャラシURL・画像（任意）を登録します。
  * 関連シナリオ / 連絡可能NPC はシナリオ・NPC フォームから名前で自動紐づけ。
  *
  * セットアップ:
@@ -90,6 +90,7 @@ function getPcHeaders_() {
     'name',
     'player_name',
     'sheet_url',
+    'image_url',
     'memo',
     'pl_hidden',
     'edit_url',
@@ -145,6 +146,21 @@ function normalizeSheetUrl_(value) {
   return '';
 }
 
+function normalizeImageUrl_(value) {
+  const s = String(value || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) {
+    const m = s.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
+    return s;
+  }
+  const first = s.split(/[,、|]/).map(part => part.trim()).filter(Boolean)[0] || '';
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(first)) {
+    return `https://drive.google.com/uc?export=view&id=${first}`;
+  }
+  return '';
+}
+
 function isPcResponseAlreadyImported_(sheet, formResponseId) {
   const headers = readSheetHeaders_(sheet);
   const idx = headers.indexOf('form_response_id');
@@ -185,6 +201,7 @@ function buildPcRowFromAnswers_(answers, sheet, meta) {
     name: pickAnswer_(answers, 'PC名', 'PC名（キャラクター名）'),
     player_name: pickAnswer_(answers, 'プレイヤー名', 'プレイヤー名（あなたの名前・ハンドルネーム）'),
     sheet_url: normalizeSheetUrl_(pickAnswer_(answers, 'キャラシURL', 'キャラシURL（いあキャラの共有）')),
+    image_url: normalizeImageUrl_(pickAnswer_(answers, '画像', 'PC画像', '立ち絵', '画像URL')),
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'

@@ -428,14 +428,32 @@
     return `<span class="kp-picker-icon-emoji" aria-hidden="true">📜</span>`;
   }
 
-  function renderPcThumb() {
+  function renderPcThumb(pc = {}) {
+    const url = pc.image_url || pc.imageUrl || pc.image || '';
+    if (url) {
+      const svgFallback = generatePickerAvatarFallback(pc.name);
+      const utils = window.ImageUtils;
+      const { src, fallbacks } = utils
+        ? utils.buildImgAttrs(url, svgFallback)
+        : { src: url, fallbacks: [] };
+      return `<img class="kp-picker-avatar"` +
+        ` src="${escapeAttr(src)}"` +
+        ` alt=""` +
+        ` loading="lazy"` +
+        ` decoding="async"` +
+        ` referrerpolicy="no-referrer"` +
+        ` data-fallbacks="${encodeURIComponent(JSON.stringify(fallbacks))}"` +
+        ` data-emoji-fallback="👤"` +
+        ` data-svg-fallback="${encodeURIComponent(svgFallback)}"` +
+        ` onerror="handleArchiveImgError(this)">`;
+    }
     return `<span class="kp-picker-icon-emoji" aria-hidden="true">👤</span>`;
   }
 
   function renderEntityThumb(entity, item) {
     if (entity === 'org') return renderOrgThumb(item);
     if (entity === 'scenario') return renderScenarioThumb();
-    if (entity === 'pc') return renderPcThumb();
+    if (entity === 'pc') return renderPcThumb(item);
     return renderNpcThumb(item);
   }
 
@@ -539,7 +557,7 @@
       const player = item.player_name || item.playerName || '';
       return `
         <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
-          ${renderPcThumb()}
+          ${renderPcThumb(item)}
           <div class="kp-npc-card-main">
             <div class="kp-npc-card-top">
               <p class="kp-npc-card-name">${escapeHtml(item.name || '名称未設定')}</p>

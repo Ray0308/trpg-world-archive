@@ -442,6 +442,7 @@ window.ArchiveNormalize = (function () {
       name: row['名前'] || row.name || row['PC名'] || '',
       playerName: row['プレイヤー名'] || row.player_name || row.playerName || '',
       sheetUrl: row.sheet_url || row.sheetUrl || row['キャラシURL'] || '',
+      image: row.image_url || row.imageUrl || row.image || row['画像'] || row['PC画像'] || '',
       description: row['説明'] || row.description || '',
       affiliation: row.affiliation || row['所属'] || '',
       relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC'])
@@ -458,6 +459,7 @@ window.ArchiveNormalize = (function () {
       name: raw.name || '',
       playerName: raw.playerName || raw.player_name || '',
       sheetUrl: raw.sheetUrl || raw.sheet_url || '',
+      image: raw.image || raw.imageUrl || raw.image_url || '',
       description: raw.description || '',
       affiliation: raw.affiliation || '',
       relatedNpcIds: splitIds(raw.relatedNpcIds)

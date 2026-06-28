@@ -181,6 +181,16 @@ function npcAvatarImg(npc) {
   return renderImg(npc.avatar || npc.image || '', svg, { className: 'list-avatar', alt: npc.name });
 }
 
+function pcPortraitImg(pc) {
+  const svg = generatePortrait(pc.name, '#2a263a', '#e8487a');
+  return renderImg(pc.image || '', svg, { className: 'detail-image', alt: pc.name });
+}
+
+function pcAvatarImg(pc) {
+  const svg = generateAvatar(pc.name, '#2a263a', '#e8487a');
+  return renderImg(pc.image || '', svg, { className: 'list-avatar', alt: pc.name });
+}
+
 /* ---- Entity Resolution ---- */
 
 function resolveNpcs(ids) {
@@ -1154,7 +1164,7 @@ function renderPcListItem(pc, active) {
         data-nav-section="pcs"
         data-nav-id="${pc.id}"
         role="option">
-      <span class="list-icon">👤</span>
+      ${pcAvatarImg(pc)}
       <div class="list-item-info">
         <div class="list-item-name">${escapeHtml(pc.name)}</div>
         <div class="list-item-sub">${escapeHtml(pc.playerName || '')}</div>
@@ -1170,8 +1180,8 @@ function renderPcDetail(pc) {
 
   return `
     <article class="entity-detail">
-      <header class="detail-header detail-header--compact">
-        <span class="detail-org-icon">👤</span>
+      <header class="detail-header">
+        ${pcPortraitImg(pc)}
         <div class="detail-header-body">
           <h1 class="detail-title">${escapeHtml(pc.name)}</h1>
           <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
