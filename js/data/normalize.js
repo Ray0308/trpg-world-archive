@@ -617,6 +617,73 @@ window.ArchiveNormalize = (function () {
     }));
   }
 
+  function parseRelatedNpcLabel(label) {
+    const p = String(label || '').trim();
+    if (!p) return { name: '', relation: '' };
+    const m = p.match(/^(.+?)（(.+)）$/);
+    if (m) return { name: m[1].trim(), relation: m[2].trim() };
+    return { name: p, relation: '' };
+  }
+
+  /** 関連NPC — 名前入力を ID に解決してリンク可能にする */
+  function linkNpcsRelatedNpcs(npcs) {
+    return npcs.map(npc => {
+      const linked = [];
+      const seen = new Set();
+
+      function addLink(npcId, relation) {
+        const id = String(npcId || '').trim();
+        if (!id || id === npc.id || seen.has(id)) return;
+        seen.add(id);
+        linked.push({ npcId: id, relation: relation || '' });
+      }
+
+      function resolveName(name, relation) {
+        const n = String(name || '').trim();
+        if (!n) return;
+        if (/^npc[-_]/i.test(n)) {
+          addLink(n, relation);
+          return;
+        }
+        npcs.forEach(candidate => {
+          if (entityNameMatches(n, candidate.name)) addLink(candidate.id, relation);
+        });
+      }
+
+      (npc.relatedNpcIds || []).forEach(entry => {
+        if (typeof entry === 'string') {
+          resolveName(entry, '');
+          return;
+        }
+        const relation = entry.relation || '';
+        const rawId = String(entry.npcId || '').trim();
+        if (/^npc[-_]/i.test(rawId)) {
+          addLink(rawId, relation);
+        } else {
+          const parsed = parseRelatedNpcLabel(rawId);
+          resolveName(parsed.name || rawId, relation || parsed.relation);
+        }
+      });
+
+      const unresolvedNames = [];
+      (npc.relatedNpcNames || []).forEach(label => {
+        const { name, relation } = parseRelatedNpcLabel(label);
+        if (!name) return;
+        const before = seen.size;
+        resolveName(name, relation);
+        if (seen.size === before) {
+          unresolvedNames.push(relation ? `${name}（${relation}）` : name);
+        }
+      });
+
+      return {
+        ...npc,
+        relatedNpcIds: linked,
+        relatedNpcNames: unresolvedNames
+      };
+    });
+  }
+
   function linkOrganizationsScenarioIds(organizations, scenarios) {
     return organizations.map(org => ({
       ...org,
@@ -814,7 +881,7 @@ window.ArchiveNormalize = (function () {
       linkOrganizationsMemberNpcs(organizations, npcs),
       scenarios
     );
-    npcs = linkNpcsScenarioIds(npcs, scenarios);
+    npcs = linkNpcsRelatedNpcs(linkNpcsScenarioIds(npcs, scenarios));
 
     return {
       npcs,

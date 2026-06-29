@@ -594,9 +594,11 @@ function renderNpcRelatedSection(npc) {
   );
   const npcLinks = renderLinkListIfAny(
     (npc.relatedNpcIds || []).map(r => {
-      const rel = indexes.npcById.get(r.npcId);
-      return rel ? renderLink(`#npcs/${rel.id}`, rel.name, r.relation) : '';
-    })
+      const id = typeof r === 'string' ? r : r.npcId;
+      const relation = typeof r === 'object' ? (r.relation || '') : '';
+      const rel = indexes.npcById.get(id);
+      return rel ? renderLink(`#npcs/${rel.id}`, rel.name, relation) : '';
+    }).filter(Boolean)
   );
   const npcNameList = (npc.relatedNpcNames || []).length
     ? `<ul class="link-list">${npc.relatedNpcNames.map(name =>
