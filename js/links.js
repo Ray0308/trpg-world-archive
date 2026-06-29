@@ -32,6 +32,16 @@
     /** 外部ツール・コミュニティ（# は未設定） */
     cocofolia: 'https://ccfolia.com/',
     iachara: 'https://iachara.com/',
-    discord: 'https://discord.com/channels/1420377314264485950/1420377315082502228'
+    discord: 'https://discord.com/channels/1420377314264485950/1420377315082502228',
+
+    /** ホーム「オマケ」に載せるミニゲーム（非掲載は配列から外す） */
+    portalMinigames: [
+      {
+        href: 'games/chaugner-run.html',
+        icon: '🏃',
+        name: 'チャウグナー・ラン',
+        description: '横スクロールミニゲーム。ランキングに名前を残そう。'
+      }
+    ]
   };
 })();

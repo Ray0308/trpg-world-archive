@@ -789,6 +789,32 @@ function renderCommunityCard(item) {
   `;
 }
 
+function renderPortalMinigameCard(game) {
+  return `
+    <a href="${escapeAttr(game.href)}" class="portal-minigame-card">
+      <span class="portal-minigame-icon" aria-hidden="true">${escapeHtml(game.icon || '🎮')}</span>
+      <span class="portal-minigame-body">
+        <span class="portal-minigame-name">${escapeHtml(game.name || '')}</span>
+        <span class="portal-minigame-desc">${escapeHtml(game.description || '')}</span>
+      </span>
+      <span class="portal-minigame-go" aria-hidden="true">→</span>
+    </a>
+  `;
+}
+
+function renderPortalMinigameSection() {
+  const games = (window.AppLinks && window.AppLinks.portalMinigames) || [];
+  if (!games.length) return '';
+  return `
+      <section class="portal-section">
+        <h2 class="portal-section-label">オマケ</h2>
+        <div class="portal-minigame-list">
+          ${games.map(renderPortalMinigameCard).join('')}
+        </div>
+      </section>
+  `;
+}
+
 function renderHomeView() {
   const stats = [
     { section: 'npcs', icon: '🧑‍🤝‍🧑', label: 'NPC', count: store.npcs.length, sub: '登録済み' },
@@ -848,19 +874,7 @@ function renderHomeView() {
         </div>
       </section>
 
-      <section class="portal-section">
-        <h2 class="portal-section-label">オマケ</h2>
-        <div class="portal-minigame-list">
-          <a href="games/chaugner-run.html" class="portal-minigame-card">
-            <span class="portal-minigame-icon" aria-hidden="true">🏃</span>
-            <span class="portal-minigame-body">
-              <span class="portal-minigame-name">チャウグナー・ラン</span>
-              <span class="portal-minigame-desc">横スクロールミニゲーム。ランキングに名前を残そう。</span>
-            </span>
-            <span class="portal-minigame-go" aria-hidden="true">→</span>
-          </a>
-        </div>
-      </section>
+      ${renderPortalMinigameSection()}
 
       <section class="portal-section portal-section--community">
         <h2 class="portal-community-title">コミュニティ</h2>
