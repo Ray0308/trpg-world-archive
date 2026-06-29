@@ -146,18 +146,43 @@ function normalizeSheetUrl_(value) {
   return '';
 }
 
+function extractDriveFileId_(value) {
+  if (value == null || value === '') return '';
+  if (Array.isArray(value)) return extractDriveFileId_(value[0]);
+  const s = String(value).trim();
+  if (!s || /^\[Ljava\.lang\.Object;@/i.test(s)) return '';
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;
+  const m = s.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : '';
+}
+
+function publishDriveFile_(value) {
+  const fileId = extractDriveFileId_(value);
+  if (!fileId) return;
+  try {
+    DriveApp.getFileById(fileId)
+      .setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    Logger.log('Drive publish skip: ' + fileId + ' / ' + (e.message || e));
+  }
+}
+
 function normalizeImageUrl_(value) {
-  const s = String(value || '').trim();
+  if (value == null || value === '') return '';
+  if (Array.isArray(value)) {
+    const fileId = extractDriveFileId_(value[0]);
+    if (!fileId) return '';
+    publishDriveFile_(fileId);
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+  }
+  const s = String(value).trim();
   if (!s) return '';
-  if (/^https?:\/\//i.test(s)) {
-    const m = s.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
-    if (m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
-    return s;
+  const fileId = extractDriveFileId_(s);
+  if (fileId) {
+    publishDriveFile_(fileId);
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
-  const first = s.split(/[,、|]/).map(part => part.trim()).filter(Boolean)[0] || '';
-  if (/^[a-zA-Z0-9_-]{20,}$/.test(first)) {
-    return `https://drive.google.com/uc?export=view&id=${first}`;
-  }
+  if (/^https?:\/\//i.test(s)) return s;
   return '';
 }
 
@@ -413,6 +438,41 @@ function importAllPcResponses() {
     else skipped++;
   });
   const msg = 'FormApp から取り込み: ' + imported + ' 件 / スキップ ' + skipped;
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 既存 PCS の画像をリンク閲覧可にし、URL を表示用に正規化
+ * PC PJ のスクリプトエディタから ▶ 実行（1回）
+ */
+function publishAllPcDriveImages() {
+  const form = FormApp.getActiveForm();
+  const ss = form
+    ? SpreadsheetApp.openById(form.getDestinationId())
+    : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return 'スプレッドシートを取得できません';
+
+  const sheet = ss.getSheetByName('PCS');
+  if (!sheet) return 'PCS シートがありません';
+
+  const headers = ensurePcHeader_(sheet);
+  const imgIdx = headers.indexOf('image_url');
+  if (imgIdx < 0) return 'image_url 列がありません';
+
+  let updated = 0;
+  const lastRow = sheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const cell = sheet.getRange(row, imgIdx + 1);
+    const normalized = normalizeImageUrl_(cell.getValue());
+    if (normalized && normalized !== String(cell.getValue() || '').trim()) {
+      cell.setValue(normalized);
+      updated++;
+    } else if (normalized) {
+      updated++;
+    }
+  }
+  const msg = 'PC画像を公開設定: ' + updated + ' 件';
   Logger.log(msg);
   return msg;
 }

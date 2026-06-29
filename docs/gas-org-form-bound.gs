@@ -80,14 +80,45 @@ function toDriveFileUrl_(value) {
   return '';
 }
 
+function extractDriveFileId_(value) {
+  if (value == null || value === '') return '';
+  if (Array.isArray(value)) return extractDriveFileId_(value[0]);
+  const url = toDriveFileUrl_(value);
+  if (url) {
+    const m = url.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]+)/);
+    if (m) return m[1];
+  }
+  const s = String(value).trim();
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;
+  return '';
+}
+
+function publishDriveFile_(value) {
+  const fileId = extractDriveFileId_(value);
+  if (!fileId) return;
+  try {
+    DriveApp.getFileById(fileId)
+      .setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    Logger.log('Drive publish skip: ' + fileId + ' / ' + (e.message || e));
+  }
+}
+
 function normalizeOrgIcon_(raw) {
   if (raw == null || raw === '') return '🏛️';
   const driveUrl = toDriveFileUrl_(raw);
-  if (driveUrl) return driveUrl;
+  if (driveUrl) {
+    publishDriveFile_(driveUrl);
+    return driveUrl;
+  }
   const s = normalizeAnswerValue_(raw);
   if (!s) return '🏛️';
   if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '🏛️';
-  if (/^https?:\/\//i.test(s)) return toDriveFileUrl_(s) || s;
+  if (/^https?:\/\//i.test(s)) {
+    const url = toDriveFileUrl_(s) || s;
+    publishDriveFile_(url);
+    return url;
+  }
   if (s.length <= 8) return s;
   return '🏛️';
 }
@@ -718,6 +749,40 @@ function syncAllOrgMemberNpcLinks() {
   }
 
   const msg = '所属NPCリンク完了: NPC ' + linked + ' 行更新 / ID解決 ' + resolved + ' 組織';
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 既存 ORGANIZATIONS のアイコン画像をリンク閲覧可にし、URL を正規化
+ * 組織PJ のスクリプトエディタから ▶ 実行（1回）
+ */
+function publishAllOrgDriveIcons() {
+  const form = FormApp.getActiveForm();
+  const ss = form
+    ? SpreadsheetApp.openById(form.getDestinationId())
+    : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return 'スプレッドシートを取得できません';
+
+  const sheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!sheet) return 'ORGANIZATIONS シートがありません';
+
+  const headers = ensureOrgHeader_(sheet);
+  const iconIdx = headers.indexOf('icon');
+  if (iconIdx < 0) return 'icon 列がありません';
+
+  let updated = 0;
+  for (let row = 2; row <= sheet.getLastRow(); row++) {
+    const cell = sheet.getRange(row, iconIdx + 1);
+    const normalized = normalizeOrgIcon_(cell.getValue());
+    if (normalized && normalized !== String(cell.getValue() || '').trim()) {
+      cell.setValue(normalized);
+      updated++;
+    } else if (normalized && /^https?:\/\//i.test(normalized)) {
+      updated++;
+    }
+  }
+  const msg = '組織アイコンを公開設定: ' + updated + ' 件';
   Logger.log(msg);
   return msg;
 }
