@@ -657,6 +657,12 @@ input {
   line-height: 1.5;
 }
 
+.portal-minigame-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 .portal-minigame-card {
   display: flex;
   align-items: center;
@@ -1277,6 +1283,25 @@ input {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   color: #fff;
+}
+
+.pc-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.file-open-btn--secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.file-open-btn--secondary:hover {
+  background: var(--bg-card);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .list-empty {
@@ -2422,6 +2447,35 @@ input {
   color: var(--text-muted);
   background: var(--bg-input);
   border: 1px solid var(--border);
+}
+
+.kp-npc-badge--deleted {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+}
+
+.kp-npc-card--deleted {
+  opacity: 0.72;
+}
+
+.kp-npc-card--deleted .kp-npc-card-name {
+  text-decoration: line-through;
+  text-decoration-color: rgba(248, 113, 113, 0.5);
+}
+
+.kp-npc-card-btn--danger {
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+}
+
+.kp-npc-card-btn--danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: #f87171;
+}
+
+.kp-npc-stat--deleted strong {
+  color: #f87171;
 }
 
 .kp-npc-card-furi {

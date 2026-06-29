@@ -10,6 +10,7 @@
       description: 'NPCの名前、画像、人物紹介、エピソード、関連情報を登録するフォーム。',
       apiType: 'npcs',
       visibilityApiType: 'npc-visibility',
+      deleteApiType: 'npc-delete',
       pickerTitle: 'NPCを編集',
       listTitle: 'NPC一覧（KP用）',
       visibilityTitle: 'PLサイトの表示設定（NPC）',
@@ -30,6 +31,7 @@
       description: '組織の名称、説明、所在地、概要、所属NPCを登録するフォーム。',
       apiType: 'organizations',
       visibilityApiType: 'org-visibility',
+      deleteApiType: 'org-delete',
       pickerTitle: '組織を編集',
       listTitle: '組織一覧（KP用）',
       visibilityTitle: 'PLサイトの表示設定（組織）',
@@ -50,6 +52,7 @@
       description: 'シナリオ名・概要・年代と、登場NPC・組織などを名前で登録するフォーム（ID不要）。',
       apiType: 'scenarios',
       visibilityApiType: 'scenario-visibility',
+      deleteApiType: 'scenario-delete',
       pickerTitle: 'シナリオを編集',
       listTitle: 'シナリオ一覧（KP用）',
       visibilityTitle: 'PLサイトの表示設定（シナリオ）',
@@ -70,6 +73,7 @@
       description: 'PL向け — PC名・プレイヤー名・キャラシURLを登録。関連づけはシナリオ・NPCフォームから自動。',
       apiType: 'pcs',
       visibilityApiType: 'pc-visibility',
+      deleteApiType: 'pc-delete',
       pickerTitle: 'PCを編集',
       listTitle: 'PC一覧（KP用）',
       visibilityTitle: 'PLサイトの表示設定（PC）',
@@ -113,6 +117,14 @@
     if (!base) return '';
     const sep = base.includes('?') ? '&' : '?';
     return `${base}${sep}type=${encodeURIComponent(apiType)}${kp ? '&kp=1' : ''}`;
+  }
+
+  function buildDeleteApiUrl(entity, itemId, deleted) {
+    const def = getEntityDef(entity);
+    const base = window.AppConfig?.api?.baseUrl || '';
+    if (!base || !def?.deleteApiType) return '';
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}type=${encodeURIComponent(def.deleteApiType)}&id=${encodeURIComponent(itemId)}&deleted=${deleted ? '1' : '0'}`;
   }
 
   function buildVisibilityApiUrl(entity, itemId, hidden) {
@@ -175,7 +187,8 @@
     return kpItems.map(item => ({
       ...item,
       image_url: item.image_url || imageById.get(item.id) || '',
-      pl_hidden: Boolean(item.pl_hidden)
+      pl_hidden: Boolean(item.pl_hidden),
+      deleted: Boolean(item.deleted)
     }));
   }
 
@@ -186,12 +199,34 @@
     return kpItems.map(item => ({
       ...item,
       icon: item.icon || iconById.get(item.id) || '🏛️',
-      pl_hidden: Boolean(item.pl_hidden)
+      pl_hidden: Boolean(item.pl_hidden),
+      deleted: Boolean(item.deleted)
     }));
   }
 
   async function setEntityPlHidden(entity, itemId, hidden) {
     const url = buildVisibilityApiUrl(entity, itemId, hidden);
+    if (!url) throw new Error('API URL が未設定です（js/config.js）');
+
+    const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error === 'unknown type') {
+      throw new Error(
+        'APIが古いバージョンです。\n' +
+        'NPCPJ の GAS（docs/gas-npc-form.gs）を貼り直し、' +
+        'ウェブアプリを「新バージョン」で再デプロイしてください。'
+      );
+    }
+    if (data.error) throw new Error(data.error);
+    if (!data.ok) throw new Error('更新に失敗しました');
+
+    invalidateEntityCache(entity);
+    return data;
+  }
+
+  async function setEntityDeleted(entity, itemId, deleted) {
+    const url = buildDeleteApiUrl(entity, itemId, deleted);
     if (!url) throw new Error('API URL が未設定です（js/config.js）');
 
     const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
@@ -270,7 +305,8 @@
             ...item,
             name: item.name || '',
             player_name: item.player_name || item.playerName || '',
-            pl_hidden: Boolean(item.pl_hidden)
+            pl_hidden: Boolean(item.pl_hidden),
+            deleted: Boolean(item.deleted)
           }));
       return entityCache[entity];
     } catch (err) {
@@ -488,67 +524,82 @@
   }
 
   function renderListSummary(items) {
-    const visible = items.filter(item => !item.pl_hidden).length;
-    const hidden = items.length - visible;
+    const active = items.filter(item => !item.deleted);
+    const deleted = items.length - active.length;
+    const visible = active.filter(item => !item.pl_hidden).length;
+    const hidden = active.length - visible;
     return `
       <span class="kp-npc-stat">全 <strong>${items.length}</strong> 件</span>
       <span class="kp-npc-stat kp-npc-stat--on">PL表示 <strong>${visible}</strong></span>
       <span class="kp-npc-stat kp-npc-stat--off">非表示 <strong>${hidden}</strong></span>
+      <span class="kp-npc-stat kp-npc-stat--deleted">削除済 <strong>${deleted}</strong></span>
+    `;
+  }
+
+  function entityCardClasses(item) {
+    const hidden = Boolean(item.pl_hidden);
+    const deleted = Boolean(item.deleted);
+    return `${hidden ? ' kp-npc-card--hidden' : ''}${deleted ? ' kp-npc-card--deleted' : ''}`;
+  }
+
+  function entityPlBadges(item) {
+    const hidden = Boolean(item.pl_hidden);
+    const deleted = Boolean(item.deleted);
+    const deletedBadge = deleted ? '<span class="kp-npc-badge kp-npc-badge--deleted">削除済</span>' : '';
+    const plBadge = `<span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>`;
+    return `${deletedBadge}${plBadge}`;
+  }
+
+  function entityCardActions(entity, item, plUrl) {
+    const hidden = Boolean(item.pl_hidden);
+    const deleted = Boolean(item.deleted);
+    const hasEdit = Boolean(item.edit_url);
+    return `
+      ${hasEdit
+        ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
+        : '<span class="kp-npc-card-note">編集URLなし</span>'}
+      <button type="button" class="kp-npc-card-btn kp-npc-card-btn--danger" data-kp-delete="${escapeAttr(item.id)}" data-kp-entity="${escapeAttr(entity)}" data-deleted="${deleted ? '1' : '0'}">${deleted ? '復元' : '削除'}</button>
+      ${deleted
+        ? '<span class="kp-npc-card-note">PL非掲載</span>'
+        : hidden
+          ? '<span class="kp-npc-card-note">PL未掲載</span>'
+          : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
     `;
   }
 
   function renderEntityListCard(entity, item) {
-    const hidden = Boolean(item.pl_hidden);
-    const hasEdit = Boolean(item.edit_url);
     const plUrl = buildPlUrl(entity, item.id);
+    const cardClass = entityCardClasses(item);
 
     if (entity === 'org') {
       return `
-        <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+        <li class="kp-npc-card${cardClass}">
           ${renderOrgThumb(item)}
           <div class="kp-npc-card-main">
             <div class="kp-npc-card-top">
               <p class="kp-npc-card-name">${escapeHtml(item.name)}</p>
-              <div class="kp-npc-card-badges">
-                <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
-              </div>
+              <div class="kp-npc-card-badges">${entityPlBadges(item)}</div>
             </div>
             <p class="kp-npc-card-job">${escapeHtml(item.summary || '概要未設定')}</p>
           </div>
-          <div class="kp-npc-card-actions">
-            ${hasEdit
-              ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
-              : '<span class="kp-npc-card-note">編集URLなし</span>'}
-            ${hidden
-              ? '<span class="kp-npc-card-note">PL未掲載</span>'
-              : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
-          </div>
+          <div class="kp-npc-card-actions">${entityCardActions(entity, item, plUrl)}</div>
         </li>
       `;
     }
 
     if (entity === 'scenario') {
       return `
-        <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+        <li class="kp-npc-card${cardClass}">
           ${renderScenarioThumb()}
           <div class="kp-npc-card-main">
             <div class="kp-npc-card-top">
               <p class="kp-npc-card-name">${escapeHtml(item.title || '名称未設定')}</p>
-              <div class="kp-npc-card-badges">
-                <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
-              </div>
+              <div class="kp-npc-card-badges">${entityPlBadges(item)}</div>
             </div>
             ${item.era ? `<p class="kp-npc-card-furi">${escapeHtml(item.era)}</p>` : ''}
             <p class="kp-npc-card-job">${escapeHtml(item.summary || '概要未設定')}</p>
           </div>
-          <div class="kp-npc-card-actions">
-            ${hasEdit
-              ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
-              : '<span class="kp-npc-card-note">編集URLなし</span>'}
-            ${hidden
-              ? '<span class="kp-npc-card-note">PL未掲載</span>'
-              : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
-          </div>
+          <div class="kp-npc-card-actions">${entityCardActions(entity, item, plUrl)}</div>
         </li>
       `;
     }
@@ -556,51 +607,35 @@
     if (entity === 'pc') {
       const player = item.player_name || item.playerName || '';
       return `
-        <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+        <li class="kp-npc-card${cardClass}">
           ${renderPcThumb(item)}
           <div class="kp-npc-card-main">
             <div class="kp-npc-card-top">
               <p class="kp-npc-card-name">${escapeHtml(item.name || '名称未設定')}</p>
-              <div class="kp-npc-card-badges">
-                <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
-              </div>
+              <div class="kp-npc-card-badges">${entityPlBadges(item)}</div>
             </div>
             ${player ? `<p class="kp-npc-card-furi">${escapeHtml(player)}</p>` : ''}
           </div>
-          <div class="kp-npc-card-actions">
-            ${hasEdit
-              ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
-              : '<span class="kp-npc-card-note">編集URLなし</span>'}
-            ${hidden
-              ? '<span class="kp-npc-card-note">PL未掲載</span>'
-              : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
-          </div>
+          <div class="kp-npc-card-actions">${entityCardActions(entity, item, plUrl)}</div>
         </li>
       `;
     }
 
     return `
-      <li class="kp-npc-card${hidden ? ' kp-npc-card--hidden' : ''}">
+      <li class="kp-npc-card${cardClass}">
         ${renderNpcThumb(item)}
         <div class="kp-npc-card-main">
           <div class="kp-npc-card-top">
             <p class="kp-npc-card-name">${escapeHtml(item.name)}</p>
             <div class="kp-npc-card-badges">
               ${item.status ? `<span class="kp-npc-badge kp-npc-badge--status ${statusBadgeClass(item.status)}">${escapeHtml(item.status)}</span>` : ''}
-              <span class="kp-npc-badge kp-npc-badge--pl${hidden ? ' is-off' : ''}">${hidden ? 'PL非表示' : 'PL表示中'}</span>
+              ${entityPlBadges(item)}
             </div>
           </div>
           ${item.furigana ? `<p class="kp-npc-card-furi">${escapeHtml(item.furigana)}</p>` : ''}
           <p class="kp-npc-card-job">${escapeHtml(item.occupation || '職業未設定')}</p>
         </div>
-        <div class="kp-npc-card-actions">
-          ${hasEdit
-            ? `<button type="button" class="kp-npc-card-btn" data-edit-url="${escapeAttr(item.edit_url)}">編集</button>`
-            : '<span class="kp-npc-card-note">編集URLなし</span>'}
-          ${hidden
-            ? '<span class="kp-npc-card-note">PL未掲載</span>'
-            : `<a href="${escapeAttr(plUrl)}" class="kp-npc-card-btn kp-npc-card-btn--link" target="_blank" rel="noopener noreferrer">PLで見る</a>`}
-        </div>
+        <div class="kp-npc-card-actions">${entityCardActions(entity, item, plUrl)}</div>
       </li>
     `;
   }
@@ -610,8 +645,10 @@
     const def = getEntityDef(entity);
 
     let rows = items;
-    if (filter === 'visible') rows = items.filter(item => !item.pl_hidden);
-    if (filter === 'hidden') rows = items.filter(item => item.pl_hidden);
+    if (filter === 'active') rows = items.filter(item => !item.deleted);
+    if (filter === 'deleted') rows = items.filter(item => item.deleted);
+    if (filter === 'visible') rows = rows.filter(item => !item.pl_hidden && !item.deleted);
+    if (filter === 'hidden') rows = rows.filter(item => item.pl_hidden && !item.deleted);
 
     if (!rows.length) {
       body.innerHTML = `<p class="kp-modal-empty">該当する ${escapeHtml(def.emptyLabel)} がありません。</p>`;
@@ -627,6 +664,28 @@
     body.querySelectorAll('[data-edit-url]').forEach(btn => {
       btn.addEventListener('click', () => {
         window.open(btn.dataset.editUrl, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    body.querySelectorAll('[data-kp-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const entityKey = btn.dataset.kpEntity;
+        const itemId = btn.dataset.kpDelete;
+        const restore = btn.dataset.deleted === '1';
+        const label = restore ? '復元' : '削除';
+        const targetItem = items.find(i => i.id === itemId) || {};
+        const name = getEntityItemLabel(entityKey, targetItem);
+        if (!confirm(`${name || itemId} を${label}しますか？\n（スプレッドシートの deleted フラグのみ。行は消えません）`)) return;
+
+        btn.disabled = true;
+        try {
+          await setEntityDeleted(entityKey, itemId, !restore);
+          if (targetItem) targetItem.deleted = !restore;
+          bindListFilters(entityKey, items);
+        } catch (err) {
+          alert(`${label}に失敗しました: ${err.message || err}`);
+          btn.disabled = false;
+        }
       });
     });
   }
@@ -748,6 +807,7 @@
   function renderVisibilityList(entity, items) {
     const body = document.getElementById('kpEntityVisibilityBody');
     const def = getEntityDef(entity);
+    items = items.filter(item => !item.deleted);
 
     if (!items.length) {
       body.innerHTML = `<p class="kp-modal-empty">登録済みの ${escapeHtml(def.emptyLabel)} がありません。</p>`;
@@ -864,7 +924,7 @@
     search.value = '';
 
     try {
-      const items = await loadKpEntities(entity);
+      const items = (await loadKpEntities(entity)).filter(item => !item.deleted);
       renderPickerList(entity, items);
       search.oninput = () => renderPickerList(entity, filterEntities(entity, items, search.value));
       search.focus();

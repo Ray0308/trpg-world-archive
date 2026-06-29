@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#161616">
+  <meta name="apple-mobile-web-app-title" content="ミニゴーキャッチャー">
+  <title>ミニゴーキャッチャー — YOKOFOLIA</title>
+  <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="mini-claw.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="mc-app">
+    <header class="mc-header">
+      <a href="../index.html#home" class="mc-back">← YOKOFOLIA</a>
+      <h1 class="mc-header-title">ミニゴーキャッチャー</h1>
+      <div class="mc-score-hud">
+        <span class="mc-score-label">GET</span>
+        <span class="mc-score-value" id="scoreValue">0</span>
+      </div>
+    </header>
+
+    <main class="mc-main">
+      <div class="mc-stage-wrap">
+        <div class="mc-game-area" id="gameArea">
+          <canvas id="gameCanvas" class="mc-canvas" width="360" height="420" draggable="false" aria-label="ミニゴーキャッチャー"></canvas>
+        </div>
+
+        <div class="mc-controls" id="gameControls">
+          <button type="button" class="mc-ctrl-btn" id="btnLeft" aria-label="左へ">◀</button>
+          <button type="button" class="mc-ctrl-btn mc-ctrl-btn--primary" id="btnDrop" aria-label="下ろす">▼</button>
+          <button type="button" class="mc-ctrl-btn" id="btnRight" aria-label="右へ">▶</button>
+        </div>
+
+        <div class="mc-overlay" id="startScreen">
+          <div class="mc-panel">
+            <p class="mc-kicker">YOKOFOLIA MINI GAME</p>
+            <h2 class="mc-title">ミニゴーキャッチャー</h2>
+            <p class="mc-lead">クレーンを動かして、ぷくぷく景品をゲットしよう。</p>
+            <ul class="mc-rules">
+              <li><strong>◀ ▶</strong> … クレーンを左右に移動</li>
+              <li><strong>▼</strong> … ロープを下ろして掴む</li>
+              <li>真ん中で止めてから下ろすと成功率アップ</li>
+            </ul>
+            <button type="button" class="mc-btn mc-btn--primary" id="startBtn">スタート</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="mc-collection" id="collectionPanel" hidden>
+        <h2 class="mc-collection-title">獲得景品</h2>
+        <ul class="mc-collection-list" id="collectionList"></ul>
+      </section>
+    </main>
+
+    <footer class="mc-footer">
+      <p>© 2026- yokofolia — オマケミニゲーム</p>
+    </footer>
+  </div>
+
+  <script src="mini-claw.js"></script>
+</body>
+</html>

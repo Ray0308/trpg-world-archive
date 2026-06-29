@@ -7,7 +7,7 @@ window.ArchiveNormalize = (function () {
     'edit_url', 'editUrl', 'form_response_id', 'formResponseId',
     'created_at', 'createdAt', 'updated_at', 'updatedAt',
     'memo', 'spreadsheet_url', 'spreadsheetUrl', 'gas_url', 'gasUrl',
-    'drive_url', 'driveUrl', 'callback', 'pl_hidden', 'plHidden'
+    'drive_url', 'driveUrl', 'callback', 'pl_hidden', 'plHidden', 'deleted', 'deletedFlag'
   ]);
 
   function stripAdminFields(raw) {
@@ -457,6 +457,7 @@ window.ArchiveNormalize = (function () {
       playerName: row['プレイヤー名'] || row.player_name || row.playerName || '',
       sheetUrl: row.sheet_url || row.sheetUrl || row['キャラシURL'] || '',
       image: cleanImageUrl(row.image_url || row.imageUrl || row.image || row['画像'] || row['PC画像'] || ''),
+      editUrl: row.edit_url || row.editUrl || '',
       description: row['説明'] || row.description || '',
       affiliation: row.affiliation || row['所属'] || '',
       relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC'])
@@ -464,9 +465,10 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizePc(raw) {
+    const editUrl = raw.edit_url || raw.editUrl || '';
     raw = stripAdminFields(raw);
     if (raw['プレイヤー名'] !== undefined || raw.player_name !== undefined || raw['PC名'] !== undefined) {
-      return normalizePcRow(raw);
+      return { ...normalizePcRow(raw), editUrl: editUrl || normalizePcRow(raw).editUrl };
     }
     return {
       id: raw.id,
@@ -474,6 +476,7 @@ window.ArchiveNormalize = (function () {
       playerName: raw.playerName || raw.player_name || '',
       sheetUrl: raw.sheetUrl || raw.sheet_url || '',
       image: cleanImageUrl(raw.image || raw.imageUrl || raw.image_url || ''),
+      editUrl,
       description: raw.description || '',
       affiliation: raw.affiliation || '',
       relatedNpcIds: splitIds(raw.relatedNpcIds)

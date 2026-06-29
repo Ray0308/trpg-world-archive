@@ -275,6 +275,7 @@ function getOrgHeaders_() {
     'member_npc_names',
     'member_npc_ids',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -411,6 +412,7 @@ function buildOrgRowFromAnswers_(answers, sheet, meta, ss) {
     member_npc_ids: memberNpcIds,
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
+    deleted: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
       ? response.getEditResponseUrl() : ''),
     form_response_id: m.formResponseId || (response && typeof response.getId === 'function'

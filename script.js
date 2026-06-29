@@ -850,14 +850,24 @@ function renderHomeView() {
 
       <section class="portal-section">
         <h2 class="portal-section-label">オマケ</h2>
-        <a href="games/chaugner-run.html" class="portal-minigame-card">
-          <span class="portal-minigame-icon" aria-hidden="true">🏃</span>
-          <span class="portal-minigame-body">
-            <span class="portal-minigame-name">チャウグナー・ラン</span>
-            <span class="portal-minigame-desc">横スクロールミニゲーム。ランキングに名前を残そう。</span>
-          </span>
-          <span class="portal-minigame-go" aria-hidden="true">→</span>
-        </a>
+        <div class="portal-minigame-list">
+          <a href="games/chaugner-run.html" class="portal-minigame-card">
+            <span class="portal-minigame-icon" aria-hidden="true">🏃</span>
+            <span class="portal-minigame-body">
+              <span class="portal-minigame-name">チャウグナー・ラン</span>
+              <span class="portal-minigame-desc">横スクロールミニゲーム。ランキングに名前を残そう。</span>
+            </span>
+            <span class="portal-minigame-go" aria-hidden="true">→</span>
+          </a>
+          <a href="games/mini-claw.html" class="portal-minigame-card">
+            <span class="portal-minigame-icon" aria-hidden="true">🎮</span>
+            <span class="portal-minigame-body">
+              <span class="portal-minigame-name">ミニゴーキャッチャー</span>
+              <span class="portal-minigame-desc">クレーンを操作して、ぷくぷく景品をキャッチ。</span>
+            </span>
+            <span class="portal-minigame-go" aria-hidden="true">→</span>
+          </a>
+        </div>
       </section>
 
       <section class="portal-section portal-section--community">
@@ -1192,11 +1202,18 @@ function renderPcDetail(pc) {
 
       <section class="detail-section">
         <h2 class="section-heading">キャラクターシート</h2>
-        ${sheetUrl ? `
-          <a href="${escapeAttr(sheetUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">
-            キャラシを開く
-          </a>
-        ` : `<p class="detail-meta">キャラシ URL が未登録です。</p>`}
+        <div class="pc-detail-actions">
+          ${sheetUrl ? `
+            <a href="${escapeAttr(sheetUrl)}" class="file-open-btn" target="_blank" rel="noopener noreferrer">
+              キャラシを開く
+            </a>
+          ` : `<p class="detail-meta">キャラシ URL が未登録です。</p>`}
+          ${String(pc.editUrl || '').trim() ? `
+            <a href="${escapeAttr(pc.editUrl)}" class="file-open-btn file-open-btn--secondary" target="_blank" rel="noopener noreferrer">
+              登録内容を編集
+            </a>
+          ` : ''}
+        </div>
       </section>
 
       ${pc.description ? `

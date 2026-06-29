@@ -48,6 +48,7 @@ function getNpcHeaders_() {
     'contactable_pc_ids',
     'location_ids',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -203,6 +204,7 @@ function buildNpcRowFromAnswers_(answers, sheet, response, ss) {
     location_ids: pickAnswer_(answers, '関連場所'),
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
+    deleted: '',
     edit_url: response.getEditResponseUrl(),
     form_response_id: response.getId(),
     created_at: now,
@@ -288,7 +290,7 @@ function doGet(e) {
 
   if (type === 'version') {
     return jsonResponse_({
-      api_version: '2026-06-26-pcs',
+      api_version: '2026-06-29-delete',
       capabilities: [
         'npcs',
         'organizations',
@@ -298,6 +300,10 @@ function doGet(e) {
         'org-visibility',
         'scenario-visibility',
         'pc-visibility',
+        'npc-delete',
+        'org-delete',
+        'scenario-delete',
+        'pc-delete',
         'chaugner-ranking',
         'chaugner-score'
       ]
@@ -384,6 +390,22 @@ function doGet(e) {
     }
   }
 
+  if (type === 'npc-delete') {
+    return handleEntityDelete_(ss, 'NPCS', ensureNpcHeader_, idFromParam_(e), deletedFromParam_(e), 'NPC', callback);
+  }
+
+  if (type === 'org-delete') {
+    return handleEntityDelete_(ss, 'ORGANIZATIONS', ensureOrgHeader_, idFromParam_(e), deletedFromParam_(e), '組織', callback);
+  }
+
+  if (type === 'scenario-delete') {
+    return handleEntityDelete_(ss, 'SCENARIOS', ensureScenarioHeader_, idFromParam_(e), deletedFromParam_(e), 'シナリオ', callback);
+  }
+
+  if (type === 'pc-delete') {
+    return handleEntityDelete_(ss, 'PCS', ensurePcHeader_, idFromParam_(e), deletedFromParam_(e), 'PC', callback);
+  }
+
   if (type === 'chaugner-ranking') {
     return jsonResponse_(getChaugnerRanking_(ss), callback);
   }
@@ -408,8 +430,60 @@ function isPlHidden_(value) {
     v === '✓' || v === '非表示' || v === 'hidden';
 }
 
+function isDeleted_(value) {
+  return isPlHidden_(value);
+}
+
 function plHiddenCellValue_(hidden) {
   return hidden ? 'TRUE' : '';
+}
+
+function deletedCellValue_(deleted) {
+  return deleted ? 'TRUE' : '';
+}
+
+function idFromParam_(e) {
+  return String((e && e.parameter && e.parameter.id) || '').trim();
+}
+
+function deletedFromParam_(e) {
+  const p = e && e.parameter && e.parameter.deleted;
+  return p === '1' || p === 'true';
+}
+
+function handleEntityDelete_(ss, sheetName, ensureHeaderFn, entityId, deleted, label, callback) {
+  if (!entityId) {
+    return jsonResponse_({ error: 'missing id' }, callback);
+  }
+  try {
+    const result = setEntityDeleted_(ss, sheetName, ensureHeaderFn, entityId, deleted, label);
+    return jsonResponse_(result, callback);
+  } catch (err) {
+    return jsonResponse_({ error: err.message || String(err) }, callback);
+  }
+}
+
+function setEntityDeleted_(ss, sheetName, ensureHeaderFn, entityId, deleted, label) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error(sheetName + ' シートがありません');
+
+  const headers = ensureHeaderFn(sheet);
+  const idCol = headers.indexOf('id') + 1;
+  const deletedCol = headers.indexOf('deleted') + 1;
+  if (idCol < 1 || deletedCol < 1) throw new Error('deleted 列がありません');
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol - 1]).trim() === String(entityId).trim()) {
+      sheet.getRange(i + 1, deletedCol).setValue(deletedCellValue_(deleted));
+      const updatedCol = headers.indexOf('updated_at') + 1;
+      if (updatedCol > 0) {
+        sheet.getRange(i + 1, updatedCol).setValue(new Date());
+      }
+      return { ok: true, id: entityId, deleted: deleted };
+    }
+  }
+  throw new Error(label + ' が見つかりません: ' + entityId);
 }
 
 function setNpcPlHidden_(ss, npcId, hidden) {
@@ -489,6 +563,7 @@ function getPcHeaders_() {
     'sheet_url',
     'image_url',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -563,6 +638,7 @@ function getScenarioHeaders_() {
     'related_scenario_names',
     'related_scenario_ids',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -622,6 +698,7 @@ function getKpNpcs_(ss) {
         status: record.status || '',
         image_url: record.image_url || '',
         pl_hidden: isPlHidden_(record.pl_hidden),
+        deleted: isDeleted_(record.deleted),
         edit_url: record.edit_url || ''
       };
     })
@@ -637,7 +714,7 @@ function getPublicNpcs_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
 
   return values.slice(1)
@@ -647,6 +724,7 @@ function getPublicNpcs_(ss) {
       headers.forEach((header, index) => {
         if (header) record[header] = row[index];
       });
+      if (isDeleted_(record.deleted)) return null;
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       return record;
@@ -803,6 +881,7 @@ function getOrgHeaders_() {
     'member_npc_names',
     'member_npc_ids',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -1054,7 +1133,7 @@ function getPublicOrganizations_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
 
   return values.slice(1)
@@ -1064,6 +1143,7 @@ function getPublicOrganizations_(ss) {
       headers.forEach((header, index) => {
         if (header) record[header] = row[index];
       });
+      if (isDeleted_(record.deleted)) return null;
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       return record;
@@ -1094,6 +1174,7 @@ function getKpOrganizations_(ss) {
         icon: record.icon || '🏛️',
         summary: record.summary || '',
         pl_hidden: isPlHidden_(record.pl_hidden),
+        deleted: isDeleted_(record.deleted),
         edit_url: record.edit_url || ''
       };
     })
@@ -1109,7 +1190,7 @@ function getPublicScenarios_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
 
   return values.slice(1)
@@ -1119,6 +1200,7 @@ function getPublicScenarios_(ss) {
       headers.forEach((header, index) => {
         if (header) record[header] = row[index];
       });
+      if (isDeleted_(record.deleted)) return null;
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       return record;
@@ -1149,6 +1231,7 @@ function getKpScenarios_(ss) {
         era: record.era || '',
         summary: record.summary || '',
         pl_hidden: isPlHidden_(record.pl_hidden),
+        deleted: isDeleted_(record.deleted),
         edit_url: record.edit_url || ''
       };
     })
@@ -1164,7 +1247,7 @@ function getPublicPcs_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden'
+    'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
 
   return values.slice(1)
@@ -1174,6 +1257,7 @@ function getPublicPcs_(ss) {
       headers.forEach((header, index) => {
         if (header) record[header] = row[index];
       });
+      if (isDeleted_(record.deleted)) return null;
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       return record;
@@ -1205,6 +1289,7 @@ function getKpPcs_(ss) {
         sheet_url: record.sheet_url || '',
         image_url: record.image_url || '',
         pl_hidden: isPlHidden_(record.pl_hidden),
+        deleted: isDeleted_(record.deleted),
         edit_url: record.edit_url || ''
       };
     })

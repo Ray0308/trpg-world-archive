@@ -1,0 +1,240 @@
+/* ミニゴーキャッチャー — YOKOFOLIA */
+
+:root {
+  --mc-bg: #161616;
+  --mc-panel: #262626;
+  --mc-border: #404040;
+  --mc-text: #ffffff;
+  --mc-muted: #9a9a9a;
+  --mc-accent: #e8487a;
+  --mc-accent-hover: #f06a96;
+  --mc-machine: #2a2a3a;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 15px; }
+
+body {
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  background: var(--mc-bg);
+  color: var(--mc-text);
+  min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mc-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--mc-border);
+  background: rgba(22, 22, 22, 0.95);
+}
+
+.mc-back {
+  font-size: 0.82rem;
+  color: var(--mc-muted);
+  text-decoration: none;
+}
+
+.mc-back:hover { color: var(--mc-accent); }
+
+.mc-header-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mc-score-hud {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.mc-score-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--mc-muted);
+  letter-spacing: 0.08em;
+}
+
+.mc-score-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mc-accent);
+}
+
+.mc-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.mc-stage-wrap {
+  position: relative;
+  width: min(100%, 360px);
+}
+
+.mc-game-area {
+  touch-action: none;
+  border: 1px solid var(--mc-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mc-machine);
+}
+
+.mc-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mc-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mc-ctrl-btn {
+  border: 1px solid var(--mc-border);
+  background: var(--mc-panel);
+  color: var(--mc-text);
+  border-radius: 10px;
+  padding: 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mc-ctrl-btn:active,
+.mc-ctrl-btn.is-active {
+  background: #333;
+  border-color: var(--mc-accent);
+}
+
+.mc-ctrl-btn--primary {
+  background: var(--mc-accent);
+  border-color: var(--mc-accent);
+  color: #fff;
+}
+
+.mc-ctrl-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mc-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 14, 0.88);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.mc-panel {
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  max-width: 300px;
+}
+
+.mc-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--mc-accent);
+  margin-bottom: 0.35rem;
+}
+
+.mc-title {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.mc-lead {
+  font-size: 0.85rem;
+  color: var(--mc-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.mc-rules {
+  font-size: 0.78rem;
+  color: var(--mc-muted);
+  line-height: 1.6;
+  margin: 0 0 1rem 1rem;
+}
+
+.mc-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mc-btn--primary {
+  background: var(--mc-accent);
+  color: #fff;
+}
+
+.mc-collection {
+  width: min(100%, 360px);
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.mc-collection-title {
+  font-size: 0.78rem;
+  color: var(--mc-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.mc-collection-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mc-collection-list li {
+  background: #1a1a24;
+  border: 1px solid var(--mc-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  font-size: 1.1rem;
+}
+
+.mc-footer {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--mc-muted);
+  border-top: 1px solid var(--mc-border);
+}

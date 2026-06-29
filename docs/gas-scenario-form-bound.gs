@@ -113,6 +113,7 @@ function getScenarioHeaders_() {
     'related_scenario_names',
     'related_scenario_ids',
     'memo',
+    'deleted',
     'pl_hidden',
     'edit_url',
     'form_response_id',
@@ -400,6 +401,7 @@ function buildScenarioRowFromAnswers_(answers, sheet, meta, ss) {
     related_scenario_ids: ss ? resolveRelatedScenarioIds_(ss, relatedNames, id) : '',
     memo: pickAnswer_(answers, '備考'),
     pl_hidden: '',
+    deleted: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
       ? response.getEditResponseUrl() : ''),
     form_response_id: m.formResponseId || (response && typeof response.getId === 'function'
