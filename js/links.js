@@ -34,4 +34,25 @@
     iachara: 'https://iachara.com/',
     discord: 'https://discord.com/channels/1420377314264485950/1420377315082502228'
   };
+
+  /** API（SETTINGS シート）の値で上書き */
+  window.applyAppLinkOverrides = function applyAppLinkOverrides(overrides) {
+    if (!overrides || typeof overrides !== 'object') return;
+    Object.keys(overrides).forEach(key => {
+      if (key.startsWith('_')) return;
+      const value = String(overrides[key] || '').trim();
+      if (value && value !== '#') window.AppLinks[key] = value;
+    });
+  };
+
+  window.loadAppLinks = async function loadAppLinks() {
+    const baseUrl = window.AppConfig?.api?.baseUrl;
+    if (!baseUrl || !window.AppsScriptProvider?.fetchLinks) return;
+    try {
+      const links = await window.AppsScriptProvider.fetchLinks(baseUrl);
+      window.applyAppLinkOverrides(links);
+    } catch (err) {
+      console.warn('[AppLinks] SETTINGS の読み込みをスキップ:', err);
+    }
+  };
 })();

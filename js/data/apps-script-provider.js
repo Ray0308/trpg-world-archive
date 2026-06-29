@@ -656,5 +656,60 @@ window.AppsScriptProvider = {
         );
       }
     }
+  },
+
+  parseLinksJson(text) {
+    if (!text || !String(text).trim()) {
+      throw new ArchiveLoadError('リンク設定が空です', 'API が空の応答を返しました');
+    }
+    if (/unknown type/i.test(text)) {
+      const err = new ArchiveLoadError('API 未対応', 'links タイプは未デプロイです');
+      err.details = { apiNotReady: true, unknownType: 'links' };
+      throw err;
+    }
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new ArchiveLoadError('リンク設定の解析に失敗', String(e.message || e));
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new ArchiveLoadError('リンク設定の形式が不正です', 'オブジェクトではありません');
+    }
+    return data;
+  },
+
+  async fetchLinks(baseUrl, { kp = false } = {}) {
+    const sep = baseUrl.includes('?') ? '&' : '?';
+    const url = `${baseUrl}${sep}type=links${kp ? '&kp=1' : ''}`;
+    const timeoutMs = window.AppConfig?.api?.timeoutMs || 30000;
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow',
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return this.parseLinksJson(await res.text());
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (fetchErr) {
+      try {
+        return await this.fetchNpcsJsonp(url, timeoutMs, 'links');
+      } catch (jsonpErr) {
+        if (/unknown type/i.test(String(jsonpErr.message || ''))) {
+          const err = new ArchiveLoadError('API 未対応', 'links タイプは未デプロイです');
+          err.details = { apiNotReady: true, unknownType: 'links' };
+          throw err;
+        }
+        throw fetchErr;
+      }
+    }
   }
 };
