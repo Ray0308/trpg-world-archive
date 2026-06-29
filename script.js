@@ -859,14 +859,6 @@ function renderHomeView() {
             </span>
             <span class="portal-minigame-go" aria-hidden="true">→</span>
           </a>
-          <a href="games/mini-claw.html" class="portal-minigame-card">
-            <span class="portal-minigame-icon" aria-hidden="true">🎮</span>
-            <span class="portal-minigame-body">
-              <span class="portal-minigame-name">ミニゴーキャッチャー</span>
-              <span class="portal-minigame-desc">クレーンを操作して、ぷくぷく景品をキャッチ。</span>
-            </span>
-            <span class="portal-minigame-go" aria-hidden="true">→</span>
-          </a>
         </div>
       </section>
 
@@ -1009,6 +1001,13 @@ function renderOrgDetail(org) {
           ${org.nameEn ? `<p class="detail-meta">${escapeHtml(org.nameEn)}</p>` : ''}
           ${org.summary ? `<p class="detail-summary">${escapeHtml(org.summary)}</p>` : ''}
           ${locationLabel ? `<p class="detail-meta detail-meta--location">${escapeHtml(locationLabel)}</p>` : ''}
+          ${String(org.editUrl || '').trim() ? `
+            <div class="pc-detail-actions">
+              <a href="${escapeAttr(org.editUrl)}" class="file-open-btn file-open-btn--secondary" target="_blank" rel="noopener noreferrer">
+                登録内容を編集
+              </a>
+            </div>
+          ` : ''}
         </div>
       </header>
 
