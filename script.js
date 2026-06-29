@@ -1495,10 +1495,7 @@ window.addEventListener('hashchange', onHashChange);
 async function init() {
   renderLoadingScreen();
   try {
-    await Promise.all([
-      loadData(),
-      window.loadAppLinks?.()
-    ]);
+    await loadData();
     stopLoadingScreen();
     route = parseHash();
     renderNoticeBanner();

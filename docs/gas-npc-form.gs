@@ -288,13 +288,12 @@ function doGet(e) {
 
   if (type === 'version') {
     return jsonResponse_({
-      api_version: '2026-06-28-links',
+      api_version: '2026-06-26-pcs',
       capabilities: [
         'npcs',
         'organizations',
         'scenarios',
         'pcs',
-        'links',
         'npc-visibility',
         'org-visibility',
         'scenario-visibility',
@@ -303,11 +302,6 @@ function doGet(e) {
         'chaugner-score'
       ]
     }, callback);
-  }
-
-  if (type === 'links') {
-    const data = kpMode ? getKpLinks_(ss) : getPublicLinks_(ss);
-    return jsonResponse_(data, callback);
   }
 
   if (type === 'npcs') {
@@ -699,66 +693,6 @@ function getArchiveSpreadsheet_() {
   const cachedId = PropertiesService.getScriptProperties().getProperty(ARCHIVE_SPREADSHEET_ID_KEY);
   if (cachedId) return SpreadsheetApp.openById(cachedId);
   throw new Error('スプレッドシートを取得できません。NPCフォームを1件送信するか、NPCフォームのスクリプトエディタから実行してください');
-}
-
-const ALLOWED_LINK_KEYS_ = ['cocofolia', 'iachara', 'discord'];
-
-function ensureSettingsSheet_(ss) {
-  let sheet = ss.getSheetByName('SETTINGS');
-  if (!sheet) {
-    sheet = ss.insertSheet('SETTINGS');
-    sheet.getRange(1, 1, 1, 3).setValues([['key', 'value', 'memo']]);
-    sheet.getRange(2, 1, 4, 3).setValues([
-      ['cocofolia', 'https://ccfolia.com/', 'ココフォリアの部屋URL（例: https://ccfolia.com/rooms/...）'],
-      ['discord', '', '空欄ならサイト既定の Discord URL'],
-      ['iachara', '', '空欄ならサイト既定のいあきゃら URL']
-    ]);
-  }
-  return sheet;
-}
-
-function getSettingsSheetUrl_(ss) {
-  const sheet = ensureSettingsSheet_(ss);
-  return ss.getUrl() + '#gid=' + sheet.getSheetId();
-}
-
-function getPublicLinks_(ss) {
-  const sheet = ensureSettingsSheet_(ss);
-
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) return {};
-
-  const headers = values[0].map(h => String(h).trim().toLowerCase());
-  const keyIdx = headers.indexOf('key');
-  const valIdx = headers.indexOf('value');
-  if (keyIdx < 0 || valIdx < 0) return {};
-
-  const links = {};
-  for (let i = 1; i < values.length; i++) {
-    const key = String(values[i][keyIdx] || '').trim();
-    const value = String(values[i][valIdx] || '').trim();
-    if (!key || ALLOWED_LINK_KEYS_.indexOf(key) < 0) continue;
-    if (!value || value === '#') continue;
-    links[key] = value;
-  }
-  return links;
-}
-
-/** KPページ用 — 外部リンク + SETTINGS シート URL */
-function getKpLinks_(ss) {
-  return {
-    ...getPublicLinks_(ss),
-    _settings_sheet_url: getSettingsSheetUrl_(ss)
-  };
-}
-
-/** SETTINGS シートを初回作成（NPCPJ から ▶ 実行） */
-function setupSettingsSheet() {
-  const ss = getArchiveSpreadsheet_();
-  ensureSettingsSheet_(ss);
-  const msg = 'SETTINGS シートを用意しました: ' + getSettingsSheetUrl_(ss);
-  Logger.log(msg);
-  return msg;
 }
 
 function getFormFromEvent_(e) {
