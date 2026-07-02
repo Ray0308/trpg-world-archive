@@ -2,6 +2,9 @@
 
 菌糸コイン・ギフトコード・PCコスメを有効にする手順です。チャウグナー・ランと同じ GAS プロジェクトを使います。
 
+**運用・配布の説明（KP向け）** → `docs/migo-catcher-kp-guide.txt`  
+**PL向けの遊び方** → `docs/migo-catcher-pl-guide.txt`
+
 ---
 
 ## やること一覧
@@ -105,6 +108,8 @@ KPページの **「オマケ通貨（菌糸コイン）」** セクションで
 
 | ファイル | 役割 |
 |---------|------|
+| `docs/migo-catcher-pl-guide.txt` | PL向け遊び方・景品一覧 |
+| `docs/migo-catcher-kp-guide.txt` | KP向け運用ガイド |
 | `docs/migo-catcher.md` | 世界観・景品一覧 |
 | `docs/gas-npc-form.gs` | GAS 正本 |
 | `games/mini-claw.*` | ゲーム本体 |

@@ -147,7 +147,7 @@ body {
   grid-template-columns: 1fr 1.2fr 1fr;
   gap: 0.5rem;
   margin-top: 0.75rem;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
 }

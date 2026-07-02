@@ -739,7 +739,6 @@
   }
 
   function bindHold(btn, key, on) {
-    const block = e => e.preventDefault();
     const start = e => {
       e.preventDefault();
       state[key] = on;
@@ -754,10 +753,15 @@
     btn.addEventListener('pointerup', end);
     btn.addEventListener('pointerleave', end);
     btn.addEventListener('pointercancel', end);
-    btn.addEventListener('touchstart', block, { passive: false });
-    btn.addEventListener('touchmove', block, { passive: false });
-    btn.addEventListener('contextmenu', block);
-    btn.addEventListener('selectstart', block);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  function bindDropBtn(btn) {
+    btn.addEventListener('pointerup', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      dropSequence();
+    });
   }
 
   async function startGameSession(e) {
@@ -816,8 +820,7 @@
     validateForm();
   }
 
-  document.getElementById('btnDrop').addEventListener('click', dropSequence);
-  document.getElementById('btnDrop').addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+  bindDropBtn(document.getElementById('btnDrop'));
   bindHold(document.getElementById('btnLeft'), 'moveLeft', true);
   bindHold(document.getElementById('btnRight'), 'moveRight', true);
   startForm.addEventListener('submit', startGameSession);

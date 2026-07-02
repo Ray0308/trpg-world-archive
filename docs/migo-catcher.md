@@ -115,7 +115,9 @@ API例: `migo-balance`, `migo-redeem`, `migo-play`, `migo-unlock`, `migo-ranking
 | 3 | KPコード発行・チャウグナー連動 | ✅ |
 | 4 | オマケ欄に再掲載 | ✅ |
 
-セットアップ手順: `docs/migo-catcher-setup.md`
+セットアップ手順: `docs/migo-catcher-setup.md`  
+PL向けガイド: `docs/migo-catcher-pl-guide.txt`  
+KP向け運用: `docs/migo-catcher-kp-guide.txt`
 
 ---
 
