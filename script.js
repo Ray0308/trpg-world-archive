@@ -329,6 +329,7 @@ function updateNavActive() {
 function scrollDetailToTop() {
   const panel = contentArea.querySelector('.detail-panel');
   if (panel) panel.scrollTop = 0;
+  contentArea.scrollTop = 0;
 }
 
 const SITE_NAME = 'YOKOFOLIA ふわっと住民台帳';
@@ -629,9 +630,21 @@ function renderNpcRelatedSection(npc) {
 }
 
 function renderListLayout(listHtml, detailHtml) {
+  const detailOpen = Boolean(route.id);
+  const layoutClass = detailOpen
+    ? 'entity-layout entity-layout--detail'
+    : 'entity-layout';
+  const backBtn = detailOpen ? `
+    <button type="button" class="mobile-detail-back" data-mobile-back="${escapeAttr(route.section)}">
+      ← 一覧に戻る
+    </button>
+  ` : '';
+
   return `
-    <div class="list-panel">${listHtml}</div>
-    <div class="detail-panel">${detailHtml}</div>
+    <div class="${layoutClass}">
+      <div class="list-panel">${listHtml}</div>
+      <div class="detail-panel">${backBtn}${detailHtml}</div>
+    </div>
   `;
 }
 
@@ -715,6 +728,13 @@ function bindNavigation() {
       closeSidebar();
     });
   });
+
+  contentArea.querySelectorAll('[data-mobile-back]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      navigate(btn.dataset.mobileBack, null);
+      closeSidebar();
+    });
+  });
 }
 
 function getActiveId(filtered, fallbackId) {
@@ -725,7 +745,15 @@ function getActiveId(filtered, fallbackId) {
   if (route.id && filtered.length > 0) {
     return filtered[0].id;
   }
-  return fallbackId || filtered[0]?.id || null;
+  // スマホは #npcs だけのとき一覧のみ（詳細はタップ後）
+  if (!isMobileListLayout()) {
+    return fallbackId || filtered[0]?.id || null;
+  }
+  return fallbackId || null;
+}
+
+function isMobileListLayout() {
+  return window.matchMedia('(max-width: 768px)').matches;
 }
 
 /* ---- Portal Home ---- */
@@ -1519,6 +1547,12 @@ navMenu.querySelectorAll('.nav-link').forEach(link => {
 });
 
 window.addEventListener('hashchange', onHashChange);
+
+window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
+  if (route.section !== 'home' && route.section !== 'files' && route.section !== 'search') {
+    render();
+  }
+});
 
 /* ---- Init ---- */
 
