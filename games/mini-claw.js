@@ -463,18 +463,28 @@
     return result;
   }
 
-  function showResult(won, prize) {
+  function showResult(won, prize, saveResult) {
     state.running = false;
+    startScreen.hidden = true;
     gameControls.hidden = true;
     resultScreen.hidden = false;
 
+    let body = '';
     if (won && prize) {
       resultTitle.textContent = '菌糸GET！';
-      resultText.textContent = `${prize.emoji} ${prize.label} を ${session.playerName} のPCに装備しました。台帳で確認しよう。`;
+      body = `${prize.emoji} ${prize.label} を ${session.playerName} のPCに装備しました。台帳で確認しよう。`;
     } else {
       resultTitle.textContent = '空振り…';
-      resultText.textContent = 'ミ＝ゴの鉤爪は何も掴めなかった。コインは消費済みです。';
+      body = 'ミ＝ゴの鉤爪は何も掴めなかった。コインは消費済みです。';
     }
+
+    if (saveResult && saveResult.needsDeploy) {
+      body += '（保存は未反映。KP: GASの再デプロイが必要）';
+    } else if (saveResult && !saveResult.ok) {
+      body += `（台帳への反映に失敗: ${saveResult.error || '通信エラー'}）`;
+    }
+
+    resultText.textContent = body;
     showPcCosmetics(session.pcId);
   }
 
@@ -530,8 +540,8 @@
         await wait(16);
       }
       state.played = true;
-      await finishPlay(true, prize.cosmeticId);
-      showResult(true, prize);
+      const saveResult = await finishPlay(true, prize.cosmeticId);
+      showResult(true, prize, saveResult);
     } else {
       state.clawOpen = true;
       state.headHue = 0.35;
@@ -539,8 +549,8 @@
       await wait(120);
       state.headHue = 0.55;
       state.played = true;
-      await finishPlay(false);
-      showResult(false);
+      const saveResult = await finishPlay(false);
+      showResult(false, null, saveResult);
     }
 
     state.busy = false;
@@ -623,6 +633,8 @@
     startScreen.hidden = false;
     gameControls.hidden = true;
     state.running = false;
+    resultTitle.textContent = '結果';
+    resultText.textContent = '';
     drawMachine();
     refreshBalance();
     validateForm();

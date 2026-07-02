@@ -152,6 +152,10 @@ body {
   padding: 1rem;
 }
 
+.mc-overlay[hidden] {
+  display: none !important;
+}
+
 .mc-panel {
   background: var(--mc-panel);
   border: 1px solid var(--mc-border);
