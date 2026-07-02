@@ -830,6 +830,39 @@ function renderPortalMinigameCard(game) {
   `;
 }
 
+function formatNewsDate(iso) {
+  if (!iso) return '';
+  const parts = String(iso).split('-');
+  if (parts.length < 3) return iso;
+  return `${Number(parts[1])}/${Number(parts[2])}`;
+}
+
+function renderPortalNewsSection() {
+  const items = (window.AppLinks && window.AppLinks.portalNews) || [];
+  if (!items.length) return '';
+  return `
+      <section class="portal-section">
+        <h2 class="portal-section-label">更新のお知らせ</h2>
+        <ul class="portal-news-list">
+          ${items.map(item => {
+            const href = String(item.href || '').trim();
+            const inner = `
+              <span class="portal-news-date">${escapeHtml(formatNewsDate(item.date))}</span>
+              <span class="portal-news-body">
+                <span class="portal-news-title">${escapeHtml(item.title || '')}</span>
+                ${item.text ? `<span class="portal-news-text">${escapeHtml(item.text)}</span>` : ''}
+              </span>
+              ${href ? '<span class="portal-news-go" aria-hidden="true">→</span>' : ''}
+            `;
+            return href
+              ? `<li><a href="${escapeAttr(href)}" class="portal-news-item">${inner}</a></li>`
+              : `<li><div class="portal-news-item portal-news-item--static">${inner}</div></li>`;
+          }).join('')}
+        </ul>
+      </section>
+  `;
+}
+
 function renderPortalMinigameSection() {
   const games = (window.AppLinks && window.AppLinks.portalMinigames) || [];
   if (!games.length) return '';
@@ -863,6 +896,8 @@ function renderHomeView() {
           <p class="portal-hero-lead">この世界に暮らす人々・組織・物語を、ひとつの場所から辿れるアーカイブ。</p>
         </div>
       </section>
+
+      ${renderPortalNewsSection()}
 
       <section class="portal-section">
         <h2 class="portal-section-label">本日の台帳</h2>
@@ -1216,6 +1251,18 @@ const MIGO_TITLE_LABELS = {
   'title-migo': '菌類の取引人'
 };
 
+const MIGO_COSMETIC_META = {
+  'frame-fungal': { emoji: '🍄', label: 'ユゴス菌糸', slot: '枠' },
+  'frame-bone': { emoji: '🦴', label: '地球製骨片', slot: '枠' },
+  'frame-ether': { emoji: '🛸', label: 'エーテル結晶', slot: '枠' },
+  'frame-migo-wing': { emoji: '🦇', label: 'ミ＝ゴの翼', slot: '枠' },
+  'bg-nebula': { emoji: '☄️', label: '隕石片', slot: '背景' },
+  'bg-void': { emoji: '🌑', label: '暗黒の欠片', slot: '背景' },
+  'title-whisper': { emoji: '📼', label: '禁断フィルム', slot: '称号' },
+  'title-migo': { emoji: '🔗', label: '鉤爪の欠片', slot: '称号' },
+  'fx-glimpse': { emoji: '👁', label: '第三の眼', slot: '光' }
+};
+
 function pcCosmeticClasses(pc) {
   const ids = pc.cosmetics || [];
   const classes = ['pc-cosme'];
@@ -1235,6 +1282,26 @@ function pcCosmeticTitle(pc) {
     if (label) return label;
   }
   return '';
+}
+
+function renderPcCosmeticsSection(pc) {
+  const ids = (pc.cosmetics || []).filter(Boolean);
+  if (!ids.length) return '';
+  const chips = ids.map(id => {
+    const meta = MIGO_COSMETIC_META[id] || { emoji: '✨', label: id, slot: '' };
+    return `<li class="pc-cosme-chip" title="${escapeAttr(meta.label)}">
+      <span class="pc-cosme-chip-emoji" aria-hidden="true">${meta.emoji}</span>
+      <span class="pc-cosme-chip-label">${escapeHtml(meta.label)}</span>
+      ${meta.slot ? `<span class="pc-cosme-chip-slot">${escapeHtml(meta.slot)}</span>` : ''}
+    </li>`;
+  }).join('');
+  return `
+      <section class="detail-section pc-cosme-section">
+        <h2 class="section-heading">菌糸コスメ</h2>
+        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品。このPCの台帳表示だけが装飾されます。</p>
+        <ul class="pc-cosme-chips">${chips}</ul>
+      </section>
+  `;
 }
 
 function renderPcListItem(pc, active) {
@@ -1270,6 +1337,8 @@ function renderPcDetail(pc) {
           <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
         </div>
       </header>
+
+      ${renderPcCosmeticsSection(pc)}
 
       <section class="detail-section">
         <h2 class="section-heading">キャラクターシート</h2>

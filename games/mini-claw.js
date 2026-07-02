@@ -54,7 +54,6 @@
   const resultTitle = document.getElementById('resultTitle');
   const resultText = document.getElementById('resultText');
   const resultBtn = document.getElementById('resultBtn');
-  const rankingList = document.getElementById('rankingList');
 
   const session = {
     playerName: '',
@@ -257,21 +256,6 @@
     validateForm();
   }
 
-  async function refreshRanking() {
-    const result = await gasFetch('migo-ranking');
-    if (!result.ok || result.needsDeploy) {
-      rankingList.innerHTML = '<li class="mc-ranking-empty">ランキング準備中</li>';
-      return;
-    }
-    const rows = result.data || [];
-    if (!rows.length) {
-      rankingList.innerHTML = '<li class="mc-ranking-empty">まだ記録がありません</li>';
-      return;
-    }
-    rankingList.innerHTML = rows.map((row, i) =>
-      `<li><span class="mc-rank-num">${i + 1}</span> ${escapeHtml(row.player_name)} <span class="mc-rank-score">${row.gets} GET</span></li>`
-    ).join('');
-  }
 
   function initPrizes() {
     const cols = 4;
@@ -679,7 +663,6 @@
     allPcs = await loadPcs();
     updatePcSelect();
     await refreshBalance();
-    await refreshRanking();
     if (!GAS_ENDPOINT) {
       setFormStatus('API未設定のためローカル表示のみです', 'warn');
     }

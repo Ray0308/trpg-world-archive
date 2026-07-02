@@ -240,55 +240,6 @@ body {
   cursor: not-allowed;
 }
 
-.mc-ranking {
-  width: min(100%, 360px);
-  background: var(--mc-panel);
-  border: 1px solid var(--mc-border);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-}
-
-.mc-ranking-title {
-  font-size: 0.78rem;
-  color: var(--mc-muted);
-  letter-spacing: 0.06em;
-  margin-bottom: 0.5rem;
-}
-
-.mc-ranking-list {
-  list-style: none;
-  font-size: 0.82rem;
-}
-
-.mc-ranking-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.mc-ranking-list li:last-child {
-  border-bottom: none;
-}
-
-.mc-rank-num {
-  font-weight: 700;
-  color: var(--mc-accent);
-  min-width: 1.2rem;
-}
-
-.mc-rank-score {
-  margin-left: auto;
-  color: var(--mc-muted);
-  font-size: 0.75rem;
-}
-
-.mc-ranking-empty {
-  color: var(--mc-muted);
-  font-size: 0.8rem;
-}
-
 .mc-kicker {
   font-size: 0.68rem;
   letter-spacing: 0.12em;
