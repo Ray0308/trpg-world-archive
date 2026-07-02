@@ -687,15 +687,6 @@
 
   setupGameInput();
 
-  function resizeCanvas() {
-    const wrap = canvas.parentElement;
-    const w = wrap.clientWidth;
-    canvas.style.width = w + 'px';
-    canvas.style.height = (w * CANVAS_H / CANVAS_W) + 'px';
-  }
-
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
   drawScene();
   validateNameInput();
   refreshRankings();
