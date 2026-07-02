@@ -81,7 +81,9 @@
   };
 
   const ROPE_MIN = 48;
-  const ROPE_MAX = 300;
+  const ROPE_MAX = 312;
+  const PRIZE_Y = 332;
+  const GRAB_Y_OFFSET = 36;
   const ARM_SPEED = 3.2;
   const DROP_SPEED = 2.4;
   const ALIGN_PX = 26;
@@ -258,27 +260,38 @@
 
 
   function initPrizes() {
-    const cols = 4;
-    const startX = 42;
-    const startY = 318;
-    const gapX = 72;
-    const gapY = 48;
-    state.prizes = PRIZES.map((p, i) => ({
-      ...p,
-      x: startX + (i % cols) * gapX,
-      y: startY + Math.floor(i / cols) * gapY,
+    const count = PRIZES.length;
+    const margin = 34;
+    const usable = W - margin * 2;
+    const gapX = count > 1 ? usable / (count - 1) : 0;
+    const order = PRIZES.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = order[i];
+      order[i] = order[j];
+      order[j] = tmp;
+    }
+    state.prizes = order.map((prizeIndex, slot) => ({
+      ...PRIZES[prizeIndex],
+      x: margin + slot * gapX,
+      y: PRIZE_Y,
       taken: false
     }));
   }
 
-  function nearestPrize(x) {
+  function prizeUnderClaw(x, ropeY) {
+    const grabY = ropeY + GRAB_Y_OFFSET;
     let best = null;
-    let bestDist = Infinity;
+    let bestScore = Infinity;
     state.prizes.forEach(p => {
       if (p.taken) return;
-      const d = Math.abs(p.x - x);
-      if (d < bestDist) {
-        bestDist = d;
+      const dx = Math.abs(p.x - x);
+      if (dx > ALIGN_PX) return;
+      const dy = Math.abs(p.y - grabY);
+      if (dy > 24) return;
+      const score = dx + dy * 1.5;
+      if (score < bestScore) {
+        bestScore = score;
         best = p;
       }
     });
@@ -483,8 +496,8 @@
       await wait(16);
     }
 
-    const target = nearestPrize(state.craneX);
-    const aligned = target && Math.abs(target.x - state.craneX) < ALIGN_PX;
+    const target = prizeUnderClaw(state.craneX, state.ropeY);
+    const aligned = !!target;
     state.clawOpen = false;
     state.headHue = 0.85;
     drawMachine();
