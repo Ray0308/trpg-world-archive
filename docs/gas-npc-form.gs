@@ -1596,6 +1596,8 @@ const MIGO_COSMETIC_SLOT_ = {
 
 const MIGO_PLAY_COST_ = 1;
 const MIGO_PLAY_MAX_AGE_MS_ = 30 * 60 * 1000;
+const MIGO_CHAUGNER_METERS_PER_COIN_ = 1000;
+const MIGO_CHAUGNER_MAX_COINS_ = 2;
 
 function normalizeMigoPlayerName_(name) {
   return String(name || '').trim().slice(0, 24);
@@ -2062,7 +2064,10 @@ function getMigoRanking_(ss) {
 
 function grantMigoChaugnerBonus_(ss, playerName, score) {
   const meters = Math.max(0, Math.floor(Number(score) || 0));
-  const coins = Math.min(3, Math.floor(meters / 300));
+  const coins = Math.min(
+    MIGO_CHAUGNER_MAX_COINS_,
+    Math.floor(meters / MIGO_CHAUGNER_METERS_PER_COIN_)
+  );
   if (coins <= 0) {
     const bal = getMigoBalance_(ss, playerName);
     return { added: 0, balance: bal.balance };
