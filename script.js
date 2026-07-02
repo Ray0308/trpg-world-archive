@@ -1263,22 +1263,46 @@ const MIGO_COSMETIC_META = {
   'fx-glimpse': { emoji: '👁', label: '第三の眼', slot: '光' }
 };
 
+const MIGO_COSMETIC_SLOT = {
+  'frame-fungal': 'frame',
+  'frame-bone': 'frame',
+  'frame-ether': 'frame',
+  'frame-migo-wing': 'frame',
+  'bg-nebula': 'bg',
+  'bg-void': 'bg',
+  'title-whisper': 'title',
+  'title-migo': 'title',
+  'fx-glimpse': 'fx'
+};
+
+function pickActiveMigoCosmetics_(cosmeticIds) {
+  const ids = cosmeticIds || [];
+  const latestBySlot = {};
+  ids.forEach(id => {
+    const slot = MIGO_COSMETIC_SLOT[id];
+    if (slot) latestBySlot[slot] = id;
+  });
+  const active = Object.keys(latestBySlot).map(slot => latestBySlot[slot]);
+  if (ids.indexOf('frame-migo-wing') >= 0) active.push('frame-migo-wing');
+  return active.filter((id, i, arr) => arr.indexOf(id) === i);
+}
+
 function pcCosmeticClasses(pc) {
-  const ids = pc.cosmetics || [];
+  const ids = pickActiveMigoCosmetics_(pc.cosmetics || []);
   const classes = ['pc-cosme'];
   ids.forEach(id => {
     if (id) classes.push(`pc-cosme--${id}`);
   });
-  if (ids.indexOf('frame-migo-wing') >= 0) {
+  if ((pc.cosmetics || []).indexOf('frame-migo-wing') >= 0) {
     classes.push('pc-cosme--complete');
   }
   return classes.join(' ');
 }
 
 function pcCosmeticTitle(pc) {
-  const ids = pc.cosmetics || [];
-  for (let i = ids.length - 1; i >= 0; i--) {
-    const label = MIGO_TITLE_LABELS[ids[i]];
+  const active = pickActiveMigoCosmetics_(pc.cosmetics || []);
+  for (let i = active.length - 1; i >= 0; i--) {
+    const label = MIGO_TITLE_LABELS[active[i]];
     if (label) return label;
   }
   return '';
@@ -1298,7 +1322,7 @@ function renderPcCosmeticsSection(pc) {
   return `
       <section class="detail-section pc-cosme-section">
         <h2 class="section-heading">菌糸コスメ</h2>
-        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品。このPCの台帳表示だけが装飾されます。</p>
+        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品コレクション。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
         <ul class="pc-cosme-chips">${chips}</ul>
       </section>
   `;

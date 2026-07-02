@@ -1955,7 +1955,6 @@ function unlockMigoCosmeticForPc_(ss, pcId, playerName, cosmeticId) {
   const cosmeticCol = headers.indexOf('cosmetic_id') + 1;
   const playerCol = headers.indexOf('player_name') + 1;
   const unlockedCol = headers.indexOf('unlocked_at') + 1;
-  const slot = MIGO_COSMETIC_SLOT_[id];
   const now = new Date();
 
   for (let i = values.length - 1; i >= 1; i--) {
@@ -1963,9 +1962,6 @@ function unlockMigoCosmeticForPc_(ss, pcId, playerName, cosmeticId) {
     const existingId = String(values[i][cosmeticCol - 1]).trim();
     if (existingId === id) {
       return getMigoCosmeticsForPc_(ss, pcId);
-    }
-    if (slot && MIGO_COSMETIC_SLOT_[existingId] === slot) {
-      sheet.deleteRow(i + 1);
     }
   }
 
