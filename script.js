@@ -1211,15 +1211,43 @@ function renderScenariosView() {
 
 /* ---- PC Views ---- */
 
+const MIGO_TITLE_LABELS = {
+  'title-whisper': '囁きの観測者',
+  'title-migo': '菌類の取引人'
+};
+
+function pcCosmeticClasses(pc) {
+  const ids = pc.cosmetics || [];
+  const classes = ['pc-cosme'];
+  ids.forEach(id => {
+    if (id) classes.push(`pc-cosme--${id}`);
+  });
+  if (ids.indexOf('frame-migo-wing') >= 0) {
+    classes.push('pc-cosme--complete');
+  }
+  return classes.join(' ');
+}
+
+function pcCosmeticTitle(pc) {
+  const ids = pc.cosmetics || [];
+  for (let i = ids.length - 1; i >= 0; i--) {
+    const label = MIGO_TITLE_LABELS[ids[i]];
+    if (label) return label;
+  }
+  return '';
+}
+
 function renderPcListItem(pc, active) {
+  const cosmeClass = pcCosmeticClasses(pc);
+  const title = pcCosmeticTitle(pc);
   return `
-    <li class="list-item ${active ? 'active' : ''}"
+    <li class="list-item ${active ? 'active' : ''} ${cosmeClass}"
         data-nav-section="pcs"
         data-nav-id="${pc.id}"
         role="option">
       ${pcAvatarImg(pc)}
       <div class="list-item-info">
-        <div class="list-item-name">${escapeHtml(pc.name)}</div>
+        <div class="list-item-name">${escapeHtml(pc.name)}${title ? `<span class="pc-cosme-title">${escapeHtml(title)}</span>` : ''}</div>
         <div class="list-item-sub">${escapeHtml(pc.playerName || '')}</div>
       </div>
     </li>
@@ -1230,13 +1258,15 @@ function renderPcDetail(pc) {
   const relatedNpcs = npcsForPc(pc);
   const scenarios = scenariosForPc(pc);
   const sheetUrl = String(pc.sheetUrl || '').trim();
+  const cosmeClass = pcCosmeticClasses(pc);
+  const title = pcCosmeticTitle(pc);
 
   return `
-    <article class="entity-detail">
+    <article class="entity-detail ${cosmeClass}">
       <header class="detail-header">
         ${pcPortraitImg(pc)}
         <div class="detail-header-body">
-          <h1 class="detail-title">${escapeHtml(pc.name)}</h1>
+          <h1 class="detail-title">${escapeHtml(pc.name)}${title ? `<span class="pc-cosme-title pc-cosme-title--detail">${escapeHtml(title)}</span>` : ''}</h1>
           <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
         </div>
       </header>

@@ -1,14 +1,15 @@
-/* ミニゴーキャッチャー — YOKOFOLIA */
+/* ミ＝ゴキャッチャー — Mi-go（ユゴスよりの菌類）/ docs/migo-catcher.md */
 
 :root {
-  --mc-bg: #161616;
-  --mc-panel: #262626;
-  --mc-border: #404040;
-  --mc-text: #ffffff;
-  --mc-muted: #9a9a9a;
-  --mc-accent: #e8487a;
-  --mc-accent-hover: #f06a96;
-  --mc-machine: #2a2a3a;
+  --mc-bg: #121018;
+  --mc-panel: #1e1824;
+  --mc-border: #3d3040;
+  --mc-text: #f0e8ec;
+  --mc-muted: #9a8894;
+  --mc-accent: #d4a8b0;
+  --mc-accent-hover: #e8bcc4;
+  --mc-accent-deep: #9a7080;
+  --mc-machine: #0e0c14;
 }
 
 *, *::before, *::after {
@@ -130,7 +131,7 @@ body {
 }
 
 .mc-ctrl-btn--primary {
-  background: var(--mc-accent);
+  background: var(--mc-accent-deep);
   border-color: var(--mc-accent);
   color: #fff;
 }
@@ -157,6 +158,131 @@ body {
   border-radius: 14px;
   padding: 1.25rem;
   max-width: 300px;
+  max-height: 92%;
+  overflow-y: auto;
+}
+
+.mc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.mc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mc-field--grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-field-label {
+  font-size: 0.72rem;
+  color: var(--mc-muted);
+  font-weight: 600;
+}
+
+.mc-field input,
+.mc-field select {
+  width: 100%;
+  border: 1px solid var(--mc-border);
+  background: #141018;
+  color: var(--mc-text);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.mc-redeem-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-end;
+}
+
+.mc-redeem-row .mc-btn {
+  width: auto;
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem;
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-border);
+  color: var(--mc-text);
+}
+
+.mc-status {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mc-status--ok { color: #9fd4a8; }
+.mc-status--warn { color: #e8c87a; }
+.mc-status--error { color: #e88a8a; }
+.mc-status--info { color: var(--mc-muted); }
+
+.mc-result-text {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--mc-muted);
+  margin-bottom: 1rem;
+}
+
+.mc-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mc-ranking {
+  width: min(100%, 360px);
+  background: var(--mc-panel);
+  border: 1px solid var(--mc-border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.mc-ranking-title {
+  font-size: 0.78rem;
+  color: var(--mc-muted);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.mc-ranking-list {
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.mc-ranking-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mc-ranking-list li:last-child {
+  border-bottom: none;
+}
+
+.mc-rank-num {
+  font-weight: 700;
+  color: var(--mc-accent);
+  min-width: 1.2rem;
+}
+
+.mc-rank-score {
+  margin-left: auto;
+  color: var(--mc-muted);
+  font-size: 0.75rem;
+}
+
+.mc-ranking-empty {
+  color: var(--mc-muted);
+  font-size: 0.8rem;
 }
 
 .mc-kicker {
@@ -175,7 +301,15 @@ body {
   font-size: 0.85rem;
   color: var(--mc-muted);
   line-height: 1.5;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mc-lore {
+  font-size: 0.8rem;
+  color: var(--mc-text);
+  line-height: 1.55;
+  margin-bottom: 0.65rem;
+  opacity: 0.88;
 }
 
 .mc-rules {
@@ -196,8 +330,19 @@ body {
 }
 
 .mc-btn--primary {
-  background: var(--mc-accent);
+  background: var(--mc-accent-deep);
   color: #fff;
+}
+
+.mc-btn--primary:hover {
+  background: var(--mc-accent);
+  color: #1a1018;
+}
+
+.mc-collection-hint {
+  font-size: 0.72rem;
+  color: var(--mc-muted);
+  margin-bottom: 0.5rem;
 }
 
 .mc-collection {

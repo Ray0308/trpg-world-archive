@@ -290,7 +290,7 @@ function doGet(e) {
 
   if (type === 'version') {
     return jsonResponse_({
-      api_version: '2026-06-29-delete',
+      api_version: '2026-06-28-migo',
       capabilities: [
         'npcs',
         'organizations',
@@ -305,7 +305,16 @@ function doGet(e) {
         'scenario-delete',
         'pc-delete',
         'chaugner-ranking',
-        'chaugner-score'
+        'chaugner-score',
+        'migo-balance',
+        'migo-redeem',
+        'migo-play',
+        'migo-play-end',
+        'migo-ranking',
+        'migo-gift-create',
+        'migo-kp-players',
+        'migo-kp-grant',
+        'migo-kp-rename'
       ]
     }, callback);
   }
@@ -416,6 +425,99 @@ function doGet(e) {
     try {
       const result = saveChaugnerScore_(ss, name, score);
       return jsonResponse_(result, callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-balance') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    try {
+      return jsonResponse_(getMigoBalance_(ss, playerName), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-redeem') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const code = String((e.parameter && e.parameter.code) || '').trim();
+    try {
+      return jsonResponse_(redeemMigoGiftCode_(ss, playerName, code), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-play') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const pcId = String((e.parameter && e.parameter.pc_id) || '').trim();
+    try {
+      return jsonResponse_(startMigoPlay_(ss, playerName, pcId), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-play-end') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const playId = String((e.parameter && e.parameter.play_id) || '').trim();
+    const won = e.parameter && (e.parameter.won === '1' || e.parameter.won === 'true');
+    const cosmeticId = String((e.parameter && e.parameter.cosmetic_id) || '').trim();
+    try {
+      return jsonResponse_(finishMigoPlay_(ss, playerName, playId, won, cosmeticId), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-ranking') {
+    return jsonResponse_(getMigoRanking_(ss), callback);
+  }
+
+  if (type === 'migo-gift-create') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const coins = e.parameter && e.parameter.coins;
+    const maxUses = e.parameter && e.parameter.max_uses;
+    const expiresDays = e.parameter && e.parameter.expires_days;
+    const memo = String((e.parameter && e.parameter.memo) || '').trim();
+    try {
+      return jsonResponse_(createMigoGiftCode_(ss, coins, maxUses, expiresDays, memo), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-kp-players') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    return jsonResponse_(getMigoKpPlayers_(ss), callback);
+  }
+
+  if (type === 'migo-kp-grant') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const coins = e.parameter && e.parameter.coins;
+    try {
+      return jsonResponse_(grantMigoCoinsKp_(ss, playerName, coins), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-kp-rename') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const oldName = String((e.parameter && e.parameter.old_name) || '').trim();
+    const newName = String((e.parameter && e.parameter.new_name) || '').trim();
+    try {
+      return jsonResponse_(renameMigoPlayerCoins_(ss, oldName, newName), callback);
     } catch (err) {
       return jsonResponse_({ error: err.message || String(err) }, callback);
     }
@@ -792,7 +894,9 @@ function getSpreadsheetFromEvent_(e) {
 }
 
 function getSpreadsheetFromSubmitEvent_(e) {
-  if (e && e.source && typeof e.source.getId === 'function') {
+  // スプレッドシートの「フォーム送信時」: e.source は Spreadsheet
+  // フォームの「フォーム送信時」: e.source は Form（getId だけでは区別できない）
+  if (e && e.source && typeof e.source.getSheets === 'function') {
     const ss = e.source;
     rememberArchiveSpreadsheet_(ss);
     return ss;
@@ -929,24 +1033,54 @@ function generateOrgId_(sheet) {
   return 'org_' + String(maxNumber + 1).padStart(3, '0');
 }
 
-function buildOrgRowFromAnswers_(answers, sheet, meta) {
+function findOrgSheetRowByFormResponseId_(orgSheet, formResponseId) {
+  const id = String(formResponseId || '').trim();
+  if (!id) return 0;
+  const headers = readSheetHeaders_(orgSheet);
+  const idx = headers.indexOf('form_response_id');
+  if (idx < 0) return 0;
+  const lastRow = orgSheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const value = String(orgSheet.getRange(row, idx + 1).getValue() || '').trim();
+    if (value === id) return row;
+  }
+  return 0;
+}
+
+function readOrgRowAsObject_(orgSheet, rowIndex, headers) {
+  const width = headers.length;
+  const values = orgSheet.getRange(rowIndex, 1, 1, width).getValues()[0];
+  const record = {};
+  headers.forEach((header, index) => {
+    if (header) record[header] = values[index];
+  });
+  return record;
+}
+
+function buildOrgRowFromAnswers_(answers, sheet, meta, existing) {
   const now = new Date();
   const m = meta || {};
   const response = m.response;
+  const ex = existing || {};
   return {
-    id: generateOrgId_(sheet),
+    id: ex.id || generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
-    icon: pickAnswer_(answers, 'アイコン') || '🏛️',
+    icon: pickAnswer_(answers, 'アイコン') || ex.icon || '🏛️',
     summary: pickAnswer_(answers, '概要'),
     description: pickAnswer_(answers, '説明'),
-    location_id: '',
+    location_id: ex.location_id || '',
     location_name: pickAnswer_(answers, '所在地'),
     scenario_ids: pickAnswer_(answers, '関連シナリオ'),
+    member_npc_names: pickAnswer_(answers, '所属NPC') || ex.member_npc_names || '',
+    member_npc_ids: ex.member_npc_ids || '',
     memo: pickAnswer_(answers, '備考'),
-    pl_hidden: '',
-    edit_url: m.editUrl || (response ? response.getEditResponseUrl() : ''),
-    form_response_id: m.formResponseId || (response ? response.getId() : ''),
-    created_at: now,
+    pl_hidden: ex.pl_hidden != null && ex.pl_hidden !== '' ? ex.pl_hidden : '',
+    deleted: ex.deleted != null && ex.deleted !== '' ? ex.deleted : '',
+    edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
+      ? response.getEditResponseUrl() : (ex.edit_url || '')),
+    form_response_id: m.formResponseId || (response && typeof response.getId === 'function'
+      ? response.getId() : (ex.form_response_id || '')),
+    created_at: ex.created_at || now,
     updated_at: now
   };
 }
@@ -955,19 +1089,31 @@ function appendOrganizationFromAnswers_(ss, answers, meta) {
   rememberArchiveSpreadsheet_(ss);
   const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
   const headers = ensureOrgHeader_(orgSheet);
-  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta);
+  const m = meta || {};
+  const response = m.response;
+  const formResponseId = m.formResponseId || (response && typeof response.getId === 'function'
+    ? response.getId() : '');
+  const existingRow = formResponseId
+    ? findOrgSheetRowByFormResponseId_(orgSheet, formResponseId)
+    : 0;
+  const existing = existingRow > 0
+    ? readOrgRowAsObject_(orgSheet, existingRow, headers)
+    : null;
+  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta, existing);
 
   if (!String(rowData.name || '').trim()) {
     Logger.log('ORG skip: 組織名が空');
     return null;
   }
-  if (rowData.form_response_id &&
-      isOrgResponseAlreadyImported_(orgSheet, rowData.form_response_id)) {
-    Logger.log('ORG skip duplicate response: ' + rowData.form_response_id);
-    return null;
-  }
 
   const row = headers.map(header => rowData[header] ?? '');
+
+  if (existingRow > 0) {
+    orgSheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+    Logger.log('ORG updated: ' + rowData.id + ' / ' + rowData.name);
+    return rowData.id;
+  }
+
   orgSheet.appendRow(row);
   Logger.log('ORG imported: ' + rowData.id + ' / ' + rowData.name);
   return rowData.id;
@@ -1133,7 +1279,7 @@ function getPublicOrganizations_(ss) {
 
   const headers = values[0].map(h => String(h).trim());
   const adminKeys = new Set([
-    'edit_url', 'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
+    'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
 
   return values.slice(1)
@@ -1249,6 +1395,7 @@ function getPublicPcs_(ss) {
   const adminKeys = new Set([
     'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
+  const cosmeticsByPc = getMigoCosmeticsByPc_(ss);
 
   return values.slice(1)
     .filter(row => row[0])
@@ -1260,6 +1407,8 @@ function getPublicPcs_(ss) {
       if (isDeleted_(record.deleted)) return null;
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
+      const pcId = String(record.id || '').trim();
+      record.cosmetics = cosmeticsByPc[pcId] || [];
       return record;
     })
     .filter(Boolean);
@@ -1399,5 +1548,646 @@ function saveChaugnerScore_(ss, name, score) {
   if (!cleanName) throw new Error('name is required');
 
   sheet.appendRow([cleanName, cleanScore, new Date()]);
-  return { ok: true, name: cleanName, score: cleanScore };
+  const migoBonus = grantMigoChaugnerBonus_(ss, cleanName, cleanScore);
+  return {
+    ok: true,
+    name: cleanName,
+    score: cleanScore,
+    migo_coins_added: migoBonus.added,
+    migo_balance: migoBonus.balance
+  };
+}
+
+/* ---- ミ＝ゴキャッチャー API ---- */
+
+const MIGO_BASE_COSMETICS_ = [
+  'frame-fungal', 'bg-nebula', 'title-whisper', 'frame-bone',
+  'fx-glimpse', 'bg-void', 'frame-ether', 'title-migo'
+];
+
+const MIGO_COMP_COSMETIC_ = 'frame-migo-wing';
+
+const MIGO_COSMETIC_SLOT_ = {
+  'frame-fungal': 'frame',
+  'frame-bone': 'frame',
+  'frame-ether': 'frame',
+  'frame-migo-wing': 'frame',
+  'bg-nebula': 'bg',
+  'bg-void': 'bg',
+  'title-whisper': 'title',
+  'title-migo': 'title',
+  'fx-glimpse': 'fx'
+};
+
+const MIGO_PLAY_COST_ = 1;
+const MIGO_PLAY_MAX_AGE_MS_ = 30 * 60 * 1000;
+
+function normalizeMigoPlayerName_(name) {
+  return String(name || '').trim().slice(0, 24);
+}
+
+function isValidMigoCosmeticId_(cosmeticId) {
+  return MIGO_BASE_COSMETICS_.indexOf(cosmeticId) >= 0 ||
+    cosmeticId === MIGO_COMP_COSMETIC_;
+}
+
+function ensureMigoCoinsSheet_(ss) {
+  const headers = ['player_name', 'balance', 'updated_at'];
+  let sheet = ss.getSheetByName('MIGO_COINS');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_COINS');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function ensureMigoGiftCodesSheet_(ss) {
+  const headers = ['code', 'coins', 'max_uses', 'used_count', 'expires_at', 'created_at', 'memo'];
+  let sheet = ss.getSheetByName('MIGO_GIFT_CODES');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_GIFT_CODES');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function ensureMigoUnlocksSheet_(ss) {
+  const headers = ['pc_id', 'cosmetic_id', 'player_name', 'unlocked_at'];
+  let sheet = ss.getSheetByName('MIGO_UNLOCKS');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_UNLOCKS');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function ensureMigoPlaysSheet_(ss) {
+  const headers = ['play_id', 'player_name', 'pc_id', 'status', 'cosmetic_id', 'created_at'];
+  let sheet = ss.getSheetByName('MIGO_PLAYS');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_PLAYS');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function findPcRecord_(ss, pcId) {
+  const sheet = ss.getSheetByName('PCS');
+  if (!sheet) return null;
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0].map(h => String(h).trim());
+  const idCol = headers.indexOf('id');
+  if (idCol < 0) return null;
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol]).trim() === String(pcId).trim()) {
+      const record = {};
+      headers.forEach((header, index) => {
+        if (header) record[header] = values[i][index];
+      });
+      if (isDeleted_(record.deleted)) return null;
+      return record;
+    }
+  }
+  return null;
+}
+
+function assertPcOwnedByPlayer_(ss, pcId, playerName) {
+  const pc = findPcRecord_(ss, pcId);
+  if (!pc) throw new Error('PCが見つかりません');
+  const owner = normalizeMigoPlayerName_(pc.player_name);
+  const player = normalizeMigoPlayerName_(playerName);
+  if (!owner || !player || owner !== player) {
+    throw new Error('プレイヤー名とPCの登録が一致しません');
+  }
+  return pc;
+}
+
+function getMigoBalance_(ss, playerName) {
+  const name = normalizeMigoPlayerName_(playerName);
+  if (!name) throw new Error('player_name is required');
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { ok: true, player_name: name, balance: 0 };
+
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name');
+  const balanceCol = headers.indexOf('balance');
+  if (nameCol < 0 || balanceCol < 0) return { ok: true, player_name: name, balance: 0 };
+
+  for (let i = 1; i < values.length; i++) {
+    if (normalizeMigoPlayerName_(values[i][nameCol]) === name) {
+      return {
+        ok: true,
+        player_name: name,
+        balance: Math.max(0, Number(values[i][balanceCol]) || 0)
+      };
+    }
+  }
+  return { ok: true, player_name: name, balance: 0 };
+}
+
+function addMigoCoins_(ss, playerName, amount) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const delta = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!name) throw new Error('player_name is required');
+  if (delta <= 0) return getMigoBalance_(ss, name);
+
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name') + 1;
+  const balanceCol = headers.indexOf('balance') + 1;
+  const updatedCol = headers.indexOf('updated_at') + 1;
+  const now = new Date();
+
+  for (let i = 1; i < values.length; i++) {
+    if (normalizeMigoPlayerName_(values[i][nameCol - 1]) === name) {
+      const next = Math.max(0, (Number(values[i][balanceCol - 1]) || 0) + delta);
+      sheet.getRange(i + 1, balanceCol).setValue(next);
+      if (updatedCol > 0) sheet.getRange(i + 1, updatedCol).setValue(now);
+      return { ok: true, player_name: name, balance: next, added: delta };
+    }
+  }
+
+  sheet.appendRow([name, delta, now]);
+  return { ok: true, player_name: name, balance: delta, added: delta };
+}
+
+function spendMigoCoins_(ss, playerName, amount) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const cost = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!name) throw new Error('player_name is required');
+  if (cost <= 0) return getMigoBalance_(ss, name);
+
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name') + 1;
+  const balanceCol = headers.indexOf('balance') + 1;
+  const updatedCol = headers.indexOf('updated_at') + 1;
+  const now = new Date();
+
+  for (let i = 1; i < values.length; i++) {
+    if (normalizeMigoPlayerName_(values[i][nameCol - 1]) === name) {
+      const current = Math.max(0, Number(values[i][balanceCol - 1]) || 0);
+      if (current < cost) throw new Error('コインが足りません');
+      const next = current - cost;
+      sheet.getRange(i + 1, balanceCol).setValue(next);
+      if (updatedCol > 0) sheet.getRange(i + 1, updatedCol).setValue(now);
+      return { ok: true, player_name: name, balance: next, spent: cost };
+    }
+  }
+  throw new Error('コインが足りません');
+}
+
+function redeemMigoGiftCode_(ss, playerName, code) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const cleanCode = String(code || '').trim().toUpperCase();
+  if (!name) throw new Error('player_name is required');
+  if (!cleanCode) throw new Error('code is required');
+
+  const sheet = ensureMigoGiftCodesSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) throw new Error('コードが無効です');
+
+  const headers = values[0].map(h => String(h).trim());
+  const codeCol = headers.indexOf('code') + 1;
+  const coinsCol = headers.indexOf('coins') + 1;
+  const maxUsesCol = headers.indexOf('max_uses') + 1;
+  const usedCol = headers.indexOf('used_count') + 1;
+  const expiresCol = headers.indexOf('expires_at') + 1;
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][codeCol - 1]).trim().toUpperCase() !== cleanCode) continue;
+
+    const coins = Math.max(0, Number(values[i][coinsCol - 1]) || 0);
+    const maxUses = Math.max(1, Number(values[i][maxUsesCol - 1]) || 1);
+    const used = Math.max(0, Number(values[i][usedCol - 1]) || 0);
+    const expiresAt = values[i][expiresCol - 1];
+
+    if (expiresAt) {
+      const exp = new Date(expiresAt);
+      if (!isNaN(exp.getTime()) && exp.getTime() < Date.now()) {
+        throw new Error('コードの有効期限が切れています');
+      }
+    }
+    if (used >= maxUses) throw new Error('コードは使用済みです');
+    if (coins <= 0) throw new Error('コードが無効です');
+
+    sheet.getRange(i + 1, usedCol).setValue(used + 1);
+    const credited = addMigoCoins_(ss, name, coins);
+    return {
+      ok: true,
+      player_name: name,
+      code: cleanCode,
+      coins_added: coins,
+      balance: credited.balance
+    };
+  }
+  throw new Error('コードが無効です');
+}
+
+function generateMigoGiftCodeString_() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let body = '';
+  for (let i = 0; i < 8; i++) {
+    body += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return 'MIGO-' + body;
+}
+
+function createMigoGiftCode_(ss, coins, maxUses, expiresDays, memo) {
+  const cleanCoins = Math.max(1, Math.min(99, Math.floor(Number(coins) || 1)));
+  const cleanMaxUses = Math.max(1, Math.min(999, Math.floor(Number(maxUses) || 1)));
+  const days = Math.max(0, Math.min(365, Math.floor(Number(expiresDays) || 0)));
+  const sheet = ensureMigoGiftCodesSheet_(ss);
+  const now = new Date();
+  const expiresAt = days > 0 ? new Date(now.getTime() + days * 24 * 60 * 60 * 1000) : '';
+
+  let code = '';
+  for (let attempt = 0; attempt < 8; attempt++) {
+    code = generateMigoGiftCodeString_();
+    const existing = sheet.getDataRange().getValues().slice(1)
+      .some(row => String(row[0]).trim().toUpperCase() === code);
+    if (!existing) break;
+  }
+
+  sheet.appendRow([code, cleanCoins, cleanMaxUses, 0, expiresAt, now, memo || '']);
+  return {
+    ok: true,
+    code: code,
+    coins: cleanCoins,
+    max_uses: cleanMaxUses,
+    expires_at: expiresAt ? new Date(expiresAt).toISOString() : ''
+  };
+}
+
+function startMigoPlay_(ss, playerName, pcId) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const id = String(pcId || '').trim();
+  if (!name) throw new Error('player_name is required');
+  if (!id) throw new Error('pc_id is required');
+
+  assertPcOwnedByPlayer_(ss, id, name);
+  const spent = spendMigoCoins_(ss, name, MIGO_PLAY_COST_);
+  const playId = 'play-' + Utilities.getUuid();
+  const sheet = ensureMigoPlaysSheet_(ss);
+  sheet.appendRow([playId, name, id, 'pending', '', new Date()]);
+
+  return {
+    ok: true,
+    play_id: playId,
+    player_name: name,
+    pc_id: id,
+    balance: spent.balance
+  };
+}
+
+function findMigoPlayRow_(sheet, playId, playerName) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0].map(h => String(h).trim());
+  const playCol = headers.indexOf('play_id');
+  const nameCol = headers.indexOf('player_name');
+  const statusCol = headers.indexOf('status');
+  const createdCol = headers.indexOf('created_at');
+  if (playCol < 0 || nameCol < 0 || statusCol < 0) return null;
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][playCol]).trim() !== String(playId).trim()) continue;
+    if (normalizeMigoPlayerName_(values[i][nameCol]) !== normalizeMigoPlayerName_(playerName)) {
+      throw new Error('プレイ情報が一致しません');
+    }
+    const createdAt = values[i][createdCol];
+    if (createdAt) {
+      const age = Date.now() - new Date(createdAt).getTime();
+      if (age > MIGO_PLAY_MAX_AGE_MS_) throw new Error('プレイの有効期限が切れています');
+    }
+    return {
+      rowIndex: i + 1,
+      status: String(values[i][statusCol]).trim(),
+      headers: headers,
+      values: values[i]
+    };
+  }
+  return null;
+}
+
+function getMigoCosmeticsForPc_(ss, pcId) {
+  const sheet = ensureMigoUnlocksSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id');
+  const cosmeticCol = headers.indexOf('cosmetic_id');
+  if (pcCol < 0 || cosmeticCol < 0) return [];
+
+  const ids = [];
+  values.slice(1).forEach(row => {
+    if (String(row[pcCol]).trim() === String(pcId).trim()) {
+      const id = String(row[cosmeticCol]).trim();
+      if (id && ids.indexOf(id) < 0) ids.push(id);
+    }
+  });
+  return ids;
+}
+
+function getMigoCosmeticsByPc_(ss) {
+  const sheet = ensureMigoUnlocksSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const map = {};
+  if (values.length <= 1) return map;
+
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id');
+  const cosmeticCol = headers.indexOf('cosmetic_id');
+  if (pcCol < 0 || cosmeticCol < 0) return map;
+
+  values.slice(1).forEach(row => {
+    const pcId = String(row[pcCol]).trim();
+    const cosmeticId = String(row[cosmeticCol]).trim();
+    if (!pcId || !cosmeticId) return;
+    if (!map[pcId]) map[pcId] = [];
+    if (map[pcId].indexOf(cosmeticId) < 0) map[pcId].push(cosmeticId);
+  });
+  return map;
+}
+
+function unlockMigoCosmeticForPc_(ss, pcId, playerName, cosmeticId) {
+  const id = String(cosmeticId || '').trim();
+  if (!isValidMigoCosmeticId_(id)) throw new Error('cosmetic_id が無効です');
+
+  const sheet = ensureMigoUnlocksSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id') + 1;
+  const cosmeticCol = headers.indexOf('cosmetic_id') + 1;
+  const playerCol = headers.indexOf('player_name') + 1;
+  const unlockedCol = headers.indexOf('unlocked_at') + 1;
+  const slot = MIGO_COSMETIC_SLOT_[id];
+  const now = new Date();
+
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][pcCol - 1]).trim() !== String(pcId).trim()) continue;
+    const existingId = String(values[i][cosmeticCol - 1]).trim();
+    if (existingId === id) {
+      return getMigoCosmeticsForPc_(ss, pcId);
+    }
+    if (slot && MIGO_COSMETIC_SLOT_[existingId] === slot) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+
+  sheet.appendRow([pcId, id, normalizeMigoPlayerName_(playerName), now]);
+  const cosmetics = getMigoCosmeticsForPc_(ss, pcId);
+  maybeGrantMigoCompBonus_(ss, pcId, playerName, cosmetics);
+  return getMigoCosmeticsForPc_(ss, pcId);
+}
+
+function maybeGrantMigoCompBonus_(ss, pcId, playerName, cosmetics) {
+  const owned = cosmetics || getMigoCosmeticsForPc_(ss, pcId);
+  const hasAll = MIGO_BASE_COSMETICS_.every(id => owned.indexOf(id) >= 0);
+  if (!hasAll) return;
+  if (owned.indexOf(MIGO_COMP_COSMETIC_) >= 0) return;
+  unlockMigoCosmeticForPc_(ss, pcId, playerName, MIGO_COMP_COSMETIC_);
+}
+
+function finishMigoPlay_(ss, playerName, playId, won, cosmeticId) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const id = String(playId || '').trim();
+  if (!name) throw new Error('player_name is required');
+  if (!id) throw new Error('play_id is required');
+
+  const sheet = ensureMigoPlaysSheet_(ss);
+  const play = findMigoPlayRow_(sheet, id, name);
+  if (!play) throw new Error('プレイが見つかりません');
+  if (play.status !== 'pending') throw new Error('このプレイは既に完了しています');
+
+  const headers = play.headers;
+  const statusCol = headers.indexOf('status') + 1;
+  const cosmeticCol = headers.indexOf('cosmetic_id') + 1;
+  const pcCol = headers.indexOf('pc_id');
+  const pcId = String(play.values[pcCol]).trim();
+
+  if (won) {
+    const cleanCosmetic = String(cosmeticId || '').trim();
+    if (!isValidMigoCosmeticId_(cleanCosmetic) || MIGO_BASE_COSMETICS_.indexOf(cleanCosmetic) < 0) {
+      throw new Error('cosmetic_id が無効です');
+    }
+    sheet.getRange(play.rowIndex, statusCol).setValue('won');
+    sheet.getRange(play.rowIndex, cosmeticCol).setValue(cleanCosmetic);
+    const cosmetics = unlockMigoCosmeticForPc_(ss, pcId, name, cleanCosmetic);
+    return {
+      ok: true,
+      play_id: id,
+      won: true,
+      pc_id: pcId,
+      cosmetic_id: cleanCosmetic,
+      cosmetics: cosmetics
+    };
+  }
+
+  sheet.getRange(play.rowIndex, statusCol).setValue('lost');
+  return { ok: true, play_id: id, won: false, pc_id: pcId };
+}
+
+function getMigoRanking_(ss) {
+  const sheet = ensureMigoPlaysSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name');
+  const statusCol = headers.indexOf('status');
+  if (nameCol < 0 || statusCol < 0) return [];
+
+  const counts = {};
+  values.slice(1).forEach(row => {
+    if (String(row[statusCol]).trim() !== 'won') return;
+    const name = normalizeMigoPlayerName_(row[nameCol]);
+    if (!name) return;
+    counts[name] = (counts[name] || 0) + 1;
+  });
+
+  return Object.keys(counts)
+    .map(name => ({ player_name: name, gets: counts[name] }))
+    .sort((a, b) => b.gets - a.gets || a.player_name.localeCompare(b.player_name))
+    .slice(0, 10);
+}
+
+function grantMigoChaugnerBonus_(ss, playerName, score) {
+  const meters = Math.max(0, Math.floor(Number(score) || 0));
+  const coins = Math.min(3, Math.floor(meters / 300));
+  if (coins <= 0) {
+    const bal = getMigoBalance_(ss, playerName);
+    return { added: 0, balance: bal.balance };
+  }
+  const credited = addMigoCoins_(ss, playerName, coins);
+  return { added: credited.added || coins, balance: credited.balance };
+}
+
+function setMigoBalance_(ss, playerName, balance) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const next = Math.max(0, Math.floor(Number(balance) || 0));
+  if (!name) throw new Error('player_name is required');
+
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name') + 1;
+  const balanceCol = headers.indexOf('balance') + 1;
+  const updatedCol = headers.indexOf('updated_at') + 1;
+  const now = new Date();
+
+  for (let i = 1; i < values.length; i++) {
+    if (normalizeMigoPlayerName_(values[i][nameCol - 1]) === name) {
+      sheet.getRange(i + 1, balanceCol).setValue(next);
+      if (updatedCol > 0) sheet.getRange(i + 1, updatedCol).setValue(now);
+      return { ok: true, player_name: name, balance: next };
+    }
+  }
+
+  sheet.appendRow([name, next, now]);
+  return { ok: true, player_name: name, balance: next };
+}
+
+function deleteMigoPlayerCoins_(ss, playerName) {
+  const name = normalizeMigoPlayerName_(playerName);
+  if (!name) return false;
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name');
+  if (nameCol < 0) return false;
+
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (normalizeMigoPlayerName_(values[i][nameCol]) === name) {
+      sheet.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function getMigoKpPlayers_(ss) {
+  const pcs = getKpPcs_(ss);
+  const players = new Map();
+
+  pcs.forEach(pc => {
+    if (pc.deleted) return;
+    const name = normalizeMigoPlayerName_(pc.player_name);
+    if (!name) return;
+    if (!players.has(name)) {
+      players.set(name, { player_name: name, pcs: [] });
+    }
+    players.get(name).pcs.push({ id: pc.id, name: pc.name || pc.id });
+  });
+
+  const sheet = ensureMigoCoinsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const balances = {};
+  if (values.length > 1) {
+    const headers = values[0].map(h => String(h).trim());
+    const nameCol = headers.indexOf('player_name');
+    const balanceCol = headers.indexOf('balance');
+    if (nameCol >= 0 && balanceCol >= 0) {
+      values.slice(1).forEach(row => {
+        const name = normalizeMigoPlayerName_(row[nameCol]);
+        if (!name) return;
+        balances[name] = Math.max(0, Number(row[balanceCol]) || 0);
+      });
+    }
+  }
+
+  const rows = [];
+  players.forEach((info, name) => {
+    rows.push({
+      player_name: name,
+      balance: balances[name] || 0,
+      pcs: info.pcs,
+      registered: true
+    });
+    delete balances[name];
+  });
+
+  Object.keys(balances).forEach(name => {
+    rows.push({
+      player_name: name,
+      balance: balances[name],
+      pcs: [],
+      registered: false,
+      orphan: true
+    });
+  });
+
+  rows.sort((a, b) => a.player_name.localeCompare(b.player_name, 'ja'));
+  return { ok: true, players: rows };
+}
+
+function grantMigoCoinsKp_(ss, playerName, coins) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const amount = Math.max(1, Math.min(999, Math.floor(Number(coins) || 0)));
+  if (!name) throw new Error('player_name is required');
+  const credited = addMigoCoins_(ss, name, amount);
+  return {
+    ok: true,
+    player_name: name,
+    coins_added: amount,
+    balance: credited.balance
+  };
+}
+
+function renameMigoPlayerCoins_(ss, oldName, newName) {
+  const oldN = normalizeMigoPlayerName_(oldName);
+  const newN = normalizeMigoPlayerName_(newName);
+  if (!oldN || !newN) throw new Error('old_name と new_name が必要です');
+  if (oldN === newN) {
+    const bal = getMigoBalance_(ss, newN);
+    return { ok: true, player_name: newN, balance: bal.balance, merged_from: oldN };
+  }
+
+  const oldBal = getMigoBalance_(ss, oldN).balance;
+  const newBal = getMigoBalance_(ss, newN).balance;
+  const merged = oldBal + newBal;
+  setMigoBalance_(ss, newN, merged);
+  if (oldN !== newN) deleteMigoPlayerCoins_(ss, oldN);
+
+  return {
+    ok: true,
+    player_name: newN,
+    balance: merged,
+    merged_from: oldN,
+    note: 'PCのプレイヤー名もフォーム編集で合わせてください'
+  };
 }

@@ -397,8 +397,11 @@ window.ArchiveNormalize = (function () {
   }
 
   function normalizeOrganization(raw) {
+    const editUrl = raw.edit_url || raw.editUrl || '';
     raw = stripAdminFields(raw);
-    if (raw['名称']) return normalizeOrganizationRow(raw);
+    if (raw['名称']) {
+      return { ...normalizeOrganizationRow(raw), editUrl };
+    }
     return {
       id: raw.id,
       name: cleanOrgText(raw.name),
@@ -410,7 +413,8 @@ window.ArchiveNormalize = (function () {
       locationName: cleanOrgText(raw.location_name || raw.locationName),
       scenarioIds: splitIds(raw.scenarioIds || raw.scenario_ids),
       memberNpcNames: splitIds(raw.member_npc_names || raw.memberNpcNames),
-      memberNpcIds: splitIds(raw.member_npc_ids || raw.memberNpcIds)
+      memberNpcIds: splitIds(raw.member_npc_ids || raw.memberNpcIds),
+      editUrl
     };
   }
 
@@ -460,7 +464,8 @@ window.ArchiveNormalize = (function () {
       editUrl: row.edit_url || row.editUrl || '',
       description: row['説明'] || row.description || '',
       affiliation: row.affiliation || row['所属'] || '',
-      relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC'])
+      relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC']),
+      cosmetics: Array.isArray(row.cosmetics) ? row.cosmetics.filter(Boolean) : []
     };
   }
 
@@ -479,7 +484,8 @@ window.ArchiveNormalize = (function () {
       editUrl,
       description: raw.description || '',
       affiliation: raw.affiliation || '',
-      relatedNpcIds: splitIds(raw.relatedNpcIds)
+      relatedNpcIds: splitIds(raw.relatedNpcIds),
+      cosmetics: Array.isArray(raw.cosmetics) ? raw.cosmetics.filter(Boolean) : []
     };
   }
 

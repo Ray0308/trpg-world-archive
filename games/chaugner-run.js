@@ -566,7 +566,12 @@
 
     const saveResult = await saveScore(playerName, scoreMeters);
     if (saveResult.ok) {
-      saveStatusEl.textContent = 'ランキングに登録しました';
+      let msg = 'ランキングに登録しました';
+      const added = saveResult.data && saveResult.data.migo_coins_added;
+      if (added > 0) {
+        msg += `（ミ＝ゴコイン +${added}）`;
+      }
+      saveStatusEl.textContent = msg;
       saveStatusEl.className = 'cr-save-status cr-save-status--ok';
     } else if (saveResult.needsDeploy) {
       saveStatusEl.textContent = 'スコアは保存されませんでした（KP: GASの再デプロイが必要）';

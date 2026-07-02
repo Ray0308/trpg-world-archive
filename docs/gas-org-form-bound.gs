@@ -105,22 +105,47 @@ function publishDriveFile_(value) {
 }
 
 function normalizeOrgIcon_(raw) {
-  if (raw == null || raw === '') return '🏛️';
+  if (raw == null || raw === '') return '';
   const driveUrl = toDriveFileUrl_(raw);
   if (driveUrl) {
     publishDriveFile_(driveUrl);
     return driveUrl;
   }
   const s = normalizeAnswerValue_(raw);
-  if (!s) return '🏛️';
-  if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '🏛️';
+  if (!s) return '';
+  if (/^\[Ljava\.lang\.Object;@/i.test(s)) return '';
   if (/^https?:\/\//i.test(s)) {
     const url = toDriveFileUrl_(s) || s;
     publishDriveFile_(url);
     return url;
   }
   if (s.length <= 8) return s;
-  return '🏛️';
+  return '';
+}
+
+/**
+ * 組織アイコンを回答から解決。
+ * Google Forms は編集時にファイルアップロードの差し替え不可 → URL欄優先、空なら既存維持。
+ */
+function resolveOrgIconFromAnswers_(answers, existingIcon) {
+  const urlOverride = pickAnswer_(answers, 'アイコンURL', 'アイコン画像URL', '画像URL');
+  if (urlOverride) {
+    const icon = normalizeOrgIcon_(urlOverride);
+    return icon || normalizeOrgIcon_(existingIcon) || '🏛️';
+  }
+
+  const raw = answers['アイコン'] != null ? answers['アイコン'] : pickAnswer_(answers, 'アイコン');
+  const hasFileIds = Array.isArray(raw) && raw.length > 0;
+  const icon = normalizeOrgIcon_(raw);
+
+  if (!icon && existingIcon) {
+    return normalizeOrgIcon_(existingIcon) || String(existingIcon).trim() || '🏛️';
+  }
+  if (!hasFileIds && !icon && existingIcon) {
+    return normalizeOrgIcon_(existingIcon) || String(existingIcon).trim() || '🏛️';
+  }
+
+  return icon || '🏛️';
 }
 
 function readSheetHeaders_(sheet) {
@@ -393,31 +418,70 @@ function isOrgNameAlreadyImported_(orgSheet, name) {
   return values.some(v => String(v).trim() === n);
 }
 
-function buildOrgRowFromAnswers_(answers, sheet, meta, ss) {
+function findOrgSheetRowByFormResponseId_(orgSheet, formResponseId) {
+  const id = String(formResponseId || '').trim();
+  if (!id) return 0;
+  const headers = readSheetHeaders_(orgSheet);
+  const idx = headers.indexOf('form_response_id');
+  if (idx < 0) return 0;
+  const lastRow = orgSheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const value = String(orgSheet.getRange(row, idx + 1).getValue() || '').trim();
+    if (value === id) return row;
+  }
+  return 0;
+}
+
+function findOrgSheetRowByName_(orgSheet, name) {
+  const n = String(name || '').trim();
+  if (!n) return 0;
+  const headers = readSheetHeaders_(orgSheet);
+  const idx = headers.indexOf('name');
+  if (idx < 0) return 0;
+  const lastRow = orgSheet.getLastRow();
+  for (let row = 2; row <= lastRow; row++) {
+    const value = String(orgSheet.getRange(row, idx + 1).getValue() || '').trim();
+    if (value === n) return row;
+  }
+  return 0;
+}
+
+function readOrgRowAsObject_(orgSheet, rowIndex, headers) {
+  const width = headers.length;
+  const values = orgSheet.getRange(rowIndex, 1, 1, width).getValues()[0];
+  const record = {};
+  headers.forEach((header, index) => {
+    if (header) record[header] = values[index];
+  });
+  return record;
+}
+
+function buildOrgRowFromAnswers_(answers, sheet, meta, ss, existing) {
   const now = new Date();
   const m = meta || {};
   const response = m.response;
+  const ex = existing || {};
   const memberNpcNames = pickAnswer_(answers, '所属NPC');
   const memberNpcIds = ss ? resolveNpcIdsFromNames_(ss, memberNpcNames) : '';
   return {
-    id: generateOrgId_(sheet),
+    id: ex.id || generateOrgId_(sheet),
     name: pickAnswer_(answers, '組織名'),
-    icon: normalizeOrgIcon_(answers['アイコン'] != null ? answers['アイコン'] : pickAnswer_(answers, 'アイコン')),
+    icon: resolveOrgIconFromAnswers_(answers, ex.icon),
     summary: pickAnswer_(answers, '概要'),
     description: pickAnswer_(answers, '説明'),
-    location_id: '',
+    location_id: ex.location_id || '',
     location_name: pickAnswer_(answers, '所在地'),
     scenario_ids: pickAnswer_(answers, '関連シナリオ'),
     member_npc_names: memberNpcNames,
     member_npc_ids: memberNpcIds,
     memo: pickAnswer_(answers, '備考'),
-    pl_hidden: '',
-    deleted: '',
+    pl_hidden: ex.pl_hidden != null && ex.pl_hidden !== '' ? ex.pl_hidden : '',
+    deleted: ex.deleted != null && ex.deleted !== '' ? ex.deleted : '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
-      ? response.getEditResponseUrl() : ''),
+      ? response.getEditResponseUrl() : (ex.edit_url || '')),
     form_response_id: m.formResponseId || (response && typeof response.getId === 'function'
-      ? response.getId() : ''),
-    created_at: now,
+      ? response.getId() : (ex.form_response_id || '')),
+    created_at: ex.created_at || now,
     updated_at: now
   };
 }
@@ -425,19 +489,38 @@ function buildOrgRowFromAnswers_(answers, sheet, meta, ss) {
 function appendOrganizationFromAnswers_(ss, answers, meta) {
   const orgSheet = getOrCreateSheet_(ss, 'ORGANIZATIONS');
   const headers = ensureOrgHeader_(orgSheet);
-  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta, ss);
+  const m = meta || {};
+  const response = m.response;
+  const formResponseId = m.formResponseId || (response && typeof response.getId === 'function'
+    ? response.getId() : '');
+  const existingRow = formResponseId
+    ? findOrgSheetRowByFormResponseId_(orgSheet, formResponseId)
+    : 0;
+  const existing = existingRow > 0
+    ? readOrgRowAsObject_(orgSheet, existingRow, headers)
+    : null;
+  const rowData = buildOrgRowFromAnswers_(answers, orgSheet, meta, ss, existing);
 
   if (!String(rowData.name || '').trim()) {
     Logger.log('ORG skip: 組織名が空');
     return null;
   }
-  if (rowData.form_response_id &&
-      isOrgResponseAlreadyImported_(orgSheet, rowData.form_response_id)) {
-    Logger.log('ORG skip duplicate: ' + rowData.form_response_id);
-    return null;
-  }
 
   const row = headers.map(header => rowData[header] ?? '');
+
+  if (existingRow > 0) {
+    orgSheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+    linkNpcsToOrganization_(
+      ss,
+      rowData.id,
+      rowData.name,
+      rowData.member_npc_names,
+      rowData.member_npc_ids
+    );
+    Logger.log('ORG updated: ' + rowData.id + ' / ' + rowData.name);
+    return rowData.id;
+  }
+
   orgSheet.appendRow(row);
   linkNpcsToOrganization_(
     ss,
@@ -487,6 +570,58 @@ function checkOrgSetup() {
     'ORGANIZATIONS: ' + (orgSheet ? Math.max(0, orgSheet.getLastRow() - 1) + '件' : 'まだ無い'),
     'member_npc 列: ' + (hasMemberNpcCols ? 'あり' : 'なし → migrateOrgSheetForMemberNpc を実行')
   ].join('\n');
+  Logger.log(msg);
+  return msg;
+}
+
+/**
+ * 既存 ORGANIZATIONS 行に edit_url / form_response_id を補完（▶ で1回実行）
+ * フォーム送信済みだが転記失敗・一括取り込みのみの行向け
+ */
+function backfillOrgEditUrls() {
+  const form = FormApp.getActiveForm();
+  if (!form) {
+    const msg = '組織PJ（組織フォームのスクリプトエディタ）から実行してください';
+    Logger.log(msg);
+    return msg;
+  }
+  const ss = SpreadsheetApp.openById(form.getDestinationId());
+  const orgSheet = ss.getSheetByName('ORGANIZATIONS');
+  if (!orgSheet || orgSheet.getLastRow() <= 1) {
+    const msg = 'ORGANIZATIONS にデータがありません';
+    Logger.log(msg);
+    return msg;
+  }
+
+  const headers = ensureOrgHeader_(orgSheet);
+  const editCol = headers.indexOf('edit_url') + 1;
+  const frCol = headers.indexOf('form_response_id') + 1;
+  const updatedCol = headers.indexOf('updated_at') + 1;
+  if (editCol < 1 || frCol < 1) {
+    const msg = 'edit_url / form_response_id 列がありません';
+    Logger.log(msg);
+    return msg;
+  }
+
+  let updated = 0;
+  form.getResponses().forEach(response => {
+    const frId = response.getId();
+    let row = findOrgSheetRowByFormResponseId_(orgSheet, frId);
+    if (row < 2) {
+      const answers = getAnswers_(response);
+      const name = pickAnswer_(answers, '組織名');
+      if (name) row = findOrgSheetRowByName_(orgSheet, name);
+    }
+    if (row < 2) return;
+    orgSheet.getRange(row, editCol).setValue(response.getEditResponseUrl());
+    orgSheet.getRange(row, frCol).setValue(frId);
+    if (updatedCol > 0) {
+      orgSheet.getRange(row, updatedCol).setValue(new Date());
+    }
+    updated++;
+  });
+
+  const msg = 'edit_url 補完: ' + updated + ' 件';
   Logger.log(msg);
   return msg;
 }

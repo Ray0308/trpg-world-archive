@@ -1000,7 +1000,293 @@
     `;
   }
 
+  function buildKpMigoApiUrl(type, params = {}) {
+    const base = window.AppConfig?.api?.baseUrl || '';
+    if (!base) return '';
+    const sep = base.includes('?') ? '&' : '?';
+    const qs = new URLSearchParams({ type, kp: '1', ...params });
+    return `${base}${sep}${qs.toString()}`;
+  }
+
+  async function fetchKpMigoApi(type, params = {}) {
+    const url = buildKpMigoApiUrl(type, params);
+    if (!url) throw new Error('API URL が未設定です');
+    const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) {
+      if (data.error === 'unknown type') throw new Error('GASの再デプロイが必要です');
+      throw new Error(data.error);
+    }
+    return data;
+  }
+
+  async function createMigoGiftCode(coins, maxUses, expiresDays, memo) {
+    return fetchKpMigoApi('migo-gift-create', {
+      coins: String(coins),
+      max_uses: String(maxUses),
+      expires_days: String(expiresDays),
+      memo: memo || ''
+    });
+  }
+
+  function renderMigoPlayersSection() {
+    const section = document.getElementById('kpMigoPlayers');
+    if (!section) return;
+
+    section.innerHTML = `
+      <article class="kp-card">
+        <span class="kp-card-icon">👤</span>
+        <h3 class="kp-card-name" id="kpMigoPlayersTitle">PL別コイン残高</h3>
+        <p class="kp-card-desc">
+          通貨は <strong>プレイヤー名単位</strong>（PC登録の <code>player_name</code>）で保持されます。
+          チャウグナー・ランの獲得、ギフトコード換金、ミ＝ゴ消費はすべてこの残高に反映されます。
+          名前を変えたときは残高の統合と、PCフォームの編集を両方行ってください。
+        </p>
+        <div class="kp-migo-toolbar">
+          <button type="button" class="kp-card-btn" id="kpMigoPlayersReload">一覧を更新</button>
+        </div>
+        <div class="kp-migo-players-wrap" id="kpMigoPlayersBody">
+          <p class="kp-migo-result">読み込み中…</p>
+        </div>
+        <div class="kp-migo-form kp-migo-form--grant">
+          <h4 class="kp-migo-subtitle">コインを直接付与</h4>
+          <label class="kp-migo-field">
+            <span>プレイヤー名</span>
+            <input type="text" id="kpMigoGrantName" list="kpMigoPlayerNames" maxlength="24" placeholder="PC登録と同じ名前">
+          </label>
+          <label class="kp-migo-field">
+            <span>付与コイン</span>
+            <input type="number" id="kpMigoGrantCoins" min="1" max="999" value="1">
+          </label>
+          <button type="button" class="kp-card-btn" id="kpMigoGrantBtn">付与</button>
+        </div>
+        <datalist id="kpMigoPlayerNames"></datalist>
+        <div class="kp-migo-form kp-migo-form--rename">
+          <h4 class="kp-migo-subtitle">コイン残高の名前変更（統合）</h4>
+          <label class="kp-migo-field">
+            <span>旧プレイヤー名</span>
+            <input type="text" id="kpMigoRenameOld" list="kpMigoPlayerNames" maxlength="24">
+          </label>
+          <label class="kp-migo-field">
+            <span>新プレイヤー名</span>
+            <input type="text" id="kpMigoRenameNew" maxlength="24" placeholder="PC登録の新しい名前">
+          </label>
+          <button type="button" class="kp-card-btn" id="kpMigoRenameBtn">統合</button>
+        </div>
+        <p class="kp-migo-result" id="kpMigoPlayersStatus" hidden></p>
+      </article>
+    `;
+
+    document.getElementById('kpMigoPlayersReload').addEventListener('click', loadMigoPlayers);
+    document.getElementById('kpMigoGrantBtn').addEventListener('click', handleMigoGrant);
+    document.getElementById('kpMigoRenameBtn').addEventListener('click', handleMigoRename);
+    loadMigoPlayers();
+  }
+
+  function renderMigoPlayersTable(players) {
+    const body = document.getElementById('kpMigoPlayersBody');
+    const datalist = document.getElementById('kpMigoPlayerNames');
+    if (!body) return;
+
+    if (!players.length) {
+      body.innerHTML = '<p class="kp-migo-result">登録PCのあるプレイヤーがいません</p>';
+      if (datalist) datalist.innerHTML = '';
+      return;
+    }
+
+    if (datalist) {
+      datalist.innerHTML = players.map(p =>
+        `<option value="${escapeAttr(p.player_name)}"></option>`
+      ).join('');
+    }
+
+    body.innerHTML = `
+      <table class="kp-migo-table">
+        <thead>
+          <tr>
+            <th>プレイヤー名</th>
+            <th>コイン</th>
+            <th>登録PC</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${players.map(p => `
+            <tr class="kp-migo-row ${p.orphan ? 'kp-migo-row--orphan' : ''}" data-player="${escapeAttr(p.player_name)}" tabindex="0" title="クリックで付与フォームに入れる">
+              <td>${escapeHtml(p.player_name)}${p.orphan ? ' <span class="kp-migo-tag">未登録</span>' : ''}</td>
+              <td>${p.balance}</td>
+              <td>${p.pcs && p.pcs.length
+                ? p.pcs.map(pc => escapeHtml(pc.name)).join('、')
+                : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    body.querySelectorAll('.kp-migo-row[data-player]').forEach(row => {
+      const pick = () => {
+        const input = document.getElementById('kpMigoGrantName');
+        if (input) input.value = row.getAttribute('data-player') || '';
+      };
+      row.addEventListener('click', pick);
+      row.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          pick();
+        }
+      });
+    });
+  }
+
+  async function loadMigoPlayers() {
+    const body = document.getElementById('kpMigoPlayersBody');
+    const statusEl = document.getElementById('kpMigoPlayersStatus');
+    if (body) body.innerHTML = '<p class="kp-migo-result">読み込み中…</p>';
+    if (statusEl) statusEl.hidden = true;
+
+    try {
+      const data = await fetchKpMigoApi('migo-kp-players');
+      renderMigoPlayersTable(data.players || []);
+    } catch (err) {
+      if (body) {
+        body.innerHTML = `<p class="kp-migo-result kp-migo-result--error">${escapeHtml(err.message || '取得に失敗')}</p>`;
+      }
+    }
+  }
+
+  function setMigoPlayersStatus(message, kind) {
+    const el = document.getElementById('kpMigoPlayersStatus');
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.className = `kp-migo-result kp-migo-result--${kind || 'info'}`;
+    el.textContent = message;
+  }
+
+  async function handleMigoGrant() {
+    const name = document.getElementById('kpMigoGrantName').value.trim();
+    const coins = Number(document.getElementById('kpMigoGrantCoins').value) || 1;
+    const btn = document.getElementById('kpMigoGrantBtn');
+    if (!name) {
+      setMigoPlayersStatus('プレイヤー名を入力してください', 'error');
+      return;
+    }
+    btn.disabled = true;
+    setMigoPlayersStatus('付与中…', 'info');
+    try {
+      const data = await fetchKpMigoApi('migo-kp-grant', {
+        player_name: name,
+        coins: String(coins)
+      });
+      setMigoPlayersStatus(`${data.player_name} に +${data.coins_added} コイン（残高 ${data.balance}）`, 'ok');
+      await loadMigoPlayers();
+    } catch (err) {
+      setMigoPlayersStatus(err.message || '付与に失敗しました', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleMigoRename() {
+    const oldName = document.getElementById('kpMigoRenameOld').value.trim();
+    const newName = document.getElementById('kpMigoRenameNew').value.trim();
+    const btn = document.getElementById('kpMigoRenameBtn');
+    if (!oldName || !newName) {
+      setMigoPlayersStatus('旧名と新名の両方を入力してください', 'error');
+      return;
+    }
+    if (!window.confirm(`「${oldName}」のコインを「${newName}」に統合します。よろしいですか？`)) return;
+
+    btn.disabled = true;
+    setMigoPlayersStatus('統合中…', 'info');
+    try {
+      const data = await fetchKpMigoApi('migo-kp-rename', {
+        old_name: oldName,
+        new_name: newName
+      });
+      setMigoPlayersStatus(
+        `${data.merged_from} → ${data.player_name}（残高 ${data.balance}）。PCのプレイヤー名も編集してください。`,
+        'ok'
+      );
+      document.getElementById('kpMigoRenameOld').value = '';
+      document.getElementById('kpMigoRenameNew').value = '';
+      await loadMigoPlayers();
+    } catch (err) {
+      setMigoPlayersStatus(err.message || '統合に失敗しました', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderMigoGiftSection() {
+    const section = document.getElementById('kpMigoGift');
+    if (!section) return;
+
+    section.innerHTML = `
+      <article class="kp-card">
+        <span class="kp-card-icon">🍄</span>
+        <h3 class="kp-card-name" id="kpMigoGiftTitle">ギフトコード発行</h3>
+        <p class="kp-card-desc">
+          シナリオ報酬などに使う換金コード。PLがミ＝ゴ画面で入力すると <strong>そのプレイヤーの残高</strong> に加算されます。
+        </p>
+        <div class="kp-migo-form">
+          <label class="kp-migo-field">
+            <span>コイン数</span>
+            <input type="number" id="kpMigoCoins" min="1" max="99" value="3">
+          </label>
+          <label class="kp-migo-field">
+            <span>使用回数上限</span>
+            <input type="number" id="kpMigoMaxUses" min="1" max="999" value="1">
+          </label>
+          <label class="kp-migo-field">
+            <span>有効日数（0＝無期限）</span>
+            <input type="number" id="kpMigoExpires" min="0" max="365" value="30">
+          </label>
+          <label class="kp-migo-field kp-migo-field--wide">
+            <span>メモ（任意）</span>
+            <input type="text" id="kpMigoMemo" maxlength="80" placeholder="例: シナリオ報酬">
+          </label>
+        </div>
+        <p class="kp-migo-result" id="kpMigoResult" hidden></p>
+        <div class="kp-card-actions">
+          <button type="button" class="kp-card-btn" id="kpMigoCreateBtn">コードを発行</button>
+        </div>
+      </article>
+    `;
+
+    const btn = document.getElementById('kpMigoCreateBtn');
+    const resultEl = document.getElementById('kpMigoResult');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      const coins = Number(document.getElementById('kpMigoCoins').value) || 1;
+      const maxUses = Number(document.getElementById('kpMigoMaxUses').value) || 1;
+      const expiresDays = Number(document.getElementById('kpMigoExpires').value) || 0;
+      const memo = document.getElementById('kpMigoMemo').value.trim();
+      btn.disabled = true;
+      resultEl.hidden = false;
+      resultEl.className = 'kp-migo-result';
+      resultEl.textContent = '発行中…';
+      try {
+        const data = await createMigoGiftCode(coins, maxUses, expiresDays, memo);
+        resultEl.className = 'kp-migo-result kp-migo-result--ok';
+        resultEl.innerHTML = `発行しました: <strong>${escapeHtml(data.code)}</strong>（${data.coins}コイン / 上限${data.max_uses}回）`;
+      } catch (err) {
+        resultEl.className = 'kp-migo-result kp-migo-result--error';
+        resultEl.textContent = err.message || '発行に失敗しました';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   renderCards();
   renderFilesDriveSection();
+  renderMigoPlayersSection();
+  renderMigoGiftSection();
   bindModal();
 })();

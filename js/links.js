@@ -41,6 +41,12 @@
         icon: '🏃',
         name: 'チャウグナー・ラン',
         description: '横スクロールミニゲーム。ランキングに名前を残そう。'
+      },
+      {
+        href: 'games/mini-claw.html',
+        icon: '🍄',
+        name: 'ミ＝ゴキャッチャー',
+        description: 'ユゴスよりの菌類の鉤爪で景品を掴む。選んだPCの表示が豪華になる。'
       }
     ]
   };
