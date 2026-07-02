@@ -81,9 +81,11 @@
   };
 
   const ROPE_MIN = 48;
-  const ROPE_MAX = 312;
-  const PRIZE_Y = 332;
+  const ROPE_MAX = 316;
   const GRAB_Y_OFFSET = 36;
+  const GRAB_DY = 32;
+  const PRIZE_COLS = 4;
+  const PRIZE_ROW_Y = [322, 352];
   const ARM_SPEED = 3.2;
   const DROP_SPEED = 2.4;
   const ALIGN_PX = 26;
@@ -260,10 +262,10 @@
 
 
   function initPrizes() {
-    const count = PRIZES.length;
-    const margin = 34;
-    const usable = W - margin * 2;
-    const gapX = count > 1 ? usable / (count - 1) : 0;
+    const cols = PRIZE_COLS;
+    const startX = 30;
+    const gapX = (W - startX * 2) / (cols - 1);
+    const bottomOffsetX = gapX / 2;
     const order = PRIZES.map((_, i) => i);
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -271,12 +273,17 @@
       order[i] = order[j];
       order[j] = tmp;
     }
-    state.prizes = order.map((prizeIndex, slot) => ({
-      ...PRIZES[prizeIndex],
-      x: margin + slot * gapX,
-      y: PRIZE_Y,
-      taken: false
-    }));
+    state.prizes = order.map((prizeIndex, slot) => {
+      const col = slot % cols;
+      const row = Math.floor(slot / cols);
+      const x = startX + col * gapX + (row === 1 ? bottomOffsetX : 0);
+      return {
+        ...PRIZES[prizeIndex],
+        x,
+        y: PRIZE_ROW_Y[row],
+        taken: false
+      };
+    });
   }
 
   function prizeUnderClaw(x, ropeY) {
@@ -288,7 +295,7 @@
       const dx = Math.abs(p.x - x);
       if (dx > ALIGN_PX) return;
       const dy = Math.abs(p.y - grabY);
-      if (dy > 24) return;
+      if (dy > GRAB_DY) return;
       const score = dx + dy * 1.5;
       if (score < bestScore) {
         bestScore = score;
