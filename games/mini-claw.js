@@ -66,6 +66,7 @@
     moveRight: false,
     shake: 0,
     particles: [],
+    fadePrize: null,
     loopActive: false
   };
 
@@ -431,6 +432,34 @@
         ctx.fill();
       }
     });
+
+    if (state.fadePrize) {
+      const fp = state.fadePrize;
+      const size = 24;
+      ctx.fillStyle = '#ffeef3';
+      ctx.font = `${size}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(255, 185, 205, 0.7)';
+      ctx.shadowBlur = 18 * fp.alpha;
+      ctx.globalAlpha = fp.alpha;
+      ctx.fillText(fp.emoji, fp.x, fp.y);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  async function animatePrizeFadeOut(emoji, x, y) {
+    let alpha = 1;
+    let fy = y;
+    while (alpha > 0.02) {
+      fy -= 2.8;
+      alpha -= 0.035;
+      state.fadePrize = { emoji, x, y: fy, alpha };
+      drawMachine();
+      await wait(16);
+    }
+    state.fadePrize = null;
   }
 
   function drawSegmentedArm(x, y) {
@@ -669,24 +698,13 @@
     }
 
     if (state.held) {
-      const destX = W - 34;
-      while (Math.abs(state.craneX - destX) > 2) {
-        state.craneX += Math.sign(destX - state.craneX) * ARM_SPEED;
-        drawMachine();
-        await wait(16);
-      }
-      state.craneX = destX;
-      state.clawOpen = true;
       const prize = state.held;
       state.held = null;
-      spawnParticles(destX, ROPE_MIN + 40, MIGO_PINK);
-      drawMachine();
-      await wait(260);
-      while (state.craneX > W / 2) {
-        state.craneX -= ARM_SPEED;
-        drawMachine();
-        await wait(16);
-      }
+      state.clawOpen = true;
+      const fadeX = state.craneX;
+      const fadeY = state.ropeY + 36;
+      spawnParticles(fadeX, fadeY, MIGO_PINK_LIGHT);
+      await animatePrizeFadeOut(prize.emoji, fadeX, fadeY);
       state.played = true;
       const saveResult = await finishPlay(true, prize.cosmeticId);
       showResult(true, prize, saveResult);
@@ -721,6 +739,7 @@
   }
 
   function bindHold(btn, key, on) {
+    const block = e => e.preventDefault();
     const start = e => {
       e.preventDefault();
       state[key] = on;
@@ -735,6 +754,10 @@
     btn.addEventListener('pointerup', end);
     btn.addEventListener('pointerleave', end);
     btn.addEventListener('pointercancel', end);
+    btn.addEventListener('touchstart', block, { passive: false });
+    btn.addEventListener('touchmove', block, { passive: false });
+    btn.addEventListener('contextmenu', block);
+    btn.addEventListener('selectstart', block);
   }
 
   async function startGameSession(e) {
@@ -777,6 +800,7 @@
     state.clawOpen = true;
     state.held = null;
     state.particles = [];
+    state.fadePrize = null;
     initPrizes(pcId);
     document.getElementById('btnDrop').disabled = false;
   }
@@ -793,6 +817,7 @@
   }
 
   document.getElementById('btnDrop').addEventListener('click', dropSequence);
+  document.getElementById('btnDrop').addEventListener('touchstart', e => e.preventDefault(), { passive: false });
   bindHold(document.getElementById('btnLeft'), 'moveLeft', true);
   bindHold(document.getElementById('btnRight'), 'moveRight', true);
   startForm.addEventListener('submit', startGameSession);

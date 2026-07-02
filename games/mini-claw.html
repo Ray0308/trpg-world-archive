@@ -8,7 +8,7 @@
   <title>ミ＝ゴキャッチャー — YOKOFOLIA</title>
   <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="mini-claw.css?v=20260702">
+  <link rel="stylesheet" href="mini-claw.css?v=20260702c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -35,9 +35,9 @@
         </div>
 
         <div class="mc-controls" id="gameControls" hidden>
-          <button type="button" class="mc-ctrl-btn" id="btnLeft" aria-label="左腕">◀</button>
+          <button type="button" class="mc-ctrl-btn mc-ctrl-btn--left" id="btnLeft" aria-label="左へ"></button>
           <button type="button" class="mc-ctrl-btn mc-ctrl-btn--primary" id="btnDrop" aria-label="鉤爪を下ろす">爪</button>
-          <button type="button" class="mc-ctrl-btn" id="btnRight" aria-label="右腕">▶</button>
+          <button type="button" class="mc-ctrl-btn mc-ctrl-btn--right" id="btnRight" aria-label="右へ"></button>
         </div>
 
         <div class="mc-overlay" id="startScreen">
@@ -87,6 +87,7 @@
             <h2 class="mc-title" id="resultTitle">結果</h2>
             <p class="mc-result-text" id="resultText"></p>
             <button type="button" class="mc-btn mc-btn--primary" id="resultBtn">もう一度</button>
+            <a href="../index.html#home" class="mc-btn mc-btn--ghost" id="resultHomeBtn">ホームに戻る</a>
           </div>
         </div>
       </div>
@@ -105,6 +106,6 @@
 
   <script src="../js/config.js"></script>
   <script src="../js/migo-cosmetics.js?v=20260702"></script>
-  <script src="mini-claw.js?v=20260702b"></script>
+  <script src="mini-claw.js?v=20260702c"></script>
 </body>
 </html>
