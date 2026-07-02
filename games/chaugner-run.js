@@ -39,6 +39,12 @@
   const resultNameEl = document.getElementById('resultName');
   const resultScoreEl = document.getElementById('resultScore');
   const saveStatusEl = document.getElementById('saveStatus');
+  const coinRewardEl = document.getElementById('coinReward');
+  const coinRewardMainEl = document.getElementById('coinRewardMain');
+  const coinRewardSubEl = document.getElementById('coinRewardSub');
+
+  const MIGO_METERS_PER_COIN = 1000;
+  const MIGO_MAX_COINS_PER_RUN = 2;
 
   const mascotImg = new Image();
   let mascotLoaded = false;
@@ -137,6 +143,60 @@
 
   function formatMeters(m) {
     return `${Math.floor(m)} m`;
+  }
+
+  function coinsFromMeters(meters) {
+    return Math.min(MIGO_MAX_COINS_PER_RUN, Math.floor(Math.max(0, meters) / MIGO_METERS_PER_COIN));
+  }
+
+  function nextCoinDistance(meters) {
+    const earned = coinsFromMeters(meters);
+    if (earned >= MIGO_MAX_COINS_PER_RUN) return 0;
+    const nextAt = (earned + 1) * MIGO_METERS_PER_COIN;
+    return Math.max(0, nextAt - Math.floor(meters));
+  }
+
+  function hideCoinReward() {
+    if (!coinRewardEl) return;
+    coinRewardEl.hidden = true;
+    coinRewardEl.className = 'cr-coin-reward';
+    if (coinRewardMainEl) coinRewardMainEl.textContent = '';
+    if (coinRewardSubEl) coinRewardSubEl.textContent = '';
+  }
+
+  function showCoinReward(saveResult) {
+    if (!coinRewardEl || !coinRewardMainEl || !coinRewardSubEl) return;
+    hideCoinReward();
+
+    if (!saveResult.ok || saveResult.needsDeploy || saveResult.offline) {
+      return;
+    }
+
+    const added = Number(saveResult.data && saveResult.data.migo_coins_added) || 0;
+    const balance = saveResult.data && saveResult.data.migo_balance;
+    coinRewardEl.hidden = false;
+
+    if (added > 0) {
+      coinRewardEl.classList.add('cr-coin-reward--got');
+      coinRewardMainEl.textContent = `+${added} 枚 GET！`;
+      const balanceText = balance !== undefined && balance !== null && balance !== ''
+        ? `残高 ${balance} 枚`
+        : '';
+      coinRewardSubEl.textContent = balanceText
+        ? `${balanceText} — ミ＝ゴキャッチャーで使えます`
+        : 'ミ＝ゴキャッチャーで使えます';
+      return;
+    }
+
+    coinRewardEl.classList.add('cr-coin-reward--none');
+    const remaining = nextCoinDistance(scoreMeters);
+    if (remaining > 0) {
+      coinRewardMainEl.textContent = '菌糸コイン 0枚';
+      coinRewardSubEl.textContent = `あと ${remaining}m で 1枚（1000mごと / 1回最大2枚）`;
+    } else {
+      coinRewardMainEl.textContent = '菌糸コイン 獲得上限';
+      coinRewardSubEl.textContent = 'このランではこれ以上コインはもらえません';
+    }
   }
 
   function buildGasUrl(type, params = {}) {
@@ -541,6 +601,7 @@
     startScreen.hidden = true;
     gameOverScreen.hidden = true;
     scoreHud.hidden = false;
+    hideCoinReward();
     lastTs = 0;
     drawScene();
     if (animId) cancelAnimationFrame(animId);
@@ -560,19 +621,16 @@
     resultScoreEl.textContent = formatMeters(scoreMeters);
     saveStatusEl.textContent = 'スコアを登録しています…';
     saveStatusEl.className = 'cr-save-status';
+    hideCoinReward();
 
     gameOverScreen.hidden = false;
     scoreHud.hidden = true;
 
     const saveResult = await saveScore(playerName, scoreMeters);
     if (saveResult.ok) {
-      let msg = 'ランキングに登録しました';
-      const added = saveResult.data && saveResult.data.migo_coins_added;
-      if (added > 0) {
-        msg += `（ミ＝ゴコイン +${added}）`;
-      }
-      saveStatusEl.textContent = msg;
+      saveStatusEl.textContent = 'ランキングに登録しました';
       saveStatusEl.className = 'cr-save-status cr-save-status--ok';
+      showCoinReward(saveResult);
     } else if (saveResult.needsDeploy) {
       saveStatusEl.textContent = 'スコアは保存されませんでした（KP: GASの再デプロイが必要）';
       saveStatusEl.className = 'cr-save-status cr-save-status--warn';

@@ -37,6 +37,12 @@
     /** ホーム「更新のお知らせ」（新しい順。非掲載は配列から外す） */
     portalNews: [
       {
+        date: '2026-07-02',
+        title: 'ミ＝ゴ・菌糸コインの説明資料',
+        text: 'ミ＝ゴキャッチャーと菌糸コインの遊び方・KP向け運用をまとめたTXTを配布しています。',
+        href: 'https://drive.google.com/file/d/1HdJlAWmeJuMRh22wsHWWnnXR6_kZKPml/view?usp=drive_link'
+      },
+      {
         date: '2026-06-28',
         title: 'ミ＝ゴキャッチャー公開',
         text: 'オマケにミ＝ゴキャッチャーを追加しました。景品を取ると、選んだPCの台帳表示が豪華になります。',

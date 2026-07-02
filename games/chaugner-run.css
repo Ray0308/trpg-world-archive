@@ -407,6 +407,72 @@ body.cr-is-playing .cr-canvas {
   color: #fbbf24;
 }
 
+.cr-coin-reward {
+  margin: 0.85rem 0 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 87, 95, 0.35);
+  background: rgba(232, 87, 95, 0.1);
+  text-align: center;
+  animation: cr-coin-pop 0.45s ease-out;
+}
+
+.cr-coin-reward[hidden] {
+  display: none !important;
+}
+
+.cr-coin-reward-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #f47a82;
+  margin-bottom: 0.35rem;
+}
+
+.cr-coin-reward-main {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.cr-coin-reward-sub {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--cr-muted);
+}
+
+.cr-coin-reward--got {
+  border-color: rgba(232, 87, 95, 0.55);
+  box-shadow: 0 0 20px rgba(232, 87, 95, 0.2);
+}
+
+.cr-coin-reward--got .cr-coin-reward-main {
+  color: #ffc4c9;
+}
+
+.cr-coin-reward--none {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cr-coin-reward--none .cr-coin-reward-main {
+  font-size: 1rem;
+  color: var(--cr-muted);
+}
+
+@keyframes cr-coin-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .cr-footer {
   padding: 0.75rem 1rem;
   text-align: center;

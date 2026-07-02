@@ -9,7 +9,7 @@
   <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
   <link rel="manifest" href="chaugner-run.webmanifest">
-  <link rel="stylesheet" href="chaugner-run.css">
+  <link rel="stylesheet" href="chaugner-run.css?v=20260702">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -42,6 +42,7 @@
               <li><strong>離す</strong> … 落下</li>
               <li><strong>着地</strong> … 燃料が全回復</li>
               <li>低い障害は飛び越え、高い障害は浮かないで通過</li>
+              <li><strong>1000m</strong> ごとに菌糸コイン1枚（1回最大2枚）</li>
             </ul>
             <p class="cr-hint">PC: スペースキー / スマホ: ゲーム画面をタップ</p>
 
@@ -74,6 +75,13 @@
                 <dd id="resultScore">0 m</dd>
               </div>
             </dl>
+
+            <div class="cr-coin-reward" id="coinReward" hidden>
+              <p class="cr-coin-reward-label">菌糸コイン</p>
+              <p class="cr-coin-reward-main" id="coinRewardMain"></p>
+              <p class="cr-coin-reward-sub" id="coinRewardSub"></p>
+            </div>
+
             <p class="cr-save-status" id="saveStatus"></p>
 
             <section class="cr-ranking-block">
@@ -95,6 +103,6 @@
   </div>
 
   <script src="../js/config.js"></script>
-  <script src="chaugner-run.js"></script>
+  <script src="chaugner-run.js?v=20260702"></script>
 </body>
 </html>
