@@ -7,33 +7,17 @@
 
   const GAME_NAME = 'ミ＝ゴキャッチャー';
   const GAS_ENDPOINT = (window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl) || '';
+  const MC = window.MigoCosmetics || {};
+  const PRIZES = MC.PRIZES || [];
+  const COSMETIC_LABELS = MC.LABELS || {};
+  const BASE_COUNT = MC.BASE_COUNT || PRIZES.length;
+  const COMP_ID = MC.COMP_ID || 'frame-migo-wing';
 
-  const MIGO_SHELL = '#d4a8b0';
-  const MIGO_SHELL_DARK = '#9a7080';
-  const MIGO_GLOW = 'rgba(212, 168, 176, 0.35)';
-
-  const COSMETIC_LABELS = {
-    'frame-fungal': 'ユゴス菌糸',
-    'bg-nebula': '隕石片',
-    'title-whisper': '禁断フィルム',
-    'frame-bone': '地球製骨片',
-    'fx-glimpse': '第三の眼',
-    'bg-void': '暗黒の欠片',
-    'frame-ether': 'エーテル結晶',
-    'title-migo': '鉤爪の欠片',
-    'frame-migo-wing': 'ミ＝ゴの翼'
-  };
-
-  const PRIZES = [
-    { emoji: '🍄', label: 'ユゴス菌糸', cosmeticId: 'frame-fungal', grabRate: 0.78 },
-    { emoji: '☄️', label: '隕石片', cosmeticId: 'bg-nebula', grabRate: 0.76 },
-    { emoji: '📼', label: '禁断フィルム', cosmeticId: 'title-whisper', grabRate: 0.74 },
-    { emoji: '🦴', label: '地球製骨片', cosmeticId: 'frame-bone', grabRate: 0.74 },
-    { emoji: '👁', label: '第三の眼', cosmeticId: 'fx-glimpse', grabRate: 0.62 },
-    { emoji: '🌑', label: '暗黒の欠片', cosmeticId: 'bg-void', grabRate: 0.62 },
-    { emoji: '🛸', label: 'エーテル結晶', cosmeticId: 'frame-ether', grabRate: 0.58 },
-    { emoji: '🔗', label: '鉤爪の欠片', cosmeticId: 'title-migo', grabRate: 0.58 }
-  ];
+  const MIGO_PINK = '#e8575f';
+  const MIGO_PINK_LIGHT = '#f47a82';
+  const MIGO_PINK_DARK = '#b83d48';
+  const MIGO_HEAD = '#3a3538';
+  const MIGO_GLOW = 'rgba(232, 87, 95, 0.38)';
 
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -54,6 +38,10 @@
   const resultTitle = document.getElementById('resultTitle');
   const resultText = document.getElementById('resultText');
   const resultBtn = document.getElementById('resultBtn');
+  const collectionProgress = document.getElementById('collectionProgress');
+
+  const mascotImg = new Image();
+  mascotImg.src = 'assets/migo-mascot.png';
 
   const session = {
     playerName: '',
@@ -65,30 +53,34 @@
 
   let allPcs = [];
   let balanceLoading = false;
+  let animTime = 0;
 
   const state = {
     running: false,
     busy: false,
     played: false,
     craneX: W / 2,
-    ropeY: 48,
+    ropeY: 52,
     clawOpen: true,
     held: null,
     prizes: [],
     moveLeft: false,
     moveRight: false,
-    headHue: 0.55
+    shake: 0,
+    particles: [],
+    loopActive: false
   };
 
-  const ROPE_MIN = 48;
-  const ROPE_MAX = 316;
-  const GRAB_Y_OFFSET = 36;
+  const ROPE_MIN = 52;
+  const ROPE_MAX = 372;
+  const GRAB_Y_OFFSET = 34;
   const GRAB_DY = 32;
   const PRIZE_COLS = 4;
-  const PRIZE_ROW_Y = [322, 352];
-  const ARM_SPEED = 3.2;
-  const DROP_SPEED = 2.4;
-  const ALIGN_PX = 26;
+  const PRIZE_ROW_GAP = 21;
+  const PRIZE_BASE_Y = 318;
+  const ARM_SPEED = 3.4;
+  const DROP_SPEED = 2.6;
+  const ALIGN_PX = 24;
 
   function buildGasUrl(type, params = {}) {
     if (!GAS_ENDPOINT) return '';
@@ -198,7 +190,7 @@
     } else if (!result.ok) {
       updateCoinDisplay(0);
     } else {
-      updateCoinDisplay(result.data.balance || 0);
+      updateCoinDisplay(result.data.balance);
     }
     validateForm();
   }
@@ -212,22 +204,41 @@
     redeemBtn.disabled = !name || balanceLoading;
   }
 
+  function ownedBaseCount(cosmetics) {
+    const set = new Set(cosmetics || []);
+    return (MC.BASE_IDS || []).filter(id => set.has(id)).length;
+  }
+
   function showPcCosmetics(pcId) {
     const pc = allPcs.find(p => p.id === pcId);
     const panel = document.getElementById('collectionPanel');
     const list = document.getElementById('collectionList');
     const cosmetics = (pc && pc.cosmetics) || session.cosmetics || [];
+    const owned = ownedBaseCount(cosmetics);
+    const hasComp = cosmetics.indexOf(COMP_ID) >= 0;
+
     if (!cosmetics.length) {
       panel.hidden = true;
       list.innerHTML = '';
+      if (collectionProgress) collectionProgress.textContent = '';
       return;
     }
+
     panel.hidden = false;
-    list.innerHTML = cosmetics.map(id => {
+    if (collectionProgress) {
+      collectionProgress.textContent = hasComp
+        ? `${BASE_COUNT}/${BASE_COUNT} コンプ！ ミ＝ゴの翼を獲得済み`
+        : `コレクション ${owned}/${BASE_COUNT} — 全種でコンプボーナス`;
+    }
+
+    const allIds = [...new Set(cosmetics)];
+    list.innerHTML = allIds.map(id => {
       const prize = PRIZES.find(p => p.cosmeticId === id);
-      const emoji = prize ? prize.emoji : (id === 'frame-migo-wing' ? '🦇' : '✨');
-      const label = COSMETIC_LABELS[id] || id;
-      return `<li title="${escapeHtml(label)}">${emoji}</li>`;
+      const meta = MC.META && MC.META[id];
+      const emoji = prize ? prize.emoji : (meta ? meta.emoji : (id === COMP_ID ? '🦇' : '✨'));
+      const label = COSMETIC_LABELS[id] || (meta && meta.label) || id;
+      const ownedClass = (MC.BASE_IDS || []).indexOf(id) >= 0 || id === COMP_ID ? ' is-owned' : '';
+      return `<li class="${ownedClass.trim()}" title="${escapeHtml(label)}">${emoji}</li>`;
     }).join('');
   }
 
@@ -260,11 +271,14 @@
     validateForm();
   }
 
+  function prizeRowCount() {
+    return Math.ceil(PRIZES.length / PRIZE_COLS);
+  }
 
   function initPrizes() {
-    const cols = PRIZE_COLS;
-    const startX = 30;
-    const gapX = (W - startX * 2) / (cols - 1);
+    const rows = prizeRowCount();
+    const startX = 28;
+    const gapX = (W - startX * 2) / (PRIZE_COLS - 1);
     const bottomOffsetX = gapX / 2;
     const order = PRIZES.map((_, i) => i);
     for (let i = order.length - 1; i > 0; i--) {
@@ -274,14 +288,16 @@
       order[j] = tmp;
     }
     state.prizes = order.map((prizeIndex, slot) => {
-      const col = slot % cols;
-      const row = Math.floor(slot / cols);
-      const x = startX + col * gapX + (row === 1 ? bottomOffsetX : 0);
+      const col = slot % PRIZE_COLS;
+      const row = Math.floor(slot / PRIZE_COLS);
+      const x = startX + col * gapX + (row % 2 === 1 ? bottomOffsetX : 0);
+      const y = PRIZE_BASE_Y + row * PRIZE_ROW_GAP;
       return {
         ...PRIZES[prizeIndex],
         x,
-        y: PRIZE_ROW_Y[row],
-        taken: false
+        y,
+        taken: false,
+        bob: Math.random() * Math.PI * 2
       };
     });
   }
@@ -305,136 +321,247 @@
     return best;
   }
 
+  function spawnParticles(x, y, color) {
+    for (let i = 0; i < 14; i++) {
+      const angle = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+      state.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * (1.2 + Math.random() * 2.5),
+        vy: Math.sin(angle) * (1.2 + Math.random() * 2.5) - 1,
+        life: 28 + Math.floor(Math.random() * 16),
+        color
+      });
+    }
+  }
+
+  function tickParticles() {
+    state.particles = state.particles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.life -= 1;
+      return p.life > 0;
+    });
+  }
+
   function drawStarfield() {
-    ctx.fillStyle = '#121018';
+    ctx.fillStyle = '#0e0c14';
     ctx.fillRect(0, 0, W, H);
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 48; i++) {
       const sx = (i * 97 + 13) % W;
-      const sy = (i * 53 + 7) % 260;
-      ctx.fillStyle = `rgba(255,255,255,${0.08 + (i % 5) * 0.04})`;
+      const sy = (i * 53 + 7) % 280;
+      const twinkle = 0.06 + Math.sin(animTime * 2 + i) * 0.04;
+      ctx.fillStyle = `rgba(255,255,255,${twinkle + (i % 5) * 0.03})`;
       ctx.fillRect(sx, sy, 1, 1);
     }
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, 'rgba(80, 40, 60, 0.15)');
-    grad.addColorStop(1, 'rgba(10, 8, 16, 0.9)');
+    grad.addColorStop(0, 'rgba(232, 87, 95, 0.08)');
+    grad.addColorStop(0.45, 'rgba(40, 20, 35, 0.2)');
+    grad.addColorStop(1, 'rgba(8, 6, 12, 0.95)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
   }
 
   function drawCabinet() {
-    ctx.fillStyle = '#0e0c14';
-    ctx.fillRect(10, 268, W - 20, H - 278);
-    ctx.strokeStyle = 'rgba(212, 168, 176, 0.22)';
+    const pitTop = 278;
+    ctx.fillStyle = '#0c0a12';
+    ctx.fillRect(8, pitTop, W - 16, H - pitTop - 8);
+    ctx.strokeStyle = 'rgba(232, 87, 95, 0.28)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(10, 268, W - 20, H - 278);
+    ctx.strokeRect(8, pitTop, W - 16, H - pitTop - 8);
 
-    ctx.fillStyle = 'rgba(212, 168, 176, 0.08)';
-    ctx.fillRect(14, 272, W - 28, 8);
+    ctx.fillStyle = 'rgba(232, 87, 95, 0.1)';
+    ctx.fillRect(12, pitTop + 4, W - 24, 10);
 
-    ctx.fillStyle = '#1a1420';
-    ctx.fillRect(W - 52, 280, 38, H - 292);
-    ctx.strokeStyle = MIGO_SHELL_DARK;
-    ctx.strokeRect(W - 52, 280, 38, H - 292);
-    ctx.fillStyle = MIGO_SHELL;
-    ctx.font = '9px sans-serif';
+    const glassGrad = ctx.createLinearGradient(0, pitTop, 0, pitTop + 80);
+    glassGrad.addColorStop(0, 'rgba(255, 220, 230, 0.06)');
+    glassGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = glassGrad;
+    ctx.fillRect(12, pitTop + 4, W - 24, 80);
+
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(W - 54, pitTop + 12, 40, H - pitTop - 24);
+    ctx.strokeStyle = MIGO_PINK_DARK;
+    ctx.strokeRect(W - 54, pitTop + 12, 40, H - pitTop - 24);
+    ctx.fillStyle = MIGO_PINK;
+    ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('菌糸', W - 33, 296);
-    ctx.fillText('OUT', W - 33, 308);
+    ctx.fillText('菌糸', W - 34, pitTop + 30);
+    ctx.fillText('OUT', W - 34, pitTop + 44);
+
+    if (mascotImg.complete && mascotImg.naturalWidth) {
+      const mw = 52;
+      const mh = 52;
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(mascotImg, 14, 8, mw, mh);
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawPrizes() {
     state.prizes.forEach(p => {
       if (p.taken && state.held !== p) return;
+      const bob = Math.sin(animTime * 2.2 + p.bob) * 2;
       const px = p === state.held ? state.craneX : p.x;
-      const py = p === state.held ? state.ropeY + 38 : p.y;
-      ctx.font = '22px sans-serif';
+      const py = (p === state.held ? state.ropeY + 36 : p.y) + bob;
+      const size = 17;
+
+      ctx.font = `${size}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.shadowColor = MIGO_GLOW;
+      ctx.shadowBlur = 6;
       ctx.fillText(p.emoji, px, py);
+      ctx.shadowBlur = 0;
+
+      if (!p.taken) {
+        ctx.fillStyle = 'rgba(232, 87, 95, 0.12)';
+        ctx.beginPath();
+        ctx.ellipse(px, py + 10, 10, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     });
   }
 
-  function drawMigoArm(x, y, open) {
-    const pinch = open ? 1 : 0.5;
+  function drawSegmentedArm(x, y) {
+    const segments = 4;
+    const segLen = y / segments;
+    for (let i = 0; i < segments; i++) {
+      const y0 = i * segLen;
+      const y1 = (i + 1) * segLen;
+      const wobble = Math.sin(animTime * 3 + i) * 1.5;
+      ctx.strokeStyle = i % 2 === 0 ? MIGO_PINK : MIGO_PINK_LIGHT;
+      ctx.lineWidth = 5 - i * 0.3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x + wobble, y0);
+      ctx.lineTo(x - wobble * 0.5, y1);
+      ctx.stroke();
 
-    ctx.strokeStyle = MIGO_SHELL_DARK;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, y);
-    ctx.stroke();
+      if (i < segments - 1) {
+        ctx.fillStyle = MIGO_PINK_DARK;
+        ctx.beginPath();
+        ctx.ellipse(x, y1, 5, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
-    ctx.strokeStyle = 'rgba(180, 120, 140, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    for (let s = 0; s < 3; s++) {
+      const spotY = segLen * (0.4 + s * 0.55);
+      ctx.fillStyle = 'rgba(184, 61, 72, 0.55)';
+      ctx.beginPath();
+      ctx.arc(x + (s % 2 ? 3 : -3), spotY, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
-    const hubY = y + 4;
-    ctx.fillStyle = MIGO_SHELL_DARK;
+  function drawTentacleHead(x, y, scale) {
+    const r = 11 * scale;
+    ctx.fillStyle = MIGO_HEAD;
     ctx.beginPath();
-    ctx.ellipse(x, hubY, 14, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, r, r * 0.85, 0, 0, Math.PI * 2);
     ctx.fill();
+    for (let i = 0; i < 8; i++) {
+      const ang = (Math.PI * 2 * i) / 8 + animTime * 0.8;
+      const len = 5 + Math.sin(animTime * 4 + i) * 1.5;
+      ctx.strokeStyle = '#5a5558';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang) * r * 0.7, y + Math.sin(ang) * r * 0.55);
+      ctx.lineTo(x + Math.cos(ang) * (r + len), y + Math.sin(ang) * (r + len * 0.8));
+      ctx.stroke();
+    }
+  }
+
+  function drawMigoArm(x, y, open) {
+    const pinch = open ? 1 : 0.45;
+    drawSegmentedArm(x, y);
+
+    const hubY = y + 6;
+    drawTentacleHead(x, hubY - 10, open ? 0.75 : 0.95);
+
+    ctx.fillStyle = MIGO_PINK_DARK;
+    ctx.beginPath();
+    ctx.ellipse(x, hubY, 15, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = MIGO_PINK;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
     function drawClaw(side) {
       const dir = side === 'left' ? -1 : 1;
-      const reach = (open ? 26 : 16) * pinch;
+      const reach = (open ? 28 : 14) * pinch;
       const tipX = x + dir * reach;
-      const tipY = hubY + 28;
-      const midX = x + dir * (reach * 0.55);
-      const midY = hubY + 14;
+      const tipY = hubY + 30;
+      const midX = x + dir * (reach * 0.5);
+      const midY = hubY + 16;
+      const jointX = x + dir * (reach * 0.78);
+      const jointY = hubY + 24;
 
-      ctx.strokeStyle = MIGO_SHELL;
-      ctx.lineWidth = 5;
+      ctx.strokeStyle = MIGO_PINK;
+      ctx.lineWidth = 6;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(x, hubY + 4);
-      ctx.quadraticCurveTo(midX, midY, tipX, tipY);
+      ctx.moveTo(x + dir * 4, hubY + 2);
+      ctx.quadraticCurveTo(midX, midY, jointX, jointY);
+      ctx.lineTo(tipX, tipY);
       ctx.stroke();
 
-      ctx.fillStyle = MIGO_SHELL;
+      ctx.fillStyle = MIGO_PINK_LIGHT;
       ctx.beginPath();
       ctx.moveTo(tipX, tipY);
-      ctx.lineTo(tipX - dir * 6, tipY + 10);
-      ctx.lineTo(tipX + dir * 2, tipY + 6);
+      ctx.lineTo(tipX - dir * 8, tipY + 12);
+      ctx.lineTo(tipX + dir * 3, tipY + 8);
       ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = MIGO_PINK_DARK;
+      ctx.beginPath();
+      ctx.arc(jointX, jointY, 3.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
     drawClaw('left');
     drawClaw('right');
+  }
 
-    if (!open) {
-      const headX = x;
-      const headY = hubY - 6;
-      ctx.fillStyle = `hsla(${state.headHue * 360}, 45%, 72%, 0.85)`;
+  function drawParticlesLayer() {
+    state.particles.forEach(p => {
+      ctx.globalAlpha = Math.min(1, p.life / 20);
+      ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.ellipse(headX, headY, 10, 7, 0, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = MIGO_SHELL_DARK;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = '#2a2030';
-      ctx.beginPath();
-      ctx.ellipse(headX - 4, headY - 1, 2, 3, -0.3, 0, Math.PI * 2);
-      ctx.ellipse(headX + 4, headY - 1, 2, 3, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    });
+    ctx.globalAlpha = 1;
   }
 
   function drawMachine() {
+    const shakeX = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
+    const shakeY = state.shake > 0 ? (Math.random() - 0.5) * state.shake * 0.6 : 0;
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
     drawStarfield();
     drawCabinet();
     drawPrizes();
     drawMigoArm(state.craneX, state.ropeY, state.clawOpen);
+    drawParticlesLayer();
 
     if (state.running && !state.busy) {
       ctx.fillStyle = MIGO_GLOW;
-      ctx.fillRect(state.craneX - 20, state.ropeY + 20, 40, 4);
+      ctx.fillRect(state.craneX - 22, state.ropeY + 24, 44, 5);
+      ctx.strokeStyle = 'rgba(232, 87, 95, 0.35)';
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.moveTo(state.craneX, state.ropeY + 30);
+      ctx.lineTo(state.craneX, PRIZE_BASE_Y - 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
+
+    ctx.restore();
   }
 
   function escapeHtml(s) {
@@ -477,6 +604,9 @@
     if (won && prize) {
       resultTitle.textContent = '菌糸GET！';
       body = `${prize.emoji} ${prize.label} を ${session.playerName} のPCに装備しました。台帳で確認しよう。`;
+      if (saveResult && saveResult.ok && saveResult.data && saveResult.data.comp_granted) {
+        body += ' 🦇 全種コンプ！ミ＝ゴの翼が付与されました！';
+      }
     } else {
       resultTitle.textContent = '空振り…';
       body = 'ミ＝ゴの鉤爪は何も掴めなかった。コインは消費済みです。';
@@ -504,28 +634,33 @@
     }
 
     const target = prizeUnderClaw(state.craneX, state.ropeY);
-    const aligned = !!target;
     state.clawOpen = false;
-    state.headHue = 0.85;
+    state.shake = 4;
     drawMachine();
-    await wait(300);
+    await wait(280);
+    state.shake = 0;
 
     const rate = target ? (target.grabRate || 0.7) : 0;
-    const won = !!(target && aligned && Math.random() < rate);
+    const won = !!(target && Math.random() < rate);
 
     if (won) {
       state.held = target;
       target.taken = true;
+      spawnParticles(state.craneX, state.ropeY + 36, MIGO_PINK_LIGHT);
+    } else if (target) {
+      state.shake = 6;
+      await wait(120);
+      state.shake = 0;
     }
 
     while (state.ropeY > ROPE_MIN) {
-      state.ropeY -= DROP_SPEED * 0.9;
+      state.ropeY -= DROP_SPEED * 0.92;
       drawMachine();
       await wait(16);
     }
 
     if (state.held) {
-      const destX = W - 33;
+      const destX = W - 34;
       while (Math.abs(state.craneX - destX) > 2) {
         state.craneX += Math.sign(destX - state.craneX) * ARM_SPEED;
         drawMachine();
@@ -533,11 +668,11 @@
       }
       state.craneX = destX;
       state.clawOpen = true;
-      state.headHue = 0.55;
       const prize = state.held;
       state.held = null;
+      spawnParticles(destX, ROPE_MIN + 40, MIGO_PINK);
       drawMachine();
-      await wait(220);
+      await wait(260);
       while (state.craneX > W / 2) {
         state.craneX -= ARM_SPEED;
         drawMachine();
@@ -548,10 +683,8 @@
       showResult(true, prize, saveResult);
     } else {
       state.clawOpen = true;
-      state.headHue = 0.35;
       drawMachine();
-      await wait(120);
-      state.headHue = 0.55;
+      await wait(140);
       state.played = true;
       const saveResult = await finishPlay(false);
       showResult(false, null, saveResult);
@@ -561,11 +694,19 @@
   }
 
   function gameLoop() {
-    if (!state.running) return;
-    if (!state.busy) {
-      if (state.moveLeft) state.craneX = Math.max(28, state.craneX - ARM_SPEED);
-      if (state.moveRight) state.craneX = Math.min(W - 28, state.craneX + ARM_SPEED);
+    animTime += 0.016;
+    tickParticles();
+    if (state.shake > 0) state.shake *= 0.85;
+
+    if (state.running && !state.busy) {
+      if (state.moveLeft) state.craneX = Math.max(26, state.craneX - ARM_SPEED);
+      if (state.moveRight) state.craneX = Math.min(W - 26, state.craneX + ARM_SPEED);
+    } else if (!state.running) {
+      state.craneX = W / 2 + Math.sin(animTime * 0.9) * 10;
+      state.ropeY = ROPE_MIN + Math.sin(animTime * 1.4) * 4;
+      state.clawOpen = true;
     }
+
     drawMachine();
     requestAnimationFrame(gameLoop);
   }
@@ -626,10 +767,9 @@
     state.ropeY = ROPE_MIN;
     state.clawOpen = true;
     state.held = null;
-    state.headHue = 0.55;
+    state.particles = [];
     initPrizes();
     document.getElementById('btnDrop').disabled = false;
-    gameLoop();
   }
 
   function returnToStart() {
@@ -639,7 +779,6 @@
     state.running = false;
     resultTitle.textContent = '結果';
     resultText.textContent = '';
-    drawMachine();
     refreshBalance();
     validateForm();
   }
@@ -679,7 +818,10 @@
 
   async function boot() {
     initPrizes();
-    drawMachine();
+    if (!state.loopActive) {
+      state.loopActive = true;
+      gameLoop();
+    }
     allPcs = await loadPcs();
     updatePcSelect();
     await refreshBalance();

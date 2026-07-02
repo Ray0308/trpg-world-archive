@@ -1246,12 +1246,12 @@ function renderScenariosView() {
 
 /* ---- PC Views ---- */
 
-const MIGO_TITLE_LABELS = {
+const MIGO_TITLE_LABELS = (window.MigoCosmetics && window.MigoCosmetics.TITLE_LABELS) || {
   'title-whisper': '囁きの観測者',
   'title-migo': '菌類の取引人'
 };
 
-const MIGO_COSMETIC_META = {
+const MIGO_COSMETIC_META = (window.MigoCosmetics && window.MigoCosmetics.META) || {
   'frame-fungal': { emoji: '🍄', label: 'ユゴス菌糸', slot: '枠' },
   'frame-bone': { emoji: '🦴', label: '地球製骨片', slot: '枠' },
   'frame-ether': { emoji: '🛸', label: 'エーテル結晶', slot: '枠' },
@@ -1263,7 +1263,7 @@ const MIGO_COSMETIC_META = {
   'fx-glimpse': { emoji: '👁', label: '第三の眼', slot: '光' }
 };
 
-const MIGO_COSMETIC_SLOT = {
+const MIGO_COSMETIC_SLOT = (window.MigoCosmetics && window.MigoCosmetics.SLOT) || {
   'frame-fungal': 'frame',
   'frame-bone': 'frame',
   'frame-ether': 'frame',
@@ -1322,7 +1322,7 @@ function renderPcCosmeticsSection(pc) {
   return `
       <section class="detail-section pc-cosme-section">
         <h2 class="section-heading">菌糸コスメ</h2>
-        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品コレクション。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
+        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品コレクション（全20種+コンプ）。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
         <ul class="pc-cosme-chips">${chips}</ul>
       </section>
   `;

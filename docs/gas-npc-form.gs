@@ -1562,7 +1562,10 @@ function saveChaugnerScore_(ss, name, score) {
 
 const MIGO_BASE_COSMETICS_ = [
   'frame-fungal', 'bg-nebula', 'title-whisper', 'frame-bone',
-  'fx-glimpse', 'bg-void', 'frame-ether', 'title-migo'
+  'fx-glimpse', 'bg-void', 'frame-ether', 'title-migo',
+  'frame-coral', 'bg-mycelium', 'title-deep', 'frame-spore',
+  'bg-plateau', 'title-probe', 'frame-rune', 'bg-star',
+  'title-dream', 'fx-buzz', 'fx-pollen', 'fx-tentacle'
 ];
 
 const MIGO_COMP_COSMETIC_ = 'frame-migo-wing';
@@ -1571,12 +1574,24 @@ const MIGO_COSMETIC_SLOT_ = {
   'frame-fungal': 'frame',
   'frame-bone': 'frame',
   'frame-ether': 'frame',
+  'frame-coral': 'frame',
+  'frame-spore': 'frame',
+  'frame-rune': 'frame',
   'frame-migo-wing': 'frame',
   'bg-nebula': 'bg',
   'bg-void': 'bg',
+  'bg-mycelium': 'bg',
+  'bg-plateau': 'bg',
+  'bg-star': 'bg',
   'title-whisper': 'title',
   'title-migo': 'title',
-  'fx-glimpse': 'fx'
+  'title-deep': 'title',
+  'title-probe': 'title',
+  'title-dream': 'title',
+  'fx-glimpse': 'fx',
+  'fx-buzz': 'fx',
+  'fx-pollen': 'fx',
+  'fx-tentacle': 'fx'
 };
 
 const MIGO_PLAY_COST_ = 1;
@@ -2001,6 +2016,8 @@ function finishMigoPlay_(ss, playerName, playId, won, cosmeticId) {
     if (!isValidMigoCosmeticId_(cleanCosmetic) || MIGO_BASE_COSMETICS_.indexOf(cleanCosmetic) < 0) {
       throw new Error('cosmetic_id が無効です');
     }
+    const beforeCosmetics = getMigoCosmeticsForPc_(ss, pcId);
+    const hadComp = beforeCosmetics.indexOf(MIGO_COMP_COSMETIC_) >= 0;
     sheet.getRange(play.rowIndex, statusCol).setValue('won');
     sheet.getRange(play.rowIndex, cosmeticCol).setValue(cleanCosmetic);
     const cosmetics = unlockMigoCosmeticForPc_(ss, pcId, name, cleanCosmetic);
@@ -2010,7 +2027,8 @@ function finishMigoPlay_(ss, playerName, playId, won, cosmeticId) {
       won: true,
       pc_id: pcId,
       cosmetic_id: cleanCosmetic,
-      cosmetics: cosmetics
+      cosmetics: cosmetics,
+      comp_granted: !hadComp && cosmetics.indexOf(MIGO_COMP_COSMETIC_) >= 0
     };
   }
 

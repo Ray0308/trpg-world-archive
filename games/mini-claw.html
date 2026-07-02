@@ -8,7 +8,7 @@
   <title>ミ＝ゴキャッチャー — YOKOFOLIA</title>
   <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="mini-claw.css?v=20260629">
+  <link rel="stylesheet" href="mini-claw.css?v=20260702">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
     <main class="mc-main">
       <div class="mc-stage-wrap">
         <div class="mc-game-area" id="gameArea">
-          <canvas id="gameCanvas" class="mc-canvas" width="360" height="420" draggable="false" aria-label="ミ＝ゴキャッチャー"></canvas>
+          <canvas id="gameCanvas" class="mc-canvas" width="360" height="500" draggable="false" aria-label="ミ＝ゴキャッチャー"></canvas>
         </div>
 
         <div class="mc-controls" id="gameControls" hidden>
@@ -40,7 +40,7 @@
           <div class="mc-panel">
             <p class="mc-kicker">YOKOFOLIA — Mi-go</p>
             <h2 class="mc-title">ミ＝ゴキャッチャー</h2>
-            <p class="mc-lore">ユゴスよりの菌類、ミ＝ゴの鉤爪が景品を掴む。取った景品は選んだ<strong>PC</strong>の台帳表示が豪華になる。</p>
+            <p class="mc-lore">ユゴスよりの菌類、<strong>薄桃色のミ＝ゴ</strong>の鉤爪が景品を掴む。取った景品は選んだ<strong>PC</strong>の台帳表示が豪華になる。</p>
 
             <form class="mc-form" id="startForm">
               <label class="mc-field">
@@ -67,6 +67,7 @@
 
               <ul class="mc-rules">
                 <li>コイン <strong>1枚</strong> で1回プレイ</li>
+                <li>景品は全 <strong>20種</strong> — コンプでミ＝ゴの翼</li>
                 <li><strong>◀ ▶</strong> … ミ＝ゴの腕を左右へ</li>
                 <li><strong>爪</strong> … 鉤爪を降下して掴む</li>
               </ul>
@@ -87,6 +88,7 @@
 
       <section class="mc-collection" id="collectionPanel" hidden>
         <h2 class="mc-collection-title">このPCのコスメ</h2>
+        <p class="mc-collection-progress" id="collectionProgress"></p>
         <ul class="mc-collection-list" id="collectionList"></ul>
       </section>
     </main>
@@ -97,6 +99,7 @@
   </div>
 
   <script src="../js/config.js"></script>
-  <script src="mini-claw.js?v=20260701"></script>
+  <script src="../js/migo-cosmetics.js?v=20260702"></script>
+  <script src="mini-claw.js?v=20260702"></script>
 </body>
 </html>
