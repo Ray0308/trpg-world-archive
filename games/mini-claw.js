@@ -70,12 +70,12 @@
   };
 
   const ROPE_MIN = 52;
-  const ROPE_MAX = 372;
+  const ROPE_MAX = 336;
   const GRAB_Y_OFFSET = 34;
   const GRAB_DY = 32;
   const PRIZE_BASE_Y = 364;
   const DISPLAY_PRIZE_COUNT = 5;
-  const PRIZE_DRIFT_AMPLITUDE = 10;
+  const PRIZE_DRIFT_AMPLITUDE = 6;
   const ARM_SPEED = 3.4;
   const DROP_SPEED = 2.6;
   const ALIGN_PX = 24;
@@ -296,14 +296,15 @@
   function prizeCurrentX(prize) {
     if (prize === state.held) return state.craneX;
     const phase = animTime * prize.driftSpeed + prize.driftPhase;
-    return prize.baseX + Math.sin(phase) * prize.driftAmp;
+    const rawX = prize.baseX + Math.sin(phase) * prize.driftAmp;
+    return Math.max(24, Math.min(W - 24, rawX));
   }
 
   function initPrizes(pcId) {
     const visible = visiblePrizesForPc(pcId);
     const count = Math.max(visible.length, 1);
     const startX = 28;
-    const endX = W - 64;
+    const endX = W - 28;
     const gapX = count > 1 ? (endX - startX) / (count - 1) : 0;
     state.prizes = visible.map((prize, slot) => {
       const baseX = startX + slot * gapX;
@@ -384,30 +385,22 @@
 
   function drawCabinet() {
     const pitTop = 278;
-    ctx.fillStyle = '#0c0a12';
+    ctx.fillStyle = '#151224';
     ctx.fillRect(8, pitTop, W - 16, H - pitTop - 8);
     ctx.strokeStyle = 'rgba(232, 87, 95, 0.28)';
     ctx.lineWidth = 2;
     ctx.strokeRect(8, pitTop, W - 16, H - pitTop - 8);
 
-    ctx.fillStyle = 'rgba(232, 87, 95, 0.1)';
+    ctx.fillStyle = 'rgba(232, 87, 95, 0.14)';
     ctx.fillRect(12, pitTop + 4, W - 24, 10);
 
     const glassGrad = ctx.createLinearGradient(0, pitTop, 0, pitTop + 80);
-    glassGrad.addColorStop(0, 'rgba(255, 220, 230, 0.06)');
-    glassGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    glassGrad.addColorStop(0, 'rgba(255, 220, 230, 0.12)');
+    glassGrad.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
     ctx.fillStyle = glassGrad;
     ctx.fillRect(12, pitTop + 4, W - 24, 80);
 
-    ctx.fillStyle = '#181420';
-    ctx.fillRect(W - 54, pitTop + 12, 40, H - pitTop - 24);
-    ctx.strokeStyle = MIGO_PINK_DARK;
-    ctx.strokeRect(W - 54, pitTop + 12, 40, H - pitTop - 24);
-    ctx.fillStyle = MIGO_PINK;
-    ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('菌糸', W - 34, pitTop + 30);
-    ctx.fillText('OUT', W - 34, pitTop + 44);
 
   }
 
@@ -419,12 +412,14 @@
       const py = (p === state.held ? state.ropeY + 36 : p.y) + bob;
       const size = 21;
 
+      // Windows canvas emoji can look desaturated; keep a bright base tint.
+      ctx.fillStyle = '#ffeef3';
       ctx.font = `${size}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = MIGO_GLOW;
-      ctx.shadowBlur = 12;
-      ctx.globalAlpha = 0.98;
+      ctx.shadowColor = 'rgba(255, 185, 205, 0.7)';
+      ctx.shadowBlur = 16;
+      ctx.globalAlpha = 1;
       ctx.fillText(p.emoji, px, py);
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
