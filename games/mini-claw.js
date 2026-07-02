@@ -39,9 +39,7 @@
   const resultText = document.getElementById('resultText');
   const resultBtn = document.getElementById('resultBtn');
   const collectionProgress = document.getElementById('collectionProgress');
-
-  const mascotImg = new Image();
-  mascotImg.src = 'assets/migo-mascot.png';
+  const loadingScreen = document.getElementById('loadingScreen');
 
   const session = {
     playerName: '',
@@ -75,9 +73,9 @@
   const ROPE_MAX = 372;
   const GRAB_Y_OFFSET = 34;
   const GRAB_DY = 32;
-  const PRIZE_COLS = 4;
-  const PRIZE_ROW_GAP = 21;
-  const PRIZE_BASE_Y = 318;
+  const PRIZE_BASE_Y = 364;
+  const DISPLAY_PRIZE_COUNT = 5;
+  const PRIZE_DRIFT_AMPLITUDE = 10;
   const ARM_SPEED = 3.4;
   const DROP_SPEED = 2.6;
   const ALIGN_PX = 24;
@@ -271,33 +269,53 @@
     validateForm();
   }
 
-  function prizeRowCount() {
-    return Math.ceil(PRIZES.length / PRIZE_COLS);
+  function pickRandomItems_(items, count) {
+    const pool = items.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = pool[i];
+      pool[i] = pool[j];
+      pool[j] = tmp;
+    }
+    return pool.slice(0, Math.min(count, pool.length));
   }
 
-  function initPrizes() {
-    const rows = prizeRowCount();
-    const startX = 28;
-    const gapX = (W - startX * 2) / (PRIZE_COLS - 1);
-    const bottomOffsetX = gapX / 2;
-    const order = PRIZES.map((_, i) => i);
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const tmp = order[i];
-      order[i] = order[j];
-      order[j] = tmp;
+  function visiblePrizesForPc(pcId) {
+    const pc = allPcs.find(p => p.id === pcId);
+    const ownedSet = new Set(((pc && pc.cosmetics) || session.cosmetics || []).filter(id => id !== COMP_ID));
+    const unowned = PRIZES.filter(p => !ownedSet.has(p.cosmeticId));
+    const owned = PRIZES.filter(p => ownedSet.has(p.cosmeticId));
+    const picked = pickRandomItems_(unowned, DISPLAY_PRIZE_COUNT);
+    if (picked.length < DISPLAY_PRIZE_COUNT) {
+      const fill = pickRandomItems_(owned, DISPLAY_PRIZE_COUNT - picked.length);
+      fill.forEach(item => picked.push(item));
     }
-    state.prizes = order.map((prizeIndex, slot) => {
-      const col = slot % PRIZE_COLS;
-      const row = Math.floor(slot / PRIZE_COLS);
-      const x = startX + col * gapX + (row % 2 === 1 ? bottomOffsetX : 0);
-      const y = PRIZE_BASE_Y + row * PRIZE_ROW_GAP;
+    return picked;
+  }
+
+  function prizeCurrentX(prize) {
+    if (prize === state.held) return state.craneX;
+    const phase = animTime * prize.driftSpeed + prize.driftPhase;
+    return prize.baseX + Math.sin(phase) * prize.driftAmp;
+  }
+
+  function initPrizes(pcId) {
+    const visible = visiblePrizesForPc(pcId);
+    const count = Math.max(visible.length, 1);
+    const startX = 28;
+    const endX = W - 64;
+    const gapX = count > 1 ? (endX - startX) / (count - 1) : 0;
+    state.prizes = visible.map((prize, slot) => {
+      const baseX = startX + slot * gapX;
       return {
-        ...PRIZES[prizeIndex],
-        x,
-        y,
+        ...prize,
+        baseX,
+        y: PRIZE_BASE_Y + (slot % 2 === 0 ? 0 : 8),
         taken: false,
-        bob: Math.random() * Math.PI * 2
+        bob: Math.random() * Math.PI * 2,
+        driftAmp: PRIZE_DRIFT_AMPLITUDE * (0.7 + Math.random() * 0.6),
+        driftSpeed: 1.1 + Math.random() * 0.8,
+        driftPhase: Math.random() * Math.PI * 2
       };
     });
   }
@@ -308,7 +326,8 @@
     let bestScore = Infinity;
     state.prizes.forEach(p => {
       if (p.taken) return;
-      const dx = Math.abs(p.x - x);
+      const px = prizeCurrentX(p);
+      const dx = Math.abs(px - x);
       if (dx > ALIGN_PX) return;
       const dy = Math.abs(p.y - grabY);
       if (dy > GRAB_DY) return;
@@ -390,35 +409,30 @@
     ctx.fillText('菌糸', W - 34, pitTop + 30);
     ctx.fillText('OUT', W - 34, pitTop + 44);
 
-    if (mascotImg.complete && mascotImg.naturalWidth) {
-      const mw = 52;
-      const mh = 52;
-      ctx.globalAlpha = 0.92;
-      ctx.drawImage(mascotImg, 14, 8, mw, mh);
-      ctx.globalAlpha = 1;
-    }
   }
 
   function drawPrizes() {
     state.prizes.forEach(p => {
       if (p.taken && state.held !== p) return;
       const bob = Math.sin(animTime * 2.2 + p.bob) * 2;
-      const px = p === state.held ? state.craneX : p.x;
+      const px = prizeCurrentX(p);
       const py = (p === state.held ? state.ropeY + 36 : p.y) + bob;
-      const size = 17;
+      const size = 21;
 
       ctx.font = `${size}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = MIGO_GLOW;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 12;
+      ctx.globalAlpha = 0.98;
       ctx.fillText(p.emoji, px, py);
       ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
 
       if (!p.taken) {
-        ctx.fillStyle = 'rgba(232, 87, 95, 0.12)';
+        ctx.fillStyle = 'rgba(232, 87, 95, 0.2)';
         ctx.beginPath();
-        ctx.ellipse(px, py + 10, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(px, py + 11, 12, 4, 0, 0, Math.PI * 2);
         ctx.fill();
       }
     });
@@ -556,7 +570,7 @@
       ctx.setLineDash([3, 5]);
       ctx.beginPath();
       ctx.moveTo(state.craneX, state.ropeY + 30);
-      ctx.lineTo(state.craneX, PRIZE_BASE_Y - 8);
+      ctx.lineTo(state.craneX, PRIZE_BASE_Y - 18);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -768,7 +782,7 @@
     state.clawOpen = true;
     state.held = null;
     state.particles = [];
-    initPrizes();
+    initPrizes(pcId);
     document.getElementById('btnDrop').disabled = false;
   }
 
@@ -817,7 +831,8 @@
   });
 
   async function boot() {
-    initPrizes();
+    if (loadingScreen) loadingScreen.hidden = false;
+    initPrizes('');
     if (!state.loopActive) {
       state.loopActive = true;
       gameLoop();
@@ -828,6 +843,7 @@
     if (!GAS_ENDPOINT) {
       setFormStatus('API未設定のためローカル表示のみです', 'warn');
     }
+    if (loadingScreen) loadingScreen.hidden = true;
   }
 
   boot();
