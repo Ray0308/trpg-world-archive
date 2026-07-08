@@ -1320,11 +1320,15 @@ function renderPcPortraitBlock(pc, isComplete) {
   if (!isComplete) return img;
   return `
     <div class="pc-complete-hero-visual">
-      <img src="games/assets/migo-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--left" width="108" height="108" decoding="async">
+      <div class="pc-complete-flank-frame pc-complete-flank-frame--left" aria-hidden="true">
+        <img src="games/assets/migo-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--left" width="96" height="96" decoding="async">
+      </div>
       <div class="pc-complete-portrait-frame">
         <div class="pc-complete-portrait-wrap">${img}</div>
       </div>
-      <img src="images/yokofolia-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--right" width="108" height="108" decoding="async">
+      <div class="pc-complete-flank-frame pc-complete-flank-frame--right" aria-hidden="true">
+        <img src="images/yokofolia-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--right" width="96" height="96" decoding="async">
+      </div>
     </div>`;
 }
 
