@@ -1392,6 +1392,7 @@ function renderPcPortraitBlock(pc, isComplete) {
         <img src="games/assets/migo-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--left" width="96" height="96" decoding="async">
       </div>
       <div class="pc-complete-portrait-frame">
+        <div class="pc-complete-portrait-wings" aria-hidden="true"></div>
         <div class="pc-complete-portrait-wrap">${img}</div>
       </div>
       <div class="pc-complete-flank-frame pc-complete-flank-frame--right" aria-hidden="true">
