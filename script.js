@@ -1365,10 +1365,10 @@ function renderPcCosmeticsSection(pc) {
     const meta = (window.MigoCosmetics && window.MigoCosmetics.META) || MIGO_COSMETIC_META;
     const baseIds = (window.MigoCosmetics && window.MigoCosmetics.BASE_IDS) || [];
     const owned = new Set(ids);
-    const catalogItems = baseIds.map(id => {
+    const catalogItems = baseIds.map((id, index) => {
       const itemMeta = meta[id] || { emoji: '✨', label: id, slot: '' };
       const isOwned = owned.has(id);
-      return `<li class="cosmetic-catalog-item${isOwned ? ' is-owned' : ' is-missing'}" title="${escapeAttr(itemMeta.label)}">
+      return `<li class="cosmetic-catalog-item${isOwned ? ' is-owned' : ' is-missing'}" style="--catalog-i: ${index}" title="${escapeAttr(itemMeta.label)}">
         <span class="cosmetic-catalog-emoji" aria-hidden="true">${itemMeta.emoji}</span>
         <span class="cosmetic-catalog-label">${escapeHtml(itemMeta.label)}</span>
         <span class="cosmetic-catalog-slot">${escapeHtml(itemMeta.slot || '')}</span>
