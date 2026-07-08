@@ -454,6 +454,16 @@ window.ArchiveNormalize = (function () {
     };
   }
 
+  function normalizeActiveCosmetics(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const out = {};
+    Object.keys(raw).forEach(key => {
+      const id = String(raw[key] || '').trim();
+      if (id) out[key] = id;
+    });
+    return out;
+  }
+
   function normalizePcRow(row) {
     return {
       id: row.id,
@@ -465,7 +475,8 @@ window.ArchiveNormalize = (function () {
       description: row['説明'] || row.description || '',
       affiliation: row.affiliation || row['所属'] || '',
       relatedNpcIds: splitIds(row.relatedNpcIds || row['関連NPC']),
-      cosmetics: Array.isArray(row.cosmetics) ? row.cosmetics.filter(Boolean) : []
+      cosmetics: Array.isArray(row.cosmetics) ? row.cosmetics.filter(Boolean) : [],
+      activeCosmetics: normalizeActiveCosmetics(row.active_cosmetics || row.activeCosmetics)
     };
   }
 
@@ -485,7 +496,8 @@ window.ArchiveNormalize = (function () {
       description: raw.description || '',
       affiliation: raw.affiliation || '',
       relatedNpcIds: splitIds(raw.relatedNpcIds),
-      cosmetics: Array.isArray(raw.cosmetics) ? raw.cosmetics.filter(Boolean) : []
+      cosmetics: Array.isArray(raw.cosmetics) ? raw.cosmetics.filter(Boolean) : [],
+      activeCosmetics: normalizeActiveCosmetics(raw.active_cosmetics || raw.activeCosmetics)
     };
   }
 

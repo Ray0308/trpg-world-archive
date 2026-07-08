@@ -57,6 +57,7 @@
 | `MIGO_COINS` | プレイヤー名 → コイン残高 |
 | `MIGO_GIFT_CODES` | KP発行のギフトコード |
 | `MIGO_UNLOCKS` | PCごとのコスメ解放 |
+| `MIGO_ACTIVE` | PCごとの装備中コスメ（スロット別） |
 | `MIGO_PLAYS` | プレイ履歴・GETランキング |
 
 手動で作る必要はありません。

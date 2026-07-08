@@ -314,7 +314,8 @@ function doGet(e) {
         'migo-gift-create',
         'migo-kp-players',
         'migo-kp-grant',
-        'migo-kp-rename'
+        'migo-kp-rename',
+        'migo-set-active'
       ]
     }, callback);
   }
@@ -518,6 +519,17 @@ function doGet(e) {
     const newName = String((e.parameter && e.parameter.new_name) || '').trim();
     try {
       return jsonResponse_(renameMigoPlayerCoins_(ss, oldName, newName), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-set-active') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const pcId = String((e.parameter && e.parameter.pc_id) || '').trim();
+    const cosmeticId = String((e.parameter && e.parameter.cosmetic_id) || '').trim();
+    try {
+      return jsonResponse_(setMigoActiveCosmetic_(ss, playerName, pcId, cosmeticId), callback);
     } catch (err) {
       return jsonResponse_({ error: err.message || String(err) }, callback);
     }
@@ -1396,6 +1408,7 @@ function getPublicPcs_(ss) {
     'form_response_id', 'created_at', 'updated_at', 'memo', 'pl_hidden', 'deleted'
   ]);
   const cosmeticsByPc = getMigoCosmeticsByPc_(ss);
+  const activeByPc = getMigoActiveByPc_(ss);
 
   return values.slice(1)
     .filter(row => row[0])
@@ -1408,7 +1421,9 @@ function getPublicPcs_(ss) {
       if (isPlHidden_(record.pl_hidden)) return null;
       adminKeys.forEach(key => delete record[key]);
       const pcId = String(record.id || '').trim();
-      record.cosmetics = cosmeticsByPc[pcId] || [];
+      const owned = cosmeticsByPc[pcId] || [];
+      record.cosmetics = owned;
+      record.active_cosmetics = sanitizeMigoActiveCosmetics_(owned, activeByPc[pcId] || {});
       return record;
     })
     .filter(Boolean);
@@ -1674,6 +1689,138 @@ function ensureMigoPlaysSheet_(ss) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
   return sheet;
+}
+
+function ensureMigoActiveSheet_(ss) {
+  const headers = ['pc_id', 'slot', 'cosmetic_id', 'player_name', 'updated_at'];
+  let sheet = ss.getSheetByName('MIGO_ACTIVE');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_ACTIVE');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function sanitizeMigoActiveCosmetics_(ownedIds, activeMap) {
+  const owned = ownedIds || [];
+  const out = {};
+  if (!activeMap) return out;
+  Object.keys(activeMap).forEach(slot => {
+    const id = String(activeMap[slot] || '').trim();
+    if (!id) return;
+    if (owned.indexOf(id) < 0) return;
+    if (MIGO_COSMETIC_SLOT_[id] !== slot) return;
+    out[slot] = id;
+  });
+  return out;
+}
+
+function getMigoActiveForPc_(ss, pcId) {
+  const sheet = ensureMigoActiveSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const map = {};
+  if (values.length <= 1) {
+    return sanitizeMigoActiveCosmetics_(getMigoCosmeticsForPc_(ss, pcId), map);
+  }
+
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id');
+  const slotCol = headers.indexOf('slot');
+  const cosmeticCol = headers.indexOf('cosmetic_id');
+  if (pcCol < 0 || slotCol < 0 || cosmeticCol < 0) {
+    return sanitizeMigoActiveCosmetics_(getMigoCosmeticsForPc_(ss, pcId), map);
+  }
+
+  values.slice(1).forEach(row => {
+    if (String(row[pcCol]).trim() !== String(pcId).trim()) return;
+    const slot = String(row[slotCol]).trim();
+    const cosmeticId = String(row[cosmeticCol]).trim();
+    if (slot && cosmeticId) map[slot] = cosmeticId;
+  });
+
+  return sanitizeMigoActiveCosmetics_(getMigoCosmeticsForPc_(ss, pcId), map);
+}
+
+function getMigoActiveByPc_(ss) {
+  const sheet = ensureMigoActiveSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const map = {};
+  if (values.length <= 1) return map;
+
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id');
+  const slotCol = headers.indexOf('slot');
+  const cosmeticCol = headers.indexOf('cosmetic_id');
+  if (pcCol < 0 || slotCol < 0 || cosmeticCol < 0) return map;
+
+  values.slice(1).forEach(row => {
+    const pcId = String(row[pcCol]).trim();
+    const slot = String(row[slotCol]).trim();
+    const cosmeticId = String(row[cosmeticCol]).trim();
+    if (!pcId || !slot || !cosmeticId) return;
+    if (!map[pcId]) map[pcId] = {};
+    map[pcId][slot] = cosmeticId;
+  });
+  return map;
+}
+
+function setMigoActiveCosmetic_(ss, playerName, pcId, cosmeticId) {
+  const cleanPcId = String(pcId || '').trim();
+  const id = String(cosmeticId || '').trim();
+  if (!cleanPcId) throw new Error('pc_id is required');
+  if (!id) throw new Error('cosmetic_id is required');
+  if (!isValidMigoCosmeticId_(id)) throw new Error('cosmetic_id が無効です');
+
+  assertPcOwnedByPlayer_(ss, cleanPcId, playerName);
+  const owned = getMigoCosmeticsForPc_(ss, cleanPcId);
+  if (owned.indexOf(id) < 0) throw new Error('未入手のコスメです');
+
+  const slot = MIGO_COSMETIC_SLOT_[id];
+  if (!slot) throw new Error('装備スロットが不明です');
+
+  const sheet = ensureMigoActiveSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => String(h).trim());
+  const pcCol = headers.indexOf('pc_id') + 1;
+  const slotCol = headers.indexOf('slot') + 1;
+  const cosmeticCol = headers.indexOf('cosmetic_id') + 1;
+  const playerCol = headers.indexOf('player_name') + 1;
+  const updatedCol = headers.indexOf('updated_at') + 1;
+  const now = new Date();
+  const name = normalizeMigoPlayerName_(playerName);
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][pcCol - 1]).trim() !== cleanPcId) continue;
+    if (String(values[i][slotCol - 1]).trim() !== slot) continue;
+    sheet.getRange(i + 1, cosmeticCol).setValue(id);
+    if (playerCol > 0) sheet.getRange(i + 1, playerCol).setValue(name);
+    if (updatedCol > 0) sheet.getRange(i + 1, updatedCol).setValue(now);
+    return {
+      ok: true,
+      pc_id: cleanPcId,
+      cosmetic_id: id,
+      slot: slot,
+      active_cosmetics: getMigoActiveForPc_(ss, cleanPcId),
+      cosmetics: owned
+    };
+  }
+
+  sheet.appendRow([cleanPcId, slot, id, name, now]);
+  return {
+    ok: true,
+    pc_id: cleanPcId,
+    cosmetic_id: id,
+    slot: slot,
+    active_cosmetics: getMigoActiveForPc_(ss, cleanPcId),
+    cosmetics: owned
+  };
 }
 
 function findPcRecord_(ss, pcId) {

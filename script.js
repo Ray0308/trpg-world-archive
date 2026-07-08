@@ -1277,25 +1277,93 @@ const MIGO_COSMETIC_SLOT = (window.MigoCosmetics && window.MigoCosmetics.SLOT) |
 
 const MIGO_COMP_ID = (window.MigoCosmetics && window.MigoCosmetics.COMP_ID) || 'frame-migo-wing';
 const MIGO_COMP_TITLE = (window.MigoCosmetics && window.MigoCosmetics.COMP_TITLE_LABEL) || '深淵を飾る者';
+const MIGO_EQUIP_PLAYER_KEY = 'migo_equip_player_name';
+const MIGO_COSMETIC_SLOTS = ['frame', 'bg', 'title', 'fx'];
 
 function pcIsMigoComplete(pc) {
   return (pc.cosmetics || []).indexOf(MIGO_COMP_ID) >= 0;
 }
 
-function pickActiveMigoCosmetics_(cosmeticIds) {
-  const ids = cosmeticIds || [];
+function pickActiveMigoCosmetics_(pc) {
+  const ids = (pc && pc.cosmetics) || [];
+  const explicit = (pc && pc.activeCosmetics) || {};
   const latestBySlot = {};
   ids.forEach(id => {
     const slot = MIGO_COSMETIC_SLOT[id];
     if (slot) latestBySlot[slot] = id;
   });
-  const active = Object.keys(latestBySlot).map(slot => latestBySlot[slot]);
-  if (ids.indexOf('frame-migo-wing') >= 0) active.push('frame-migo-wing');
+
+  const active = [];
+  MIGO_COSMETIC_SLOTS.forEach(slot => {
+    const chosen = explicit[slot];
+    if (chosen && ids.indexOf(chosen) >= 0 && MIGO_COSMETIC_SLOT[chosen] === slot) {
+      active.push(chosen);
+    } else if (latestBySlot[slot]) {
+      active.push(latestBySlot[slot]);
+    }
+  });
   return active.filter((id, i, arr) => arr.indexOf(id) === i);
 }
 
+function isCosmeticEquipped(pc, cosmeticId) {
+  return pickActiveMigoCosmetics_(pc).indexOf(cosmeticId) >= 0;
+}
+
+function buildMigoGasUrl(type, params = {}) {
+  const base = window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl;
+  if (!base) return '';
+  const sep = base.includes('?') ? '&' : '?';
+  const qs = new URLSearchParams({ type, ...params }).toString();
+  return `${base}${sep}${qs}`;
+}
+
+async function migoGasFetch(type, params = {}) {
+  const url = buildMigoGasUrl(type, params);
+  if (!url) return { ok: false, offline: true };
+  try {
+    const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) {
+      if (data.error === 'unknown type') return { ok: false, needsDeploy: true };
+      return { ok: false, error: data.error };
+    }
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err.message || 'fetch failed' };
+  }
+}
+
+function getCosmeticEquipPlayerName() {
+  try {
+    return String(sessionStorage.getItem(MIGO_EQUIP_PLAYER_KEY) || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+function setCosmeticEquipPlayerName(name) {
+  try {
+    sessionStorage.setItem(MIGO_EQUIP_PLAYER_KEY, String(name || '').trim());
+  } catch (e) { /* ignore */ }
+}
+
+function setCosmeticEquipStatus(message, kind) {
+  const el = document.getElementById('cosmeticEquipStatus');
+  if (!el) return;
+  if (!message) {
+    el.hidden = true;
+    el.textContent = '';
+    el.className = 'cosmetic-equip-status';
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+  el.className = `cosmetic-equip-status cosmetic-equip-status--${kind || 'info'}`;
+}
+
 function pcCosmeticClasses(pc) {
-  const ids = pickActiveMigoCosmetics_(pc.cosmetics || []);
+  const ids = pickActiveMigoCosmetics_(pc);
   const classes = ['pc-cosme'];
   ids.forEach(id => {
     if (id) classes.push(`pc-cosme--${id}`);
@@ -1307,7 +1375,7 @@ function pcCosmeticClasses(pc) {
 }
 
 function pcCosmeticTitle(pc) {
-  const active = pickActiveMigoCosmetics_(pc.cosmetics || []);
+  const active = pickActiveMigoCosmetics_(pc);
   for (let i = active.length - 1; i >= 0; i--) {
     const label = MIGO_TITLE_LABELS[active[i]];
     if (label) return label;
@@ -1332,13 +1400,18 @@ function renderPcPortraitBlock(pc, isComplete) {
     </div>`;
 }
 
-function renderCompRewardCard(unlocked) {
+function renderCompRewardCard(pc, unlocked) {
   const meta = (window.MigoCosmetics && window.MigoCosmetics.META) || MIGO_COSMETIC_META;
   const comp = meta[MIGO_COMP_ID] || { emoji: '🦇', label: 'ミ＝ゴの翼', slot: '枠' };
+  const equipped = unlocked && isCosmeticEquipped(pc, MIGO_COMP_ID);
+  const cardTag = unlocked ? 'button' : 'div';
+  const cardAttrs = unlocked
+    ? ` type="button" class="cosmetic-comp-reward__card is-unlocked${equipped ? ' is-equipped' : ''}" data-cosmetic-equip data-pc-id="${escapeAttr(pc.id)}" data-cosmetic-id="${escapeAttr(MIGO_COMP_ID)}" title="${escapeAttr(comp.label)}を装備"`
+    : ` class="cosmetic-comp-reward__card"`;
   return `
     <div class="cosmetic-comp-reward${unlocked ? ' is-unlocked' : ''}">
       <h3 class="cosmetic-comp-reward__heading">コンプリート報酬</h3>
-      <div class="cosmetic-comp-reward__card">
+      <${cardTag}${cardAttrs}>
         <div class="cosmetic-comp-reward__emblem" aria-hidden="true">
           <span class="cosmetic-comp-reward__emblem-icon">${comp.emoji}</span>
         </div>
@@ -1346,11 +1419,55 @@ function renderCompRewardCard(unlocked) {
           <p class="cosmetic-comp-reward__name">
             ${escapeHtml(comp.label)}
             <span class="cosmetic-comp-reward__slot">${escapeHtml(comp.slot)}</span>
+            ${equipped ? '<span class="cosmetic-equipped-badge">装備中</span>' : ''}
           </p>
           <p class="cosmetic-comp-reward__desc">全カテゴリの菌糸コスメ収集の証</p>
         </div>
-      </div>
+      </${cardTag}>
     </div>`;
+}
+
+function renderCosmeticEquipBar() {
+  const saved = getCosmeticEquipPlayerName();
+  return `
+    <div class="cosmetic-equip-bar" id="cosmeticEquipBar">
+      <label class="cosmetic-equip-field">
+        <span class="cosmetic-equip-label">装備変更（プレイヤー名）</span>
+        <input type="text" class="cosmetic-equip-input" id="cosmeticEquipPlayer" value="${escapeAttr(saved)}" placeholder="登録名と一致させる" maxlength="24" autocomplete="nickname">
+      </label>
+      <p class="cosmetic-equip-hint">取得済みのコスメをタップして、台帳の見た目を切り替えられます。未設定のスロットはいちばん新しい取得が表示されます。</p>
+      <p class="cosmetic-equip-status" id="cosmeticEquipStatus" hidden></p>
+    </div>`;
+}
+
+function renderCosmeticCatalogItem(pc, id, index, itemMeta, isOwned) {
+  const equipped = isOwned && isCosmeticEquipped(pc, id);
+  const classes = [
+    'cosmetic-catalog-item',
+    isOwned ? 'is-owned' : 'is-missing',
+    equipped ? 'is-equipped' : ''
+  ].filter(Boolean).join(' ');
+  const inner = `
+        <span class="cosmetic-catalog-emoji" aria-hidden="true">${itemMeta.emoji}</span>
+        <span class="cosmetic-catalog-label">${escapeHtml(itemMeta.label)}</span>
+        <span class="cosmetic-catalog-slot">${escapeHtml(itemMeta.slot || '')}${equipped ? ' · 装備中' : ''}</span>`;
+  if (!isOwned) {
+    return `<li class="${classes}" style="--catalog-i: ${index}" title="${escapeAttr(itemMeta.label)}">${inner}</li>`;
+  }
+  return `<li class="${classes}" style="--catalog-i: ${index}">
+      <button type="button" class="cosmetic-catalog-btn" data-cosmetic-equip data-pc-id="${escapeAttr(pc.id)}" data-cosmetic-id="${escapeAttr(id)}" title="${escapeAttr(itemMeta.label)}を装備">${inner}</button>
+    </li>`;
+}
+
+function renderCosmeticChip(pc, id, itemMeta) {
+  const equipped = isCosmeticEquipped(pc, id);
+  return `<li>
+      <button type="button" class="pc-cosme-chip${equipped ? ' is-equipped' : ''}" data-cosmetic-equip data-pc-id="${escapeAttr(pc.id)}" data-cosmetic-id="${escapeAttr(id)}" title="${escapeAttr(itemMeta.label)}">
+        <span class="pc-cosme-chip-emoji" aria-hidden="true">${itemMeta.emoji}</span>
+        <span class="pc-cosme-chip-label">${escapeHtml(itemMeta.label)}</span>
+        ${itemMeta.slot ? `<span class="pc-cosme-chip-slot">${escapeHtml(itemMeta.slot)}${equipped ? ' · 装備中' : ''}</span>` : ''}
+      </button>
+    </li>`;
 }
 
 function renderPcDetailTitleBlock(pc, title, isComplete) {
@@ -1369,44 +1486,107 @@ function renderPcCosmeticsSection(pc) {
   const ids = (pc.cosmetics || []).filter(Boolean);
   if (!ids.length) return '';
 
+  const equipBar = renderCosmeticEquipBar();
+  const leadText = 'ミ＝ゴキャッチャーの景品コレクション（全20種）。各スロット（枠・背景・称号・光）は<strong>装備中</strong>のコスメが台帳に反映されます。';
+
   if (pcIsMigoComplete(pc)) {
     const meta = (window.MigoCosmetics && window.MigoCosmetics.META) || MIGO_COSMETIC_META;
     const baseIds = (window.MigoCosmetics && window.MigoCosmetics.BASE_IDS) || [];
     const owned = new Set(ids);
     const catalogItems = baseIds.map((id, index) => {
       const itemMeta = meta[id] || { emoji: '✨', label: id, slot: '' };
-      const isOwned = owned.has(id);
-      return `<li class="cosmetic-catalog-item${isOwned ? ' is-owned' : ' is-missing'}" style="--catalog-i: ${index}" title="${escapeAttr(itemMeta.label)}">
-        <span class="cosmetic-catalog-emoji" aria-hidden="true">${itemMeta.emoji}</span>
-        <span class="cosmetic-catalog-label">${escapeHtml(itemMeta.label)}</span>
-        <span class="cosmetic-catalog-slot">${escapeHtml(itemMeta.slot || '')}</span>
-      </li>`;
+      return renderCosmeticCatalogItem(pc, id, index, itemMeta, owned.has(id));
     }).join('');
     return `
       <section class="detail-section pc-cosme-section pc-cosme-section--complete">
         <h2 class="section-heading">菌糸コスメ</h2>
-        <p class="detail-meta pc-cosme-lead pc-cosme-lead--complete">ミ＝ゴキャッチャーの景品コレクション（全20種）。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
+        ${equipBar}
+        <p class="detail-meta pc-cosme-lead pc-cosme-lead--complete">${leadText}</p>
         <ul class="cosmetic-catalog-grid">${catalogItems}</ul>
-        ${renderCompRewardCard(owned.has(MIGO_COMP_ID))}
+        ${renderCompRewardCard(pc, owned.has(MIGO_COMP_ID))}
       </section>
     `;
   }
 
   const chips = ids.map(id => {
     const itemMeta = MIGO_COSMETIC_META[id] || { emoji: '✨', label: id, slot: '' };
-    return `<li class="pc-cosme-chip" title="${escapeAttr(itemMeta.label)}">
-      <span class="pc-cosme-chip-emoji" aria-hidden="true">${itemMeta.emoji}</span>
-      <span class="pc-cosme-chip-label">${escapeHtml(itemMeta.label)}</span>
-      ${itemMeta.slot ? `<span class="pc-cosme-chip-slot">${escapeHtml(itemMeta.slot)}</span>` : ''}
-    </li>`;
+    return renderCosmeticChip(pc, id, itemMeta);
   }).join('');
   return `
       <section class="detail-section pc-cosme-section">
         <h2 class="section-heading">菌糸コスメ</h2>
-        <p class="detail-meta pc-cosme-lead">ミ＝ゴキャッチャーの景品コレクション（全20種+コンプ）。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
+        ${equipBar}
+        <p class="detail-meta pc-cosme-lead">${leadText} コンプ特典あり。</p>
         <ul class="pc-cosme-chips">${chips}</ul>
       </section>
   `;
+}
+
+async function applyPcCosmeticEquip(pcId, cosmeticId, playerName) {
+  setCosmeticEquipStatus('装備を変更中…', 'info');
+  const result = await migoGasFetch('migo-set-active', {
+    player_name: playerName,
+    pc_id: pcId,
+    cosmetic_id: cosmeticId
+  });
+
+  if (result.needsDeploy) {
+    setCosmeticEquipStatus('GASの再デプロイが必要です（migo-set-active）', 'error');
+    return false;
+  }
+  if (!result.ok) {
+    setCosmeticEquipStatus(result.error || '装備の変更に失敗しました', 'error');
+    return false;
+  }
+
+  const pc = indexes.pcById.get(pcId);
+  if (pc && result.data) {
+    if (result.data.active_cosmetics) pc.activeCosmetics = result.data.active_cosmetics;
+    if (Array.isArray(result.data.cosmetics)) pc.cosmetics = result.data.cosmetics;
+  }
+
+  const meta = MIGO_COSMETIC_META[cosmeticId] || { label: cosmeticId };
+  setCosmeticEquipStatus(`${meta.label || cosmeticId} を装備しました`, 'ok');
+  return true;
+}
+
+function bindCosmeticEquip() {
+  const input = document.getElementById('cosmeticEquipPlayer');
+  if (input) {
+    input.addEventListener('input', () => {
+      setCosmeticEquipPlayerName(input.value);
+      setCosmeticEquipStatus('', '');
+    });
+  }
+
+  contentArea.querySelectorAll('[data-cosmetic-equip]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const pcId = btn.dataset.pcId;
+      const cosmeticId = btn.dataset.cosmeticId;
+      const playerInput = document.getElementById('cosmeticEquipPlayer');
+      const playerName = String((playerInput && playerInput.value) || getCosmeticEquipPlayerName()).trim();
+      if (!playerName) {
+        setCosmeticEquipStatus('プレイヤー名を入力してください', 'error');
+        if (playerInput) playerInput.focus();
+        return;
+      }
+      setCosmeticEquipPlayerName(playerName);
+
+      const pc = indexes.pcById.get(pcId);
+      if (pc && isCosmeticEquipped(pc, cosmeticId)) {
+        setCosmeticEquipStatus('すでに装備中です', 'info');
+        return;
+      }
+
+      contentArea.querySelectorAll('[data-cosmetic-equip]').forEach(el => { el.disabled = true; });
+      const ok = await applyPcCosmeticEquip(pcId, cosmeticId, playerName);
+      contentArea.querySelectorAll('[data-cosmetic-equip]').forEach(el => { el.disabled = false; });
+      if (ok && route.section === 'pcs') {
+        renderPcsView();
+      }
+    });
+  });
 }
 
 function renderPcListItem(pc, active) {
@@ -1543,9 +1723,8 @@ function renderPcsView() {
 
   contentArea.innerHTML = renderListLayout(listHtml, detailHtml);
   bindNavigation();
+  bindCosmeticEquip();
 }
-
-/* ---- Files (Google Drive) ---- */
 
 function renderFilesView() {
   const driveUrl = getFilesDriveUrl();
