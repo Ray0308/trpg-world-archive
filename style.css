@@ -3531,35 +3531,17 @@ input {
 
 .pc-complete-card {
   position: relative;
-  padding: 0;
+  padding: 0 0.15rem 0.25rem;
   z-index: 1;
-  min-height: 12rem;
-}
-
-.pc-complete-card-frame {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-  z-index: 2;
-  opacity: 0.92;
-  filter: drop-shadow(0 0 18px rgba(180, 40, 70, 0.22));
-}
-
-.pc-complete-card-inner {
-  position: relative;
-  z-index: 1;
-  padding: 2.85rem 1.15rem 1.15rem;
 }
 
 .pc-complete-card::before {
   content: '';
   position: absolute;
-  inset: 8% 6% 5%;
+  inset: -0.5rem -0.35rem auto;
+  height: 62%;
   border-radius: var(--radius-md);
-  background: radial-gradient(ellipse at 50% 18%, rgba(160, 35, 65, 0.18), transparent 62%);
+  background: radial-gradient(ellipse at 28% 35%, rgba(160, 35, 65, 0.22), transparent 62%);
   pointer-events: none;
   z-index: 0;
 }
@@ -3765,40 +3747,32 @@ input {
 .pc-complete-portrait-frame {
   position: relative;
   flex-shrink: 0;
-  padding: 0.55rem;
+  width: 240px;
+  height: 240px;
   margin-bottom: 0;
-  border-radius: 6px;
-  background:
-    linear-gradient(145deg, rgba(36, 8, 18, 0.95), rgba(14, 4, 10, 0.98));
-  border: 2px solid rgba(175, 75, 95, 0.55);
-  box-shadow:
-    0 0 32px rgba(130, 30, 55, 0.38),
-    inset 0 0 24px rgba(60, 12, 30, 0.35);
-  animation: pc-frame-pulse 3.8s ease-in-out infinite, pc-portrait-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  overflow: hidden;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: pc-portrait-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  overflow: visible;
+}
+
+.pc-complete-portrait-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 0 16px rgba(150, 35, 60, 0.28));
 }
 
 .pc-complete-portrait-frame::before,
 .pc-complete-portrait-frame::after {
-  content: '';
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: rgba(200, 150, 90, 0.55);
-  border-style: solid;
-  pointer-events: none;
-}
-
-.pc-complete-portrait-frame::before {
-  top: 6px;
-  left: 6px;
-  border-width: 2px 0 0 2px;
-}
-
-.pc-complete-portrait-frame::after {
-  bottom: 6px;
-  right: 6px;
-  border-width: 0 2px 2px 0;
+  display: none;
 }
 
 .pc-complete-hero {
@@ -3823,10 +3797,16 @@ input {
 }
 
 .pc-complete-portrait-wrap {
-  position: relative;
+  position: absolute;
+  top: 23%;
+  right: 11%;
+  bottom: 9%;
+  left: 11%;
   flex-shrink: 0;
   isolation: isolate;
   z-index: 1;
+  overflow: hidden;
+  border-radius: 2px;
 }
 
 .pc-complete-portrait-wrap::before,
@@ -3868,13 +3848,10 @@ input {
 .entity-detail.pc-full-complete .pc-complete-portrait-wrap .detail-image {
   position: relative;
   z-index: 1;
-  width: 188px;
-  height: 188px;
-  box-shadow:
-    0 0 0 3px rgba(190, 50, 75, 0.85),
-    0 0 0 6px rgba(120, 25, 50, 0.35),
-    0 0 36px rgba(150, 35, 65, 0.55),
-    0 0 64px rgba(90, 15, 45, 0.28) !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  box-shadow: none !important;
   animation: pc-portrait-glow 4s ease-in-out infinite;
 }
 
@@ -4395,12 +4372,16 @@ input {
     width: 18%;
   }
 
-  .pc-complete-card-inner {
-    padding: 2.15rem 0.65rem 0.85rem;
+  .pc-complete-portrait-frame {
+    width: 200px;
+    height: 200px;
   }
 
-  .pc-complete-card-frame {
-    opacity: 0.88;
+  .pc-complete-portrait-wrap {
+    top: 22%;
+    right: 10%;
+    bottom: 8%;
+    left: 10%;
   }
 
   .pc-complete-hero-visual {
@@ -4433,11 +4414,6 @@ input {
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
-
-  .entity-detail.pc-full-complete .pc-complete-portrait-wrap .detail-image {
-    width: 160px;
-    height: 160px;
   }
 
   .pc-complete-portrait-wrap::before,
@@ -4485,7 +4461,6 @@ input {
   .entity-detail.pc-full-complete::before,
   .entity-detail.pc-full-complete::after,
   .pc-complete-stage,
-  .pc-complete-card-frame,
   .pc-complete-stage::after,
   .pc-complete-portrait-frame,
   .pc-complete-flank-frame,
