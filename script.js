@@ -1393,7 +1393,6 @@ function renderPcPortraitBlock(pc, isComplete) {
       </div>
       <div class="pc-complete-portrait-frame">
         <div class="pc-complete-portrait-wrap">${img}</div>
-        <img src="images/pc-complete-frame.png" alt="" class="pc-complete-portrait-overlay" width="240" height="240" decoding="async" aria-hidden="true">
       </div>
       <div class="pc-complete-flank-frame pc-complete-flank-frame--right" aria-hidden="true">
         <img src="images/chaugnar-pixel.gif" alt="" class="pc-complete-flank pc-complete-flank--right pc-complete-flank--pixel" width="96" height="96" decoding="async">

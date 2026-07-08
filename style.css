@@ -3747,32 +3747,42 @@ input {
 .pc-complete-portrait-frame {
   position: relative;
   flex-shrink: 0;
-  width: 240px;
-  height: 240px;
+  padding: 0.5rem;
   margin-bottom: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  animation: pc-portrait-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  overflow: visible;
-}
-
-.pc-complete-portrait-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-  z-index: 3;
-  filter: drop-shadow(0 0 14px rgba(180, 130, 50, 0.22));
+  border-radius: 4px;
+  background:
+    linear-gradient(145deg, rgba(28, 6, 14, 0.96), rgba(10, 3, 8, 0.98));
+  border: 2px solid rgba(196, 155, 72, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(120, 90, 40, 0.4),
+    0 0 28px rgba(150, 100, 40, 0.22),
+    inset 0 0 22px rgba(40, 8, 20, 0.35);
+  animation: pc-frame-pulse 3.8s ease-in-out infinite, pc-portrait-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  overflow: hidden;
 }
 
 .pc-complete-portrait-frame::before,
 .pc-complete-portrait-frame::after {
-  display: none;
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: rgba(220, 180, 100, 0.62);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pc-complete-portrait-frame::before {
+  top: 5px;
+  left: 5px;
+  border-width: 2px 0 0 2px;
+}
+
+.pc-complete-portrait-frame::after {
+  bottom: 5px;
+  right: 5px;
+  border-width: 0 2px 2px 0;
 }
 
 .pc-complete-hero {
@@ -3797,16 +3807,10 @@ input {
 }
 
 .pc-complete-portrait-wrap {
-  position: absolute;
-  top: 14%;
-  right: 10%;
-  bottom: 14%;
-  left: 10%;
+  position: relative;
   flex-shrink: 0;
   isolation: isolate;
   z-index: 1;
-  overflow: hidden;
-  border-radius: 2px;
 }
 
 .pc-complete-portrait-wrap::before,
@@ -3848,10 +3852,12 @@ input {
 .entity-detail.pc-full-complete .pc-complete-portrait-wrap .detail-image {
   position: relative;
   z-index: 1;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover;
-  box-shadow: none !important;
+  width: 188px;
+  height: 188px;
+  box-shadow:
+    0 0 0 2px rgba(196, 155, 72, 0.55),
+    0 0 0 4px rgba(90, 25, 45, 0.35),
+    0 0 32px rgba(150, 35, 65, 0.45) !important;
   animation: pc-portrait-glow 4s ease-in-out infinite;
 }
 
@@ -4213,12 +4219,18 @@ input {
 
 @keyframes pc-frame-pulse {
   0%, 100% {
-    box-shadow: 0 0 28px rgba(120, 25, 50, 0.32), inset 0 0 20px rgba(60, 12, 30, 0.3);
-    border-color: rgba(170, 70, 90, 0.5);
+    box-shadow:
+      0 0 0 1px rgba(120, 90, 40, 0.35),
+      0 0 24px rgba(150, 100, 40, 0.2),
+      inset 0 0 20px rgba(40, 8, 20, 0.3);
+    border-color: rgba(196, 155, 72, 0.65);
   }
   50% {
-    box-shadow: 0 0 44px rgba(160, 35, 65, 0.48), inset 0 0 28px rgba(80, 15, 38, 0.38);
-    border-color: rgba(210, 90, 110, 0.68);
+    box-shadow:
+      0 0 0 1px rgba(160, 120, 55, 0.5),
+      0 0 36px rgba(180, 130, 50, 0.32),
+      inset 0 0 26px rgba(60, 12, 28, 0.36);
+    border-color: rgba(230, 190, 110, 0.82);
   }
 }
 
@@ -4372,16 +4384,9 @@ input {
     width: 18%;
   }
 
-  .pc-complete-portrait-frame {
-    width: 200px;
-    height: 200px;
-  }
-
-  .pc-complete-portrait-wrap {
-    top: 13%;
-    right: 9%;
-    bottom: 13%;
-    left: 9%;
+  .entity-detail.pc-full-complete .pc-complete-portrait-wrap .detail-image {
+    width: 160px;
+    height: 160px;
   }
 
   .pc-complete-hero-visual {
