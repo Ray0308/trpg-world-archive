@@ -1319,8 +1319,12 @@ function renderPcPortraitBlock(pc, isComplete) {
   const img = pcPortraitImg(pc);
   if (!isComplete) return img;
   return `
-    <div class="pc-complete-portrait-frame">
-      <div class="pc-complete-portrait-wrap">${img}</div>
+    <div class="pc-complete-hero-visual">
+      <img src="games/assets/migo-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--left" width="108" height="108" decoding="async">
+      <div class="pc-complete-portrait-frame">
+        <div class="pc-complete-portrait-wrap">${img}</div>
+      </div>
+      <img src="images/yokofolia-mascot.png" alt="" class="pc-complete-flank pc-complete-flank--right" width="108" height="108" decoding="async">
     </div>`;
 }
 
