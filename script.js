@@ -1318,6 +1318,7 @@ function pcCosmeticTitle(pc) {
 function renderMyceliumCompleteBanner() {
   return `
     <div class="mycelium-complete-banner" role="status">
+      <p class="mycelium-complete-banner__kicker">FULL COMPLETE</p>
       <p class="mycelium-complete-banner__main">菌糸コスメ COMPLETE</p>
       <p class="mycelium-complete-banner__sub">全20種収集済み · ミ＝ゴの翼 解放</p>
     </div>
@@ -1421,18 +1422,31 @@ function renderPcDetail(pc) {
 
   return `
     <article class="entity-detail ${cosmeClass}${isComplete ? ' pc-full-complete' : ''}">
-      ${isComplete ? renderMyceliumCompleteBanner() : ''}
-      <div class="pc-complete-card">
-        <header class="detail-header${isComplete ? ' pc-complete-hero' : ''}">
-          ${renderPcPortraitBlock(pc, isComplete)}
-          <div class="detail-header-body">
-            ${renderPcDetailTitleBlock(pc, title, isComplete)}
-            <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
-          </div>
-        </header>
+      ${isComplete ? `
+      <div class="pc-complete-stage">
+        ${renderMyceliumCompleteBanner()}
+        <div class="pc-complete-card">
+          <header class="detail-header pc-complete-hero">
+            ${renderPcPortraitBlock(pc, true)}
+            <div class="detail-header-body">
+              ${renderPcDetailTitleBlock(pc, title, true)}
+              <p class="detail-meta pc-complete-player">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
+            </div>
+          </header>
+          ${renderPcCosmeticsSection(pc)}
+        </div>
       </div>
+      ` : `
+      <header class="detail-header">
+        ${renderPcPortraitBlock(pc, false)}
+        <div class="detail-header-body">
+          ${renderPcDetailTitleBlock(pc, title, false)}
+          <p class="detail-meta">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
+        </div>
+      </header>
 
       ${renderPcCosmeticsSection(pc)}
+      `}
 
       <section class="detail-section">
         <h2 class="section-heading">キャラクターシート</h2>

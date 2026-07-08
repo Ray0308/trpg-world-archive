@@ -8,7 +8,7 @@
   <title>ミ＝ゴキャッチャー — YOKOFOLIA</title>
   <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="mini-claw.css?v=20260702d">
+  <link rel="stylesheet" href="mini-claw.css?v=20260708">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -29,9 +29,9 @@
         <div class="mc-game-area" id="gameArea">
           <canvas id="gameCanvas" class="mc-canvas" width="360" height="500" draggable="false" aria-label="ミ＝ゴキャッチャー"></canvas>
         </div>
-        <div class="mc-loader" id="loadingScreen" role="status" aria-live="polite">
+        <div class="mc-loader" id="loadingScreen" role="status" aria-live="polite" hidden>
           <img src="assets/migo-mascot.png" alt="ミ＝ゴ" class="mc-loader-image">
-          <p class="mc-loader-text">菌糸回線で筐体に接続中…</p>
+          <p class="mc-loader-text" id="loadingText">菌糸回線で筐体に接続中…</p>
         </div>
 
         <div class="mc-controls" id="gameControls" hidden>
@@ -106,6 +106,6 @@
 
   <script src="../js/config.js"></script>
   <script src="../js/migo-cosmetics.js?v=20260702"></script>
-  <script src="mini-claw.js?v=20260708"></script>
+  <script src="mini-claw.js?v=20260708b"></script>
 </body>
 </html>

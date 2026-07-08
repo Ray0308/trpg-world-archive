@@ -40,6 +40,15 @@
   const resultBtn = document.getElementById('resultBtn');
   const collectionProgress = document.getElementById('collectionProgress');
   const loadingScreen = document.getElementById('loadingScreen');
+  const loadingText = document.getElementById('loadingText');
+  const backLink = document.querySelector('.mc-back');
+  const resultHomeBtn = document.getElementById('resultHomeBtn');
+
+  const LOADER_MSG = {
+    boot: '菌糸回線で筐体に接続中…',
+    start: 'コインを消費して筐体を起動中…',
+    save: '菌糸台帳に記録中…'
+  };
 
   const session = {
     playerName: '',
@@ -71,7 +80,8 @@
     shake: 0,
     particles: [],
     fadePrize: null,
-    loopActive: false
+    loopActive: false,
+    navLocked: false
   };
 
   const ROPE_MIN = 52;
@@ -84,6 +94,33 @@
   const ARM_SPEED = 3.4;
   const DROP_SPEED = 2.6;
   const ALIGN_PX = 24;
+
+  function setNavigationLocked(locked) {
+    state.navLocked = !!locked;
+    document.body.classList.toggle('mc-nav-locked', state.navLocked);
+  }
+
+  function setLoader(visible, message, mode) {
+    if (loadingText && message) loadingText.textContent = message;
+    if (!loadingScreen) return;
+    loadingScreen.hidden = !visible;
+    loadingScreen.classList.toggle('mc-loader--saving', visible && mode === 'saving');
+    loadingScreen.classList.toggle('mc-loader--boot', visible && mode === 'boot');
+  }
+
+  function guardNavigationClick(e) {
+    if (!state.navLocked) return;
+    e.preventDefault();
+  }
+
+  if (backLink) backLink.addEventListener('click', guardNavigationClick);
+  if (resultHomeBtn) resultHomeBtn.addEventListener('click', guardNavigationClick);
+
+  window.addEventListener('beforeunload', e => {
+    if (!state.navLocked) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   function buildGasUrl(type, params = {}) {
     if (!GAS_ENDPOINT) return '';
@@ -645,7 +682,7 @@
     return result;
   }
 
-  function buildResultBody(won, prize, saveResult, pending) {
+  function buildResultBody(won, prize, saveResult) {
     let body = '';
     if (won && prize) {
       body = `${prize.emoji} ${prize.label} を ${session.playerName} のPCに装備しました。台帳で確認しよう。`;
@@ -656,9 +693,7 @@
       body = 'ミ＝ゴの鉤爪は何も掴めなかった。コインは消費済みです。';
     }
 
-    if (pending) {
-      body += '（台帳に反映中…）';
-    } else if (saveResult && saveResult.needsDeploy) {
+    if (saveResult && saveResult.needsDeploy) {
       body += '（保存は未反映。KP: GASの再デプロイが必要）';
     } else if (saveResult && !saveResult.ok) {
       body += `（台帳への反映に失敗: ${saveResult.error || '通信エラー'}）`;
@@ -667,22 +702,31 @@
     return body;
   }
 
-  function showResult(won, prize, saveResult, options) {
-    const pending = options && options.pending;
+  function showResult(won, prize, saveResult) {
     state.running = false;
     startScreen.hidden = true;
     gameControls.hidden = true;
     resultScreen.hidden = false;
 
     resultTitle.textContent = won && prize ? '菌糸GET！' : '空振り…';
-    resultText.textContent = buildResultBody(won, prize, saveResult, pending);
-    if (!pending) showPcCosmetics(session.pcId);
+    resultText.textContent = buildResultBody(won, prize, saveResult);
+    showPcCosmetics(session.pcId);
   }
 
   async function finalizePlayResult(won, prize) {
-    showResult(won, prize, null, { pending: true });
-    const saveResult = await finishPlay(won, prize && prize.cosmeticId);
-    showResult(won, prize, saveResult, { pending: false });
+    startScreen.hidden = true;
+    gameControls.hidden = true;
+    resultScreen.hidden = true;
+    setNavigationLocked(true);
+    setLoader(true, LOADER_MSG.save, 'saving');
+    let saveResult;
+    try {
+      saveResult = await finishPlay(won, prize && prize.cosmeticId);
+    } finally {
+      setLoader(false);
+      setNavigationLocked(false);
+    }
+    showResult(won, prize, saveResult);
   }
 
   async function dropSequence() {
@@ -794,9 +838,18 @@
     if (!name || !pcId) return;
 
     startBtn.disabled = true;
-    setFormStatus('コインを消費して筐体を起動中…', 'info');
+    setFormStatus('', '');
+    setNavigationLocked(true);
+    setLoader(true, LOADER_MSG.start, 'saving');
 
-    const result = await gasFetch('migo-play', { player_name: name, pc_id: pcId });
+    let result;
+    try {
+      result = await gasFetch('migo-play', { player_name: name, pc_id: pcId });
+    } finally {
+      setLoader(false);
+      setNavigationLocked(false);
+    }
+
     if (result.needsDeploy) {
       setFormStatus('GASの再デプロイが必要です', 'warn');
       startBtn.disabled = false;
@@ -833,6 +886,7 @@
   }
 
   function returnToStart() {
+    if (state.navLocked) return;
     resultScreen.hidden = true;
     startScreen.hidden = false;
     gameControls.hidden = true;
@@ -878,7 +932,8 @@
   });
 
   async function boot() {
-    if (loadingScreen) loadingScreen.hidden = false;
+    setNavigationLocked(true);
+    setLoader(true, LOADER_MSG.boot, 'boot');
     initPrizes('');
     if (!state.loopActive) {
       state.loopActive = true;
@@ -890,7 +945,8 @@
     if (!GAS_ENDPOINT) {
       setFormStatus('API未設定のためローカル表示のみです', 'warn');
     }
-    if (loadingScreen) loadingScreen.hidden = true;
+    setLoader(false);
+    setNavigationLocked(false);
   }
 
   boot();
