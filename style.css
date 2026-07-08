@@ -3679,19 +3679,25 @@ input {
 }
 
 .pc-complete-flank-frame--left {
-  border-color: rgba(185, 55, 80, 0.52);
+  border-color: rgba(70, 150, 110, 0.5);
+  background:
+    linear-gradient(145deg, rgba(8, 22, 16, 0.94), rgba(4, 12, 10, 0.98));
+  box-shadow:
+    0 0 22px rgba(40, 110, 80, 0.26),
+    inset 0 0 18px rgba(12, 35, 25, 0.3);
+  animation-name: pc-flank-frame-pulse-cthulhu;
   animation-delay: 0.2s;
   margin-right: -0.5rem;
 }
 
 .pc-complete-flank-frame--right {
-  border-color: rgba(115, 95, 145, 0.48);
+  border-color: rgba(70, 150, 110, 0.5);
   background:
-    linear-gradient(145deg, rgba(18, 10, 28, 0.94), rgba(8, 5, 14, 0.98));
+    linear-gradient(145deg, rgba(8, 22, 16, 0.94), rgba(4, 12, 10, 0.98));
   box-shadow:
-    0 0 22px rgba(70, 40, 110, 0.28),
-    inset 0 0 18px rgba(30, 18, 45, 0.3);
-  animation-name: pc-flank-frame-pulse-right;
+    0 0 22px rgba(40, 110, 80, 0.26),
+    inset 0 0 18px rgba(12, 35, 25, 0.3);
+  animation-name: pc-flank-frame-pulse-cthulhu;
   animation-delay: 1.15s;
   margin-left: -0.5rem;
 }
@@ -3740,10 +3746,15 @@ input {
   width: clamp(72px, 16vw, 104px);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 0 12px rgba(120, 180, 140, 0.35));
+  filter: drop-shadow(0 0 12px rgba(80, 160, 120, 0.35));
 }
 
-.pc-complete-flank-frame--right .pc-complete-flank--pixel {
+.pc-complete-flank--pixel.pc-complete-flank--left {
+  animation: pc-flank-float-mirror 4.6s ease-in-out infinite;
+  animation-delay: 0.15s;
+}
+
+.pc-complete-flank--pixel.pc-complete-flank--right {
   animation: pc-flank-float 4.6s ease-in-out infinite;
   animation-delay: 1.35s;
 }
@@ -4292,6 +4303,24 @@ input {
 @keyframes pc-flank-float {
   0%, 100% { transform: translateY(0) scale(1); opacity: 0.78; }
   50% { transform: translateY(-6px) scale(1.03); opacity: 0.95; }
+}
+
+@keyframes pc-flank-float-mirror {
+  0%, 100% { transform: scaleX(-1) translateY(0) scale(1); opacity: 0.78; }
+  50% { transform: scaleX(-1) translateY(-6px) scale(1.03); opacity: 0.95; }
+}
+
+@keyframes pc-flank-frame-pulse-cthulhu {
+  0%, 100% {
+    box-shadow:
+      0 0 18px rgba(40, 110, 80, 0.22),
+      inset 0 0 16px rgba(12, 35, 25, 0.26);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(55, 140, 100, 0.34),
+      inset 0 0 20px rgba(18, 45, 32, 0.34);
+  }
 }
 
 @keyframes pc-wing-left {
