@@ -1315,31 +1315,43 @@ function pcCosmeticTitle(pc) {
   return '';
 }
 
-function renderMyceliumCompleteBanner() {
-  return `
-    <div class="mycelium-complete-banner" role="status">
-      <p class="mycelium-complete-banner__kicker">FULL COMPLETE</p>
-      <p class="mycelium-complete-banner__main">菌糸コスメ COMPLETE</p>
-      <p class="mycelium-complete-banner__sub">全20種収集済み · ミ＝ゴの翼 解放</p>
-    </div>
-  `;
-}
-
 function renderPcPortraitBlock(pc, isComplete) {
   const img = pcPortraitImg(pc);
   if (!isComplete) return img;
-  return `<div class="pc-complete-portrait-wrap">${img}</div>`;
+  return `
+    <div class="pc-complete-portrait-frame">
+      <div class="pc-complete-portrait-wrap">${img}</div>
+    </div>`;
+}
+
+function renderCompRewardCard(unlocked) {
+  const meta = (window.MigoCosmetics && window.MigoCosmetics.META) || MIGO_COSMETIC_META;
+  const comp = meta[MIGO_COMP_ID] || { emoji: '🦇', label: 'ミ＝ゴの翼', slot: '枠' };
+  return `
+    <div class="cosmetic-comp-reward${unlocked ? ' is-unlocked' : ''}">
+      <h3 class="cosmetic-comp-reward__heading">コンプリート報酬</h3>
+      <div class="cosmetic-comp-reward__card">
+        <div class="cosmetic-comp-reward__emblem" aria-hidden="true">
+          <span class="cosmetic-comp-reward__emblem-icon">${comp.emoji}</span>
+        </div>
+        <div class="cosmetic-comp-reward__body">
+          <p class="cosmetic-comp-reward__name">
+            ${escapeHtml(comp.label)}
+            <span class="cosmetic-comp-reward__slot">${escapeHtml(comp.slot)}</span>
+          </p>
+          <p class="cosmetic-comp-reward__desc">全カテゴリの菌糸コスメ収集の証</p>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderPcDetailTitleBlock(pc, title, isComplete) {
   if (isComplete) {
     const subTitle = title && title !== MIGO_COMP_TITLE ? title : '';
     return `
-          <h1 class="detail-title pc-complete-title-block">
-            ${escapeHtml(pc.name)}
-            <span class="complete-title-badge">${escapeHtml(MIGO_COMP_TITLE)}</span>
-            ${subTitle ? `<span class="pc-cosme-title pc-cosme-title--sub">${escapeHtml(subTitle)}</span>` : ''}
-          </h1>`;
+          <h1 class="detail-title pc-complete-title-block">${escapeHtml(pc.name)}</h1>
+          <span class="complete-title-badge">${escapeHtml(MIGO_COMP_TITLE)}</span>
+          ${subTitle ? `<span class="pc-cosme-title pc-cosme-title--sub">${escapeHtml(subTitle)}</span>` : ''}`;
   }
   return `
           <h1 class="detail-title">${escapeHtml(pc.name)}${title ? `<span class="pc-cosme-title pc-cosme-title--detail">${escapeHtml(title)}</span>` : ''}</h1>`;
@@ -1351,29 +1363,23 @@ function renderPcCosmeticsSection(pc) {
 
   if (pcIsMigoComplete(pc)) {
     const meta = (window.MigoCosmetics && window.MigoCosmetics.META) || MIGO_COSMETIC_META;
-    const slotOrder = { '枠': 0, '背景': 1, '称号': 2, '光': 3 };
-    const sortedIds = [...ids].sort((a, b) => {
-      const sa = (meta[a] && meta[a].slot) || '';
-      const sb = (meta[b] && meta[b].slot) || '';
-      if (sa !== sb) return (slotOrder[sa] ?? 9) - (slotOrder[sb] ?? 9);
-      if (a === MIGO_COMP_ID) return 1;
-      if (b === MIGO_COMP_ID) return -1;
-      return 0;
-    });
-    const items = sortedIds.map(id => {
+    const baseIds = (window.MigoCosmetics && window.MigoCosmetics.BASE_IDS) || [];
+    const owned = new Set(ids);
+    const catalogItems = baseIds.map(id => {
       const itemMeta = meta[id] || { emoji: '✨', label: id, slot: '' };
-      const isComp = id === MIGO_COMP_ID;
-      return `<li class="cosmetic-complete-item${isComp ? ' cosmetic-complete-item--comp' : ''}" title="${escapeAttr(itemMeta.label)}">
-        <span class="cosmetic-complete-check" aria-hidden="true">✓</span>
-        <span class="cosmetic-complete-emoji" aria-hidden="true">${itemMeta.emoji}</span>
-        <span class="cosmetic-complete-label">${escapeHtml(itemMeta.label)}</span>
-        ${itemMeta.slot ? `<span class="cosmetic-complete-slot">${escapeHtml(itemMeta.slot)}</span>` : ''}
+      const isOwned = owned.has(id);
+      return `<li class="cosmetic-catalog-item${isOwned ? ' is-owned' : ' is-missing'}" title="${escapeAttr(itemMeta.label)}">
+        <span class="cosmetic-catalog-emoji" aria-hidden="true">${itemMeta.emoji}</span>
+        <span class="cosmetic-catalog-label">${escapeHtml(itemMeta.label)}</span>
+        <span class="cosmetic-catalog-slot">${escapeHtml(itemMeta.slot || '')}</span>
       </li>`;
     }).join('');
     return `
       <section class="detail-section pc-cosme-section pc-cosme-section--complete">
-        <h2 class="section-heading pc-cosme-section-heading">収集リスト <span class="pc-cosme-complete-tag">確認用</span></h2>
-        <ul class="cosmetic-complete-list">${items}</ul>
+        <h2 class="section-heading">菌糸コスメ</h2>
+        <p class="detail-meta pc-cosme-lead pc-cosme-lead--complete">ミ＝ゴキャッチャーの景品コレクション（全20種）。台帳の装飾は各スロット（枠・背景・称号・光）の<strong>最新</strong>が反映されます。</p>
+        <ul class="cosmetic-catalog-grid">${catalogItems}</ul>
+        ${renderCompRewardCard(owned.has(MIGO_COMP_ID))}
       </section>
     `;
   }
@@ -1424,11 +1430,10 @@ function renderPcDetail(pc) {
     <article class="entity-detail ${cosmeClass}${isComplete ? ' pc-full-complete' : ''}">
       ${isComplete ? `
       <div class="pc-complete-stage">
-        ${renderMyceliumCompleteBanner()}
         <div class="pc-complete-card">
-          <header class="detail-header pc-complete-hero">
+          <header class="detail-header pc-complete-hero pc-complete-hero--stacked">
             ${renderPcPortraitBlock(pc, true)}
-            <div class="detail-header-body">
+            <div class="detail-header-body pc-complete-identity">
               ${renderPcDetailTitleBlock(pc, title, true)}
               <p class="detail-meta pc-complete-player">プレイヤー：${escapeHtml(pc.playerName || '—')}</p>
             </div>
