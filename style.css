@@ -3225,18 +3225,18 @@ input {
 
 .pc-cosme--frame-migo-wing,
 .pc-cosme--complete {
-  border-color: rgba(232, 188, 196, 0.75) !important;
+  border-color: rgba(160, 45, 70, 0.65) !important;
   box-shadow:
-    inset 0 0 0 2px rgba(232, 188, 196, 0.7),
-    0 0 24px rgba(212, 168, 176, 0.35);
+    inset 0 0 0 2px rgba(140, 35, 60, 0.55),
+    0 0 20px rgba(100, 20, 45, 0.28);
 }
 
 .pc-cosme--frame-migo-wing::after,
 .pc-cosme--complete::after {
   opacity: 1;
   box-shadow:
-    0 0 28px rgba(212, 168, 176, 0.28),
-    0 0 48px rgba(180, 120, 160, 0.12);
+    0 0 24px rgba(120, 25, 55, 0.22),
+    0 0 40px rgba(80, 15, 40, 0.1);
   animation: pc-migo-wing-glow 4s ease-in-out infinite;
 }
 
@@ -3329,7 +3329,7 @@ input {
 .entity-detail.pc-cosme--complete .detail-image,
 .list-item.pc-cosme--frame-migo-wing .list-avatar,
 .list-item.pc-cosme--complete .list-avatar {
-  box-shadow: 0 0 0 2px rgba(232, 188, 196, 0.75), 0 0 22px rgba(212, 168, 176, 0.35);
+  box-shadow: 0 0 0 2px rgba(160, 45, 70, 0.7), 0 0 20px rgba(120, 25, 55, 0.3);
 }
 
 .entity-detail.pc-cosme--frame-coral .detail-image,
@@ -3365,4 +3365,376 @@ input {
 @keyframes pc-migo-wing-glow {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
+}
+
+/* ---- 菌糸コスメ フルコンプ（PC詳細専用） ---- */
+
+.entity-detail.pc-full-complete {
+  padding: 1.1rem 1.15rem 1.25rem;
+  margin: -0.25rem -0.35rem 0;
+  border-radius: calc(var(--radius-md) + 2px);
+  background:
+    linear-gradient(165deg, rgba(8, 4, 8, 0.97) 0%, rgba(28, 8, 18, 0.94) 42%, rgba(12, 6, 14, 0.97) 100%);
+  border: 1px solid rgba(130, 30, 55, 0.55);
+  box-shadow:
+    0 0 36px rgba(90, 15, 40, 0.28),
+    inset 0 0 80px rgba(50, 8, 28, 0.18);
+  overflow: hidden;
+}
+
+.entity-detail.pc-full-complete::before {
+  opacity: 1 !important;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(140, 25, 55, 0.38), transparent 58%),
+    radial-gradient(ellipse at 15% 85%, rgba(90, 20, 70, 0.22), transparent 52%),
+    radial-gradient(ellipse at 88% 72%, rgba(110, 30, 80, 0.16), transparent 48%);
+  animation: pc-complete-aura 7s ease-in-out infinite;
+}
+
+.entity-detail.pc-full-complete::after {
+  opacity: 1 !important;
+  inset: -1px;
+  border-radius: calc(var(--radius-md) + 3px);
+  box-shadow:
+    0 0 42px rgba(120, 25, 55, 0.32),
+    inset 0 0 0 1px rgba(200, 90, 110, 0.22);
+  animation: pc-complete-border-pulse 4.5s ease-in-out infinite;
+}
+
+.mycelium-complete-banner {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin: -1.1rem -1.15rem 1.15rem;
+  padding: 0.9rem 1rem 0.85rem;
+  background:
+    linear-gradient(135deg, rgba(14, 4, 8, 0.98), rgba(42, 10, 22, 0.96), rgba(18, 6, 14, 0.98));
+  border-bottom: 1px solid rgba(160, 45, 70, 0.45);
+  box-shadow:
+    0 4px 24px rgba(80, 12, 35, 0.35),
+    inset 0 1px 0 rgba(255, 210, 220, 0.07);
+  animation: pc-complete-aura 6s ease-in-out infinite;
+}
+
+.mycelium-complete-banner::before,
+.mycelium-complete-banner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 28%;
+  max-width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180, 80, 100, 0.55), transparent);
+  transform: translateY(-50%);
+}
+
+.mycelium-complete-banner::before { left: 6%; }
+.mycelium-complete-banner::after { right: 6%; }
+
+.mycelium-complete-banner__main {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #ffd0dc;
+  text-shadow: 0 0 14px rgba(200, 60, 90, 0.45);
+  margin-bottom: 0.3rem;
+}
+
+.mycelium-complete-banner__sub {
+  font-size: 0.72rem;
+  color: rgba(220, 170, 185, 0.82);
+  letter-spacing: 0.06em;
+}
+
+.pc-complete-card {
+  position: relative;
+  z-index: 2;
+}
+
+.entity-detail.pc-full-complete .detail-header {
+  border-bottom-color: rgba(120, 30, 50, 0.4);
+  padding-bottom: 1.35rem;
+  margin-bottom: 1.15rem;
+}
+
+.pc-complete-hero {
+  align-items: center;
+}
+
+.pc-complete-portrait-wrap {
+  position: relative;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.pc-complete-portrait-wrap::before,
+.pc-complete-portrait-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 88px;
+  height: 136px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  filter: blur(0.5px);
+  animation: pc-wing-glow 5.5s ease-in-out infinite;
+}
+
+.pc-complete-portrait-wrap::before {
+  right: 52%;
+  transform: translateY(-48%) skewY(-10deg) rotate(-14deg);
+  background:
+    radial-gradient(ellipse 70% 55% at 75% 45%, rgba(200, 50, 80, 0.55), transparent 68%),
+    radial-gradient(ellipse 50% 40% at 60% 70%, rgba(120, 25, 90, 0.35), transparent 72%);
+  border-radius: 8% 72% 38% 68%;
+}
+
+.pc-complete-portrait-wrap::after {
+  left: 52%;
+  transform: translateY(-48%) skewY(10deg) rotate(14deg) scaleX(-1);
+  background:
+    radial-gradient(ellipse 70% 55% at 75% 45%, rgba(200, 50, 80, 0.55), transparent 68%),
+    radial-gradient(ellipse 50% 40% at 60% 70%, rgba(120, 25, 90, 0.35), transparent 72%);
+  border-radius: 8% 72% 38% 68%;
+}
+
+.pc-complete-portrait-wrap .detail-image {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 0 0 2px rgba(160, 40, 70, 0.8),
+    0 0 28px rgba(130, 30, 60, 0.45),
+    0 0 52px rgba(80, 15, 45, 0.22) !important;
+}
+
+.pc-complete-title-block {
+  display: block;
+}
+
+.complete-title-badge {
+  display: block;
+  margin-top: 0.55rem;
+  padding: 0.4rem 0.9rem;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.35;
+  color: #ffe8ee;
+  background:
+    linear-gradient(135deg, rgba(55, 8, 22, 0.95), rgba(95, 18, 42, 0.9), rgba(45, 10, 28, 0.95));
+  border: 1px solid rgba(190, 85, 105, 0.5);
+  border-radius: 6px;
+  box-shadow:
+    0 0 22px rgba(130, 30, 60, 0.38),
+    inset 0 1px 0 rgba(255, 220, 230, 0.1);
+  text-shadow: 0 0 14px rgba(255, 140, 165, 0.45);
+  animation: pc-title-shine 5s ease-in-out infinite;
+}
+
+.pc-cosme-title--sub {
+  display: block;
+  margin: 0.4rem 0 0;
+  padding: 0.12rem 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(210, 175, 188, 0.82);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(120, 40, 60, 0.28);
+  border-radius: 999px;
+  box-shadow: none;
+  vertical-align: baseline;
+}
+
+.pc-cosme-section--complete {
+  position: relative;
+  z-index: 2;
+  padding: 0.85rem 0.95rem;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(120, 30, 50, 0.35);
+  border-radius: var(--radius-md);
+}
+
+.pc-cosme-section-heading {
+  font-size: 0.88rem;
+  margin-bottom: 0.65rem;
+}
+
+.pc-cosme-complete-tag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(200, 140, 155, 0.75);
+  border: 1px solid rgba(120, 40, 60, 0.35);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.cosmetic-complete-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 0.4rem;
+}
+
+.cosmetic-complete-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.35rem;
+  padding: 0.38rem 0.5rem;
+  font-size: 0.72rem;
+  background: rgba(8, 4, 8, 0.55);
+  border: 1px solid rgba(110, 30, 50, 0.32);
+  border-radius: 6px;
+  line-height: 1.25;
+}
+
+.cosmetic-complete-item--comp {
+  border-color: rgba(180, 60, 85, 0.55);
+  background: linear-gradient(135deg, rgba(30, 8, 16, 0.75), rgba(50, 12, 28, 0.65));
+  box-shadow: 0 0 12px rgba(100, 20, 45, 0.2);
+}
+
+.cosmetic-complete-check {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #c45a72;
+}
+
+.cosmetic-complete-emoji {
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.cosmetic-complete-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: #f0dde4;
+  overflow-wrap: anywhere;
+}
+
+.cosmetic-complete-slot {
+  flex: 0 0 100%;
+  padding-left: 1.1rem;
+  font-size: 0.58rem;
+  color: rgba(180, 120, 140, 0.72);
+  letter-spacing: 0.04em;
+}
+
+@keyframes pc-complete-aura {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+@keyframes pc-complete-border-pulse {
+  0%, 100% {
+    opacity: 0.75;
+    box-shadow:
+      0 0 36px rgba(110, 22, 50, 0.26),
+      inset 0 0 0 1px rgba(180, 75, 95, 0.18);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 48px rgba(140, 30, 60, 0.38),
+      inset 0 0 0 1px rgba(210, 100, 120, 0.32);
+  }
+}
+
+@keyframes pc-wing-glow {
+  0%, 100% { opacity: 0.42; }
+  50% { opacity: 0.62; }
+}
+
+@keyframes pc-title-shine {
+  0%, 100% {
+    box-shadow:
+      0 0 18px rgba(120, 25, 55, 0.32),
+      inset 0 1px 0 rgba(255, 220, 230, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 28px rgba(160, 40, 70, 0.48),
+      inset 0 1px 0 rgba(255, 230, 238, 0.14);
+  }
+}
+
+@media (max-width: 640px) {
+  .entity-detail.pc-full-complete {
+    margin: -0.1rem -0.15rem 0;
+    padding: 0.85rem 0.85rem 1rem;
+  }
+
+  .mycelium-complete-banner {
+    margin: -0.85rem -0.85rem 1rem;
+    padding: 0.75rem 0.65rem;
+  }
+
+  .mycelium-complete-banner__main {
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+  }
+
+  .mycelium-complete-banner::before,
+  .mycelium-complete-banner::after {
+    width: 18%;
+  }
+
+  .pc-complete-hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .pc-complete-portrait-wrap::before,
+  .pc-complete-portrait-wrap::after {
+    width: 64px;
+    height: 104px;
+    opacity: 0.38;
+  }
+
+  .complete-title-badge {
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  .pc-cosme-title--sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cosmetic-complete-list {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cosmetic-complete-label {
+    font-size: 0.68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entity-detail.pc-full-complete::before,
+  .entity-detail.pc-full-complete::after,
+  .mycelium-complete-banner,
+  .complete-title-badge,
+  .pc-complete-portrait-wrap::before,
+  .pc-complete-portrait-wrap::after,
+  .pc-cosme--frame-migo-wing::after,
+  .pc-cosme--complete::after {
+    animation: none;
+  }
 }

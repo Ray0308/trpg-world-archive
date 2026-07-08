@@ -50,8 +50,12 @@
   };
 
   let allPcs = [];
-  let balanceLoading = false;
+  let balanceDebounceTimer = null;
+  let balanceRequestSeq = 0;
+  let balanceCachedName = '';
   let animTime = 0;
+
+  const BALANCE_DEBOUNCE_MS = 320;
 
   const state = {
     running: false,
@@ -172,17 +176,25 @@
     session.balance = balance;
   }
 
+  function scheduleRefreshBalance() {
+    clearTimeout(balanceDebounceTimer);
+    balanceDebounceTimer = setTimeout(refreshBalance, BALANCE_DEBOUNCE_MS);
+  }
+
   async function refreshBalance() {
     const name = normalizeName(playerNameInput.value);
     if (!name || !GAS_ENDPOINT) {
+      balanceCachedName = '';
       updateCoinDisplay(GAS_ENDPOINT ? 0 : '—');
       validateForm();
       return;
     }
-    balanceLoading = true;
-    validateForm();
+
+    const reqId = ++balanceRequestSeq;
     const result = await gasFetch('migo-balance', { player_name: name });
-    balanceLoading = false;
+    if (reqId !== balanceRequestSeq) return;
+
+    balanceCachedName = name;
     if (result.needsDeploy) {
       setFormStatus('GASの再デプロイが必要です（KP向け）', 'warn');
       updateCoinDisplay('—');
@@ -198,9 +210,10 @@
     const name = normalizeName(playerNameInput.value);
     const pcId = pcSelect.value;
     const hasPc = !!pcId && pcsForPlayer(name).length > 0;
-    const canPlay = !!name && hasPc && session.balance >= 1 && !balanceLoading;
+    const balanceReady = !name || balanceCachedName === name;
+    const canPlay = !!name && hasPc && session.balance >= 1 && balanceReady;
     startBtn.disabled = !canPlay;
-    redeemBtn.disabled = !name || balanceLoading;
+    redeemBtn.disabled = !name;
   }
 
   function ownedBaseCount(cosmetics) {
@@ -632,32 +645,44 @@
     return result;
   }
 
-  function showResult(won, prize, saveResult) {
-    state.running = false;
-    startScreen.hidden = true;
-    gameControls.hidden = true;
-    resultScreen.hidden = false;
-
+  function buildResultBody(won, prize, saveResult, pending) {
     let body = '';
     if (won && prize) {
-      resultTitle.textContent = '菌糸GET！';
       body = `${prize.emoji} ${prize.label} を ${session.playerName} のPCに装備しました。台帳で確認しよう。`;
       if (saveResult && saveResult.ok && saveResult.data && saveResult.data.comp_granted) {
         body += ' 🦇 全種コンプ！ミ＝ゴの翼が付与されました！';
       }
     } else {
-      resultTitle.textContent = '空振り…';
       body = 'ミ＝ゴの鉤爪は何も掴めなかった。コインは消費済みです。';
     }
 
-    if (saveResult && saveResult.needsDeploy) {
+    if (pending) {
+      body += '（台帳に反映中…）';
+    } else if (saveResult && saveResult.needsDeploy) {
       body += '（保存は未反映。KP: GASの再デプロイが必要）';
     } else if (saveResult && !saveResult.ok) {
       body += `（台帳への反映に失敗: ${saveResult.error || '通信エラー'}）`;
     }
 
-    resultText.textContent = body;
-    showPcCosmetics(session.pcId);
+    return body;
+  }
+
+  function showResult(won, prize, saveResult, options) {
+    const pending = options && options.pending;
+    state.running = false;
+    startScreen.hidden = true;
+    gameControls.hidden = true;
+    resultScreen.hidden = false;
+
+    resultTitle.textContent = won && prize ? '菌糸GET！' : '空振り…';
+    resultText.textContent = buildResultBody(won, prize, saveResult, pending);
+    if (!pending) showPcCosmetics(session.pcId);
+  }
+
+  async function finalizePlayResult(won, prize) {
+    showResult(won, prize, null, { pending: true });
+    const saveResult = await finishPlay(won, prize && prize.cosmeticId);
+    showResult(won, prize, saveResult, { pending: false });
   }
 
   async function dropSequence() {
@@ -706,15 +731,13 @@
       spawnParticles(fadeX, fadeY, MIGO_PINK_LIGHT);
       await animatePrizeFadeOut(prize.emoji, fadeX, fadeY);
       state.played = true;
-      const saveResult = await finishPlay(true, prize.cosmeticId);
-      showResult(true, prize, saveResult);
+      await finalizePlayResult(true, prize);
     } else {
       state.clawOpen = true;
       drawMachine();
       await wait(140);
       state.played = true;
-      const saveResult = await finishPlay(false);
-      showResult(false, null, saveResult);
+      await finalizePlayResult(false, null);
     }
 
     state.busy = false;
@@ -829,8 +852,9 @@
 
   playerNameInput.addEventListener('input', () => {
     updatePcSelect();
-    refreshBalance();
+    scheduleRefreshBalance();
     showPcCosmetics(pcSelect.value);
+    validateForm();
   });
 
   pcSelect.addEventListener('change', () => {

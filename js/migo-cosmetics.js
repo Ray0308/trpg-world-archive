@@ -32,7 +32,7 @@
     emoji: '🦇',
     label: 'ミ＝ゴの翼',
     slot: 'frame',
-    titleLabel: null
+    titleLabel: '深淵を飾る者'
   };
 
   const BASE_IDS = ITEMS.map(item => item.id);
@@ -67,6 +67,7 @@
     BASE_IDS,
     BASE_COUNT: BASE_IDS.length,
     COMP_ID: COMP.id,
+    COMP_TITLE_LABEL: COMP.titleLabel,
     PRIZES,
     LABELS,
     META,
