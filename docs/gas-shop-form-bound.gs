@@ -18,7 +18,6 @@
  *  - 商品画像（ファイル）
  *  - 価格（整数・必須）
  *  - 在庫数（整数・必須）
- *  - 表示順（任意・整数）
  *  - 備考（任意・KP用）
  */
 
@@ -228,7 +227,6 @@ function buildShopRowFromAnswers_(answers, sheet, meta) {
   const response = m.response;
   const price = parseNonNegInt_(pickAnswer_(answers, '価格', '価格（菌糸コイン）'), -1);
   const stock = parseNonNegInt_(pickAnswer_(answers, '在庫数', '在庫'), -1);
-  const sortOrder = parseNonNegInt_(pickAnswer_(answers, '表示順', '並び順'), 100);
 
   return {
     product_id: generateShopProductId_(sheet),
@@ -240,7 +238,7 @@ function buildShopRowFromAnswers_(answers, sheet, meta) {
     price: price,
     stock: stock,
     active: true,
-    sort_order: sortOrder,
+    sort_order: 100,
     deleted: '',
     edit_url: m.editUrl || (response && typeof response.getEditResponseUrl === 'function'
       ? response.getEditResponseUrl() : ''),
@@ -285,10 +283,12 @@ function appendOrUpdateShopFromAnswers_(ss, answers, meta) {
       const deletedIdx = existing.headers.indexOf('deleted');
       rowData.product_id = String(existing.values[idIdx] || rowData.product_id);
       if (createdIdx >= 0) rowData.created_at = existing.values[createdIdx];
-      // 在庫・公開・削除は KP 画面管理を優先して上書きしない
+      // 在庫・公開・削除・表示順は KP / 既存値を優先して上書きしない
+      const sortIdx = existing.headers.indexOf('sort_order');
       if (stockIdx >= 0) rowData.stock = existing.values[stockIdx];
       if (activeIdx >= 0) rowData.active = existing.values[activeIdx];
       if (deletedIdx >= 0) rowData.deleted = existing.values[deletedIdx];
+      if (sortIdx >= 0) rowData.sort_order = existing.values[sortIdx];
       rowData.updated_at = new Date();
       writeShopRow_(sheet, headers, rowData, existing.rowIndex);
       Logger.log('Shop updated: ' + rowData.product_id);
