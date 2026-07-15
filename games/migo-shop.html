@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1210">
+  <meta name="apple-mobile-web-app-title" content="マリウスの露天商">
+  <title>マリウスの露天商 — YOKOFOLIA</title>
+  <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="migo-shop.css?v=20260715a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="ms-app">
+    <header class="ms-header">
+      <a href="../index.html#home" class="ms-back">← YOKOFOLIA</a>
+      <h1 class="ms-header-title">マリウスの露天商</h1>
+      <div class="ms-coin-hud" aria-live="polite">
+        <span class="ms-coin-label">菌糸コイン</span>
+        <span class="ms-coin-value" id="coinBalance">—</span>
+      </div>
+    </header>
+
+    <main class="ms-main">
+      <section class="ms-player-bar">
+        <label class="ms-field">
+          <span class="ms-field-label">プレイヤー名</span>
+          <input type="text" id="playerName" maxlength="24" placeholder="PC登録と同じ名前" autocomplete="nickname">
+        </label>
+        <button type="button" class="ms-btn" id="refreshBtn">残高を更新</button>
+        <p class="ms-status" id="formStatus" hidden></p>
+      </section>
+
+      <section class="ms-shop-stage" aria-label="露天商">
+        <div class="ms-shop-backdrop">
+          <div class="ms-shopkeeper">
+            <img id="shopkeeperImage" src="../images/yokofolia-mascot.png" alt="マリウス" width="160" height="160" decoding="async">
+            <p class="ms-shopkeeper-name">マリウス</p>
+            <p class="ms-shopkeeper-line">よう、菌糸コイン持ってるなら見ていきな。</p>
+          </div>
+        </div>
+
+        <div class="ms-shelf" id="productShelf" role="list">
+          <p class="ms-shelf-empty" id="shelfEmpty">商品を読み込み中…</p>
+        </div>
+      </section>
+    </main>
+
+    <div class="ms-modal" id="productModal" hidden aria-hidden="true">
+      <div class="ms-modal-backdrop" data-ms-close></div>
+      <div class="ms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+        <button type="button" class="ms-modal-close" data-ms-close aria-label="閉じる">×</button>
+        <div class="ms-modal-media">
+          <img id="productModalImage" alt="" width="240" height="240" decoding="async">
+        </div>
+        <h2 class="ms-modal-title" id="productModalTitle"></h2>
+        <p class="ms-modal-desc" id="productModalDesc"></p>
+        <dl class="ms-modal-meta">
+          <div>
+            <dt>価格</dt>
+            <dd><span id="productModalPrice">0</span> コイン</dd>
+          </div>
+          <div>
+            <dt>残り在庫</dt>
+            <dd id="productModalStock">0</dd>
+          </div>
+        </dl>
+        <p class="ms-modal-status" id="productModalStatus" hidden></p>
+        <button type="button" class="ms-btn ms-btn--primary" id="buyBtn">購入する（1個）</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/image-utils.js"></script>
+  <script src="migo-shop.js?v=20260715a"></script>
+</body>
+</html>

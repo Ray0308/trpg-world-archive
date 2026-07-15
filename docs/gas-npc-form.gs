@@ -315,7 +315,14 @@ function doGet(e) {
         'migo-kp-players',
         'migo-kp-grant',
         'migo-kp-rename',
-        'migo-set-active'
+        'migo-set-active',
+        'migo-shop-catalog',
+        'migo-shop-buy',
+        'migo-shop-kp-list',
+        'migo-shop-kp-set-active',
+        'migo-shop-kp-set-stock',
+        'migo-shop-kp-delete',
+        'migo-shop-kp-sales'
       ]
     }, callback);
   }
@@ -530,6 +537,86 @@ function doGet(e) {
     const cosmeticId = String((e.parameter && e.parameter.cosmetic_id) || '').trim();
     try {
       return jsonResponse_(setMigoActiveCosmetic_(ss, playerName, pcId, cosmeticId), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-catalog') {
+    try {
+      return jsonResponse_(getMigoShopCatalog_(ss), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-buy') {
+    const playerName = String((e.parameter && e.parameter.player_name) || '').trim();
+    const productId = String((e.parameter && e.parameter.product_id) || '').trim();
+    const clientRequestId = String((e.parameter && e.parameter.client_request_id) || '').trim();
+    try {
+      return jsonResponse_(buyMigoShopProduct_(ss, playerName, productId, clientRequestId), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-kp-list') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    try {
+      return jsonResponse_(getKpMigoShopProducts_(ss), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-kp-set-active') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const productId = String((e.parameter && e.parameter.product_id) || '').trim();
+    const active = e.parameter && (e.parameter.active === '1' || e.parameter.active === 'true');
+    try {
+      return jsonResponse_(setMigoShopProductActive_(ss, productId, active), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-kp-set-stock') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const productId = String((e.parameter && e.parameter.product_id) || '').trim();
+    const stock = e.parameter && e.parameter.stock;
+    try {
+      return jsonResponse_(setMigoShopProductStock_(ss, productId, stock), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-kp-delete') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    const productId = String((e.parameter && e.parameter.product_id) || '').trim();
+    const deleted = !(e.parameter && (e.parameter.deleted === '0' || e.parameter.deleted === 'false'));
+    try {
+      return jsonResponse_(setMigoShopProductDeleted_(ss, productId, deleted), callback);
+    } catch (err) {
+      return jsonResponse_({ error: err.message || String(err) }, callback);
+    }
+  }
+
+  if (type === 'migo-shop-kp-sales') {
+    if (!kpMode) {
+      return jsonResponse_({ error: 'kp mode required' }, callback);
+    }
+    try {
+      return jsonResponse_(getKpMigoShopSales_(ss), callback);
     } catch (err) {
       return jsonResponse_({ error: err.message || String(err) }, callback);
     }
@@ -2356,4 +2443,298 @@ function renameMigoPlayerCoins_(ss, oldName, newName) {
     merged_from: oldN,
     note: 'PCのプレイヤー名もフォーム編集で合わせてください'
   };
+}
+
+/* ---- マリウスの露天商（ミゴコインショップ） ---- */
+
+function ensureMigoShopProductsSheet_(ss) {
+  const headers = [
+    'product_id', 'name', 'description', 'image_url', 'price', 'stock',
+    'active', 'sort_order', 'deleted', 'edit_url', 'form_response_id',
+    'created_at', 'updated_at', 'memo'
+  ];
+  let sheet = ss.getSheetByName('MIGO_SHOP_PRODUCTS');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_SHOP_PRODUCTS');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function ensureMigoShopPurchasesSheet_(ss) {
+  const headers = [
+    'purchase_id', 'player_name', 'product_id', 'product_name',
+    'price_paid', 'qty', 'purchased_at', 'client_request_id'
+  ];
+  let sheet = ss.getSheetByName('MIGO_SHOP_PURCHASES');
+  if (!sheet) {
+    sheet = ss.insertSheet('MIGO_SHOP_PURCHASES');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+    return sheet;
+  }
+  const firstRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (firstRow.every(v => v === '')) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function isMigoShopActive_(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (!v) return false;
+  return v === 'true' || v === '1' || v === 'はい' || v === 'yes' || v === '公開';
+}
+
+function mapMigoShopProductRow_(headers, row) {
+  const record = {};
+  headers.forEach((header, index) => {
+    if (header) record[header] = row[index];
+  });
+  const productId = String(record.product_id || '').trim();
+  if (!productId) return null;
+  return {
+    product_id: productId,
+    name: String(record.name || '').trim(),
+    description: String(record.description || '').trim(),
+    image_url: String(record.image_url || '').trim(),
+    price: Math.max(0, Math.floor(Number(record.price) || 0)),
+    stock: Math.max(0, Math.floor(Number(record.stock) || 0)),
+    active: isMigoShopActive_(record.active),
+    sort_order: Math.floor(Number(record.sort_order) || 0),
+    deleted: isDeleted_(record.deleted),
+    edit_url: String(record.edit_url || '').trim(),
+    form_response_id: String(record.form_response_id || '').trim(),
+    memo: String(record.memo || '').trim(),
+    created_at: record.created_at || '',
+    updated_at: record.updated_at || ''
+  };
+}
+
+function readMigoShopProducts_(ss) {
+  const sheet = ensureMigoShopProductsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  const headers = values[0].map(h => String(h).trim());
+  return values.slice(1)
+    .map(row => mapMigoShopProductRow_(headers, row))
+    .filter(Boolean);
+}
+
+function findMigoShopProductRow_(ss, productId) {
+  const sheet = ensureMigoShopProductsSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0].map(h => String(h).trim());
+  const idCol = headers.indexOf('product_id');
+  if (idCol < 0) return null;
+  const cleanId = String(productId || '').trim();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idCol]).trim() === cleanId) {
+      return {
+        sheet: sheet,
+        headers: headers,
+        rowIndex: i + 1,
+        values: values[i],
+        product: mapMigoShopProductRow_(headers, values[i])
+      };
+    }
+  }
+  return null;
+}
+
+function getMigoShopCatalog_(ss) {
+  const products = readMigoShopProducts_(ss)
+    .filter(p => !p.deleted && p.active)
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ja'));
+  return {
+    ok: true,
+    shop_name: 'マリウスの露天商',
+    products: products.map(p => ({
+      product_id: p.product_id,
+      name: p.name,
+      description: p.description,
+      image_url: p.image_url,
+      price: p.price,
+      stock: p.stock,
+      sort_order: p.sort_order
+    }))
+  };
+}
+
+function getKpMigoShopProducts_(ss) {
+  const products = readMigoShopProducts_(ss)
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ja'));
+  return { ok: true, products: products };
+}
+
+function setMigoShopProductActive_(ss, productId, active) {
+  const found = findMigoShopProductRow_(ss, productId);
+  if (!found || !found.product) throw new Error('商品が見つかりません');
+  if (found.product.deleted) throw new Error('削除済みの商品です');
+  const activeCol = found.headers.indexOf('active') + 1;
+  const updatedCol = found.headers.indexOf('updated_at') + 1;
+  if (activeCol <= 0) throw new Error('active 列がありません');
+  found.sheet.getRange(found.rowIndex, activeCol).setValue(active ? true : false);
+  if (updatedCol > 0) found.sheet.getRange(found.rowIndex, updatedCol).setValue(new Date());
+  return { ok: true, product_id: found.product.product_id, active: !!active };
+}
+
+function setMigoShopProductStock_(ss, productId, stock) {
+  const found = findMigoShopProductRow_(ss, productId);
+  if (!found || !found.product) throw new Error('商品が見つかりません');
+  if (found.product.deleted) throw new Error('削除済みの商品です');
+  const next = Math.max(0, Math.floor(Number(stock)));
+  if (!isFinite(next)) throw new Error('在庫数が不正です');
+  const stockCol = found.headers.indexOf('stock') + 1;
+  const updatedCol = found.headers.indexOf('updated_at') + 1;
+  if (stockCol <= 0) throw new Error('stock 列がありません');
+  found.sheet.getRange(found.rowIndex, stockCol).setValue(next);
+  if (updatedCol > 0) found.sheet.getRange(found.rowIndex, updatedCol).setValue(new Date());
+  return { ok: true, product_id: found.product.product_id, stock: next };
+}
+
+function setMigoShopProductDeleted_(ss, productId, deleted) {
+  const found = findMigoShopProductRow_(ss, productId);
+  if (!found || !found.product) throw new Error('商品が見つかりません');
+  const deletedCol = found.headers.indexOf('deleted') + 1;
+  const activeCol = found.headers.indexOf('active') + 1;
+  const updatedCol = found.headers.indexOf('updated_at') + 1;
+  if (deletedCol <= 0) throw new Error('deleted 列がありません');
+  found.sheet.getRange(found.rowIndex, deletedCol).setValue(deleted ? true : false);
+  if (deleted && activeCol > 0) {
+    found.sheet.getRange(found.rowIndex, activeCol).setValue(false);
+  }
+  if (updatedCol > 0) found.sheet.getRange(found.rowIndex, updatedCol).setValue(new Date());
+  return { ok: true, product_id: found.product.product_id, deleted: !!deleted };
+}
+
+function findMigoShopPurchaseByClientRequest_(ss, playerName, clientRequestId) {
+  const id = String(clientRequestId || '').trim();
+  if (!id) return null;
+  const sheet = ensureMigoShopPurchasesSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0].map(h => String(h).trim());
+  const nameCol = headers.indexOf('player_name');
+  const reqCol = headers.indexOf('client_request_id');
+  if (nameCol < 0 || reqCol < 0) return null;
+  const name = normalizeMigoPlayerName_(playerName);
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (normalizeMigoPlayerName_(values[i][nameCol]) !== name) continue;
+    if (String(values[i][reqCol]).trim() !== id) continue;
+    const record = {};
+    headers.forEach((header, index) => {
+      if (header) record[header] = values[i][index];
+    });
+    return record;
+  }
+  return null;
+}
+
+function buyMigoShopProduct_(ss, playerName, productId, clientRequestId) {
+  const name = normalizeMigoPlayerName_(playerName);
+  const cleanProductId = String(productId || '').trim();
+  if (!name) throw new Error('プレイヤー名を入力してください');
+  if (!cleanProductId) throw new Error('商品が指定されていません');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const existing = findMigoShopPurchaseByClientRequest_(ss, name, clientRequestId);
+    if (existing) {
+      const bal = getMigoBalance_(ss, name);
+      return {
+        ok: true,
+        already_processed: true,
+        purchase_id: String(existing.purchase_id || ''),
+        product_id: String(existing.product_id || ''),
+        product_name: String(existing.product_name || ''),
+        price_paid: Math.max(0, Math.floor(Number(existing.price_paid) || 0)),
+        balance: bal.balance,
+        message: '同じ購入リクエストはすでに処理済みです'
+      };
+    }
+
+    const found = findMigoShopProductRow_(ss, cleanProductId);
+    if (!found || !found.product) throw new Error('商品が見つかりません');
+    const product = found.product;
+    if (product.deleted || !product.active) throw new Error('この商品は現在購入できません');
+    if (product.stock < 1) throw new Error('在庫切れです');
+    if (product.price < 1) throw new Error('商品価格が不正です');
+
+    const bal = getMigoBalance_(ss, name);
+    if (bal.balance < product.price) {
+      throw new Error('ミゴコインが足りません（残高 ' + bal.balance + ' / 必要 ' + product.price + '）');
+    }
+
+    const spent = spendMigoCoins_(ss, name, product.price);
+    const stockCol = found.headers.indexOf('stock') + 1;
+    const updatedCol = found.headers.indexOf('updated_at') + 1;
+    const nextStock = product.stock - 1;
+    found.sheet.getRange(found.rowIndex, stockCol).setValue(nextStock);
+    if (updatedCol > 0) found.sheet.getRange(found.rowIndex, updatedCol).setValue(new Date());
+
+    const purchaseId = Utilities.getUuid();
+    const now = new Date();
+    const purchaseSheet = ensureMigoShopPurchasesSheet_(ss);
+    purchaseSheet.appendRow([
+      purchaseId,
+      name,
+      product.product_id,
+      product.name,
+      product.price,
+      1,
+      now,
+      String(clientRequestId || '').trim()
+    ]);
+
+    return {
+      ok: true,
+      purchase_id: purchaseId,
+      product_id: product.product_id,
+      product_name: product.name,
+      price_paid: product.price,
+      qty: 1,
+      stock: nextStock,
+      balance: spent.balance,
+      message: product.name + ' を購入しました'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getKpMigoShopSales_(ss) {
+  const sheet = ensureMigoShopPurchasesSheet_(ss);
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { ok: true, sales: [] };
+  const headers = values[0].map(h => String(h).trim());
+  const sales = values.slice(1).map(row => {
+    const record = {};
+    headers.forEach((header, index) => {
+      if (header) record[header] = row[index];
+    });
+    const purchaseId = String(record.purchase_id || '').trim();
+    if (!purchaseId) return null;
+    return {
+      purchase_id: purchaseId,
+      player_name: String(record.player_name || '').trim(),
+      product_id: String(record.product_id || '').trim(),
+      product_name: String(record.product_name || '').trim(),
+      price_paid: Math.max(0, Math.floor(Number(record.price_paid) || 0)),
+      qty: Math.max(1, Math.floor(Number(record.qty) || 1)),
+      purchased_at: record.purchased_at || ''
+    };
+  }).filter(Boolean);
+  sales.reverse();
+  return { ok: true, sales: sales };
 }

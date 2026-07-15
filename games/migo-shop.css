@@ -1,0 +1,388 @@
+/* マリウスの露天商 — YOKOFOLIA ショップ */
+
+:root {
+  --ms-bg: #14100f;
+  --ms-panel: #221814;
+  --ms-border: #5a3a2e;
+  --ms-text: #f4e8df;
+  --ms-muted: #b39a8c;
+  --ms-accent: #d4a05a;
+  --ms-accent-strong: #e8b86a;
+  --ms-danger: #e07070;
+  --ms-ok: #7ecf9a;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 15px; }
+
+body {
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(180, 90, 50, 0.18), transparent 55%),
+    linear-gradient(180deg, #1a1210 0%, #100c0b 100%);
+  color: var(--ms-text);
+  min-height: 100vh;
+  touch-action: manipulation;
+}
+
+.ms-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ms-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(90, 58, 46, 0.7);
+  background: rgba(10, 8, 7, 0.72);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.ms-back {
+  color: var(--ms-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.ms-back:hover { color: var(--ms-accent); }
+
+.ms-header-title {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ms-coin-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.ms-coin-label {
+  font-size: 0.65rem;
+  color: var(--ms-muted);
+}
+
+.ms-coin-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ms-accent-strong);
+}
+
+.ms-main {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 1rem 1rem 2.5rem;
+  flex: 1;
+}
+
+.ms-player-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(90, 58, 46, 0.55);
+  border-radius: 10px;
+}
+
+.ms-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 12rem;
+}
+
+.ms-field-label {
+  font-size: 0.7rem;
+  color: var(--ms-muted);
+  font-weight: 600;
+}
+
+.ms-field input {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(90, 58, 46, 0.7);
+  background: #120e0c;
+  color: var(--ms-text);
+  font: inherit;
+}
+
+.ms-field input:focus {
+  outline: none;
+  border-color: var(--ms-accent);
+}
+
+.ms-btn {
+  appearance: none;
+  border: 1px solid rgba(212, 160, 90, 0.45);
+  background: rgba(80, 45, 28, 0.55);
+  color: var(--ms-text);
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ms-btn:hover { border-color: var(--ms-accent); }
+.ms-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ms-btn--primary {
+  width: 100%;
+  background: linear-gradient(135deg, #8a5228, #c4863c);
+  border-color: rgba(232, 184, 106, 0.6);
+  margin-top: 0.35rem;
+}
+
+.ms-status {
+  width: 100%;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.ms-status--ok { color: var(--ms-ok); }
+.ms-status--error { color: var(--ms-danger); }
+.ms-status--info { color: var(--ms-muted); }
+
+.ms-shop-stage {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(90, 58, 46, 0.65);
+  background:
+    linear-gradient(180deg, rgba(60, 32, 22, 0.45) 0%, rgba(18, 12, 10, 0.95) 48%, #120d0b 100%);
+  min-height: 28rem;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.ms-shop-backdrop {
+  padding: 1.25rem 1rem 0.25rem;
+  text-align: center;
+}
+
+.ms-shopkeeper img {
+  width: clamp(96px, 22vw, 148px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+}
+
+.ms-shopkeeper-name {
+  margin-top: 0.35rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f0d2b0;
+}
+
+.ms-shopkeeper-line {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--ms-muted);
+}
+
+.ms-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1rem 1.35rem;
+  position: relative;
+  z-index: 1;
+}
+
+.ms-shelf-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--ms-muted);
+  padding: 1.5rem 0.5rem 2rem;
+}
+
+.ms-product {
+  appearance: none;
+  border: 1px solid rgba(120, 80, 55, 0.55);
+  background: linear-gradient(160deg, rgba(42, 26, 20, 0.95), rgba(20, 14, 12, 0.98));
+  border-radius: 10px;
+  padding: 0.55rem;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 10.5rem;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ms-product:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 160, 90, 0.7);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.ms-product.is-soldout {
+  opacity: 0.55;
+}
+
+.ms-product-thumb {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d0a09;
+}
+
+.ms-product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ms-product-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ms-product-price {
+  font-size: 0.78rem;
+  color: var(--ms-accent-strong);
+  font-weight: 600;
+}
+
+.ms-product-stock {
+  font-size: 0.68rem;
+  color: var(--ms-muted);
+}
+
+.ms-modal[hidden] { display: none; }
+
+.ms-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.ms-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.ms-modal-panel {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  background: linear-gradient(180deg, #2a1c16, #17110f);
+  border: 1px solid rgba(212, 160, 90, 0.4);
+  border-radius: 14px;
+  padding: 1.1rem 1rem 1.2rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.ms-modal-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--ms-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ms-modal-media {
+  width: min(220px, 70%);
+  margin: 0.2rem auto 0.85rem;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0d0a09;
+  border: 1px solid rgba(90, 58, 46, 0.6);
+}
+
+.ms-modal-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ms-modal-title {
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.ms-modal-desc {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #e2d0c2;
+  margin-bottom: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.ms-modal-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.ms-modal-meta div {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.ms-modal-meta dt {
+  font-size: 0.65rem;
+  color: var(--ms-muted);
+}
+
+.ms-modal-meta dd {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ms-accent-strong);
+}
+
+.ms-modal-status {
+  font-size: 0.78rem;
+  margin-bottom: 0.55rem;
+}
+
+.ms-modal-status--ok { color: var(--ms-ok); }
+.ms-modal-status--error { color: var(--ms-danger); }
+.ms-modal-status--info { color: var(--ms-muted); }
+
+@media (max-width: 640px) {
+  .ms-header-title { font-size: 0.92rem; }
+  .ms-shelf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ms-shop-stage { min-height: 24rem; }
+}

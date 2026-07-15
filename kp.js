@@ -86,10 +86,18 @@
       emptyLabel: 'PC',
       editable: true,
       visibilityControl: true
+    },
+    shop: {
+      linkKey: 'shopForm',
+      icon: '🏪',
+      name: '露天商・商品登録フォーム',
+      description: 'マリウスの露天商の商品を追加。在庫・公開切替は下の「オマケ通貨」内ショップ管理から。',
+      editable: false,
+      visibilityControl: false
     }
   };
 
-  const FORM_CARDS = ['npc', 'org', 'scenario', 'pc'];
+  const FORM_CARDS = ['npc', 'org', 'scenario', 'pc', 'shop'];
 
   const EXTERNAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
 
@@ -1284,9 +1292,240 @@
     });
   }
 
+  function renderMigoShopSection() {
+    const section = document.getElementById('kpMigoShop');
+    if (!section) return;
+
+    section.innerHTML = `
+      <article class="kp-card kp-card--wide">
+        <span class="kp-card-icon">🏪</span>
+        <h3 class="kp-card-name" id="kpMigoShopTitle">マリウスの露天商（KP）</h3>
+        <p class="kp-card-desc">
+          商品の追加はフォーム、ここに在庫と公開状態、購入履歴があります。
+          物理削除はせず、論理削除または非公開にしてください。
+        </p>
+        <div class="kp-migo-toolbar">
+          <button type="button" class="kp-card-btn" id="kpShopRefreshBtn">商品を再読込</button>
+          <button type="button" class="kp-card-btn kp-card-btn--secondary" id="kpShopSalesBtn">購入履歴</button>
+        </div>
+        <p class="kp-migo-result" id="kpShopStatus" hidden></p>
+        <div class="kp-migo-players-wrap" id="kpShopProductsBody">
+          <p class="kp-migo-result">読み込み中…</p>
+        </div>
+        <div class="kp-migo-players-wrap" id="kpShopSalesBody" hidden></div>
+      </article>
+    `;
+
+    document.getElementById('kpShopRefreshBtn').addEventListener('click', () => loadKpShopProducts());
+    document.getElementById('kpShopSalesBtn').addEventListener('click', () => loadKpShopSales());
+    loadKpShopProducts();
+  }
+
+  function setKpShopStatus(message, kind) {
+    const el = document.getElementById('kpShopStatus');
+    if (!el) return;
+    if (!message) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.hidden = false;
+    el.textContent = message;
+    el.className = `kp-migo-result kp-migo-result--${kind || 'info'}`;
+  }
+
+  function formatShopDate(value) {
+    if (!value) return '—';
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString('ja-JP');
+    } catch (e) {
+      return String(value);
+    }
+  }
+
+  function renderKpShopProducts(products) {
+    const body = document.getElementById('kpShopProductsBody');
+    const salesBody = document.getElementById('kpShopSalesBody');
+    if (salesBody) salesBody.hidden = true;
+    if (!body) return;
+
+    if (!products.length) {
+      body.innerHTML = '<p class="kp-migo-result">登録商品がありません。フォームから追加してください。</p>';
+      return;
+    }
+
+    body.innerHTML = `
+      <table class="kp-migo-table kp-shop-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>商品</th>
+            <th>価格</th>
+            <th>在庫</th>
+            <th>公開</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => {
+            const deleted = Boolean(p.deleted);
+            const active = Boolean(p.active) && !deleted;
+            return `
+              <tr class="${deleted ? 'kp-migo-row--orphan' : ''}" data-product-id="${escapeAttr(p.product_id)}">
+                <td><code>${escapeHtml(p.product_id)}</code></td>
+                <td>
+                  <strong>${escapeHtml(p.name || '')}</strong>
+                  ${deleted ? ' <span class="kp-migo-tag">削除</span>' : ''}
+                  <div class="kp-shop-desc">${escapeHtml((p.description || '').slice(0, 80))}</div>
+                </td>
+                <td>${escapeHtml(String(p.price ?? 0))}</td>
+                <td>
+                  <input type="number" class="kp-shop-stock-input" min="0" step="1" value="${escapeAttr(String(p.stock ?? 0))}" ${deleted ? 'disabled' : ''} aria-label="在庫">
+                </td>
+                <td>${active ? '公開' : '非公開'}</td>
+                <td class="kp-shop-actions">
+                  <button type="button" class="kp-card-btn kp-card-btn--secondary" data-shop-stock ${deleted ? 'disabled' : ''}>在庫保存</button>
+                  <button type="button" class="kp-card-btn kp-card-btn--secondary" data-shop-active="${active ? '0' : '1'}" ${deleted ? 'disabled' : ''}>
+                    ${active ? '非公開にする' : '公開する'}
+                  </button>
+                  <button type="button" class="kp-card-btn kp-card-btn--secondary" data-shop-delete="${deleted ? '0' : '1'}">
+                    ${deleted ? '削除取消' : '論理削除'}
+                  </button>
+                  ${p.edit_url ? `<a class="kp-card-btn kp-card-btn--secondary" href="${escapeAttr(p.edit_url)}" target="_blank" rel="noopener noreferrer">編集${EXTERNAL_ICON}</a>` : ''}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+
+    body.querySelectorAll('[data-shop-stock]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('[data-product-id]');
+        const id = row && row.dataset.productId;
+        const input = row && row.querySelector('.kp-shop-stock-input');
+        if (!id || !input) return;
+        btn.disabled = true;
+        try {
+          await fetchKpMigoApi('migo-shop-kp-set-stock', {
+            product_id: id,
+            stock: String(input.value)
+          });
+          setKpShopStatus(`${id} の在庫を更新しました`, 'ok');
+          await loadKpShopProducts();
+        } catch (err) {
+          setKpShopStatus(err.message || '在庫更新に失敗', 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-shop-active]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('[data-product-id]');
+        const id = row && row.dataset.productId;
+        if (!id) return;
+        btn.disabled = true;
+        try {
+          await fetchKpMigoApi('migo-shop-kp-set-active', {
+            product_id: id,
+            active: btn.dataset.shopActive
+          });
+          setKpShopStatus(`${id} の公開状態を更新しました`, 'ok');
+          await loadKpShopProducts();
+        } catch (err) {
+          setKpShopStatus(err.message || '公開切替に失敗', 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-shop-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('[data-product-id]');
+        const id = row && row.dataset.productId;
+        if (!id) return;
+        btn.disabled = true;
+        try {
+          await fetchKpMigoApi('migo-shop-kp-delete', {
+            product_id: id,
+            deleted: btn.dataset.shopDelete
+          });
+          setKpShopStatus(`${id} を更新しました`, 'ok');
+          await loadKpShopProducts();
+        } catch (err) {
+          setKpShopStatus(err.message || '削除状態の更新に失敗', 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  async function loadKpShopProducts() {
+    const body = document.getElementById('kpShopProductsBody');
+    if (body) body.innerHTML = '<p class="kp-migo-result">読み込み中…</p>';
+    try {
+      const data = await fetchKpMigoApi('migo-shop-kp-list');
+      renderKpShopProducts(data.products || []);
+    } catch (err) {
+      if (body) {
+        body.innerHTML = `<p class="kp-migo-result kp-migo-result--error">${escapeHtml(err.message || '取得失敗')}</p>`;
+      }
+    }
+  }
+
+  async function loadKpShopSales() {
+    const body = document.getElementById('kpShopProductsBody');
+    const salesBody = document.getElementById('kpShopSalesBody');
+    if (!salesBody) return;
+    salesBody.hidden = false;
+    salesBody.innerHTML = '<p class="kp-migo-result">購入履歴を読み込み中…</p>';
+    try {
+      const data = await fetchKpMigoApi('migo-shop-kp-sales');
+      const sales = data.sales || [];
+      if (!sales.length) {
+        salesBody.innerHTML = '<p class="kp-migo-result">購入履歴はまだありません。</p>';
+        return;
+      }
+      salesBody.innerHTML = `
+        <h4 class="kp-migo-subtitle">購入履歴</h4>
+        <table class="kp-migo-table">
+          <thead>
+            <tr>
+              <th>日時</th>
+              <th>PL名</th>
+              <th>商品</th>
+              <th>価格</th>
+              <th>数</th>
+              <th>履歴ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sales.map(s => `
+              <tr>
+                <td>${escapeHtml(formatShopDate(s.purchased_at))}</td>
+                <td>${escapeHtml(s.player_name || '')}</td>
+                <td>${escapeHtml(s.product_name || s.product_id || '')}</td>
+                <td>${escapeHtml(String(s.price_paid ?? 0))}</td>
+                <td>${escapeHtml(String(s.qty ?? 1))}</td>
+                <td><code>${escapeHtml(s.purchase_id || '')}</code></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch (err) {
+      salesBody.innerHTML = `<p class="kp-migo-result kp-migo-result--error">${escapeHtml(err.message || '履歴取得失敗')}</p>`;
+    }
+  }
+
   renderCards();
   renderFilesDriveSection();
   renderMigoPlayersSection();
   renderMigoGiftSection();
+  renderMigoShopSection();
   bindModal();
 })();

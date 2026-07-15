@@ -25,6 +25,8 @@
     organizationForm: 'https://docs.google.com/forms/d/e/1FAIpQLSdOio3knxLlXFAPz8TWeq-Yjsy-N2xjMkHyySjJC7KOxUN3zA/viewform',
     scenarioForm: 'https://docs.google.com/forms/d/e/1FAIpQLSeuLPqiYqKwr7kHQ2y-BU8QT9kAO5rqi2HZsNDS9LOSaJzOZg/viewform',
     pcForm: 'https://docs.google.com/forms/d/e/1FAIpQLSdijWFqVuaMmtu7ORESIks_f5QkNtvhRyk84LcBL7BkNyfhWg/viewform',
+    /** マリウスの露天商 — 商品登録フォーム（作成後に URL を貼る） */
+    shopForm: '#',
 
     /** PL/KP 共通 — 配布資料の Google ドライブフォルダ（リンクを知っている人が閲覧できる共有設定にすること） */
     filesDriveFolder: 'https://drive.google.com/drive/folders/1Wh-1nA_FKheUc9V3DdmbcWTVnlfzVfAb?usp=sharing',
@@ -36,6 +38,12 @@
 
     /** ホーム「更新のお知らせ」（新しい順。非掲載は配列から外す） */
     portalNews: [
+      {
+        date: '2026-07-15',
+        title: 'マリウスの露天商',
+        text: '菌糸コインで商品を買える露天商を追加しました。サイドバーから入れます。',
+        href: 'games/migo-shop.html'
+      },
       {
         date: '2026-07-02',
         title: 'ミ＝ゴ・菌糸コインの説明資料',
@@ -57,6 +65,12 @@
 
     /** ホーム「オマケ」に載せるミニゲーム（非掲載は配列から外す） */
     portalMinigames: [
+      {
+        href: 'games/migo-shop.html',
+        icon: '🏪',
+        name: 'マリウスの露天商',
+        description: '菌糸コインで商品を買う露天商。在庫がなくなると売切れ。'
+      },
       {
         href: 'games/chaugner-run.html',
         icon: '🏃',
