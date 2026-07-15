@@ -1,13 +1,13 @@
-/* マリウスの露天商 — YOKOFOLIA ショップ */
+/* マリウスの露天商 — スラムの屋台 */
 
 :root {
-  --ms-bg: #14100f;
-  --ms-panel: #221814;
-  --ms-border: #5a3a2e;
-  --ms-text: #f4e8df;
-  --ms-muted: #b39a8c;
-  --ms-accent: #d4a05a;
-  --ms-accent-strong: #e8b86a;
+  --ms-bg: #1c1712;
+  --ms-text: #f3ebe2;
+  --ms-muted: #b7a592;
+  --ms-accent: #c9854a;
+  --ms-accent-strong: #e0a05a;
+  --ms-wood: #5a3d28;
+  --ms-wood-lite: #7a5536;
   --ms-danger: #e07070;
   --ms-ok: #7ecf9a;
 }
@@ -23,8 +23,9 @@ html { font-size: 15px; }
 body {
   font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(180, 90, 50, 0.18), transparent 55%),
-    linear-gradient(180deg, #1a1210 0%, #100c0b 100%);
+    radial-gradient(ellipse at 30% 10%, rgba(160, 90, 40, 0.14), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(40, 50, 70, 0.2), transparent 45%),
+    linear-gradient(180deg, #251c15 0%, #14100c 100%);
   color: var(--ms-text);
   min-height: 100vh;
   touch-action: manipulation;
@@ -41,9 +42,8 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(90, 58, 46, 0.7);
-  background: rgba(10, 8, 7, 0.72);
-  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(90, 60, 40, 0.55);
+  background: rgba(12, 10, 8, 0.78);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -62,7 +62,6 @@ body {
   flex: 1;
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
 }
 
 .ms-coin-hud {
@@ -84,7 +83,7 @@ body {
 }
 
 .ms-main {
-  width: min(960px, 100%);
+  width: min(920px, 100%);
   margin: 0 auto;
   padding: 1rem 1rem 2.5rem;
   flex: 1;
@@ -98,7 +97,7 @@ body {
   margin-bottom: 1rem;
   padding: 0.85rem;
   background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(90, 58, 46, 0.55);
+  border: 1px solid rgba(90, 60, 40, 0.5);
   border-radius: 10px;
 }
 
@@ -118,7 +117,7 @@ body {
 .ms-field input {
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
-  border: 1px solid rgba(90, 58, 46, 0.7);
+  border: 1px solid rgba(90, 60, 40, 0.65);
   background: #120e0c;
   color: var(--ms-text);
   font: inherit;
@@ -131,8 +130,8 @@ body {
 
 .ms-btn {
   appearance: none;
-  border: 1px solid rgba(212, 160, 90, 0.45);
-  background: rgba(80, 45, 28, 0.55);
+  border: 1px solid rgba(201, 133, 74, 0.45);
+  background: rgba(80, 50, 28, 0.55);
   color: var(--ms-text);
   border-radius: 8px;
   padding: 0.55rem 0.9rem;
@@ -149,8 +148,8 @@ body {
 
 .ms-btn--primary {
   width: 100%;
-  background: linear-gradient(135deg, #8a5228, #c4863c);
-  border-color: rgba(232, 184, 106, 0.6);
+  background: linear-gradient(135deg, #7a4a24, #c07a38);
+  border-color: rgba(224, 160, 90, 0.55);
   margin-top: 0.35rem;
 }
 
@@ -164,91 +163,178 @@ body {
 .ms-status--error { color: var(--ms-danger); }
 .ms-status--info { color: var(--ms-muted); }
 
+/* ---- 屋台ステージ ---- */
+
 .ms-shop-stage {
   position: relative;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(90, 58, 46, 0.65);
-  background:
-    linear-gradient(180deg, rgba(60, 32, 22, 0.45) 0%, rgba(18, 12, 10, 0.95) 48%, #120d0b 100%);
-  min-height: 28rem;
+  border: 1px solid rgba(90, 60, 40, 0.6);
+  background: linear-gradient(180deg, #3a2a1c 0%, #221810 42%, #15100c 100%);
+  min-height: 30rem;
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.35);
 }
 
-.ms-shop-backdrop {
-  padding: 1.25rem 1rem 0.25rem;
-  text-align: center;
+.ms-alley {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.ms-stall {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 30rem;
+}
+
+.ms-stall-back {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.75rem 1.1rem;
+  padding: 1.1rem 1rem 0.35rem;
+  flex-wrap: wrap;
+}
+
+.ms-shopkeeper {
+  flex: 0 0 auto;
 }
 
 .ms-shopkeeper img {
-  width: clamp(96px, 22vw, 148px);
+  display: block;
+  width: clamp(150px, 34vw, 240px);
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
 }
 
-.ms-shopkeeper-name {
-  margin-top: 0.35rem;
+.ms-speech {
+  flex: 1 1 14rem;
+  max-width: 22rem;
+  margin-bottom: 1.2rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 248, 236, 0.94);
+  color: #2a2118;
+  border-radius: 14px;
+  border: 2px solid rgba(120, 80, 45, 0.35);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.ms-speech::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  bottom: 28px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8px 12px 8px 0;
+  border-color: transparent rgba(255, 248, 236, 0.94) transparent transparent;
+}
+
+.ms-speech-name {
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #f0d2b0;
+  color: #8a5a30;
+  margin-bottom: 0.25rem;
 }
 
-.ms-shopkeeper-line {
-  margin-top: 0.2rem;
-  font-size: 0.82rem;
-  color: var(--ms-muted);
+.ms-speech-line {
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 0.35rem;
+}
+
+.ms-speech-sub {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #5a4636;
+}
+
+.ms-counter {
+  margin-top: auto;
+  position: relative;
+  padding: 1.15rem 0.85rem 1.2rem;
+  background:
+    linear-gradient(180deg, rgba(90, 58, 34, 0.55) 0%, rgba(48, 32, 20, 0.95) 18%, #2a1c12 100%);
+  border-top: 4px solid #6b472c;
+  box-shadow: inset 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+.ms-counter-rail {
+  position: absolute;
+  left: 0.6rem;
+  right: 0.6rem;
+  top: -8px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #8a6240, #5a3d28);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.ms-counter-label {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(232, 200, 150, 0.8);
+  margin-bottom: 0.75rem;
 }
 
 .ms-shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 0.75rem;
-  padding: 1rem 1rem 1.35rem;
-  position: relative;
-  z-index: 1;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 0.7rem;
 }
 
 .ms-shelf-empty {
   grid-column: 1 / -1;
   text-align: center;
   color: var(--ms-muted);
-  padding: 1.5rem 0.5rem 2rem;
+  padding: 1.2rem 0.5rem;
 }
 
 .ms-product {
   appearance: none;
-  border: 1px solid rgba(120, 80, 55, 0.55);
-  background: linear-gradient(160deg, rgba(42, 26, 20, 0.95), rgba(20, 14, 12, 0.98));
+  border: 1px solid rgba(140, 95, 55, 0.55);
+  background: linear-gradient(165deg, rgba(55, 38, 24, 0.96), rgba(24, 16, 12, 0.98));
   border-radius: 10px;
-  padding: 0.55rem;
+  padding: 0.5rem;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  min-height: 10.5rem;
+  gap: 0.28rem;
+  min-height: 10.2rem;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .ms-product:hover {
-  transform: translateY(-2px);
-  border-color: rgba(212, 160, 90, 0.7);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  transform: translateY(-3px);
+  border-color: rgba(224, 160, 90, 0.75);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
 }
 
-.ms-product.is-soldout {
-  opacity: 0.55;
-}
+.ms-product.is-soldout { opacity: 0.5; }
 
 .ms-product-thumb {
   display: block;
   aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
-  background: #0d0a09;
+  background: #100c0a;
+  border: 1px solid rgba(80, 55, 35, 0.55);
 }
 
 .ms-product-image {
@@ -259,19 +345,19 @@ body {
 }
 
 .ms-product-name {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.3;
 }
 
 .ms-product-price {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--ms-accent-strong);
   font-weight: 600;
 }
 
 .ms-product-stock {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: var(--ms-muted);
 }
 
@@ -297,8 +383,8 @@ body {
   width: min(420px, 100%);
   max-height: min(90vh, 720px);
   overflow: auto;
-  background: linear-gradient(180deg, #2a1c16, #17110f);
-  border: 1px solid rgba(212, 160, 90, 0.4);
+  background: linear-gradient(180deg, #2d2118, #17110e);
+  border: 1px solid rgba(201, 133, 74, 0.4);
   border-radius: 14px;
   padding: 1.1rem 1rem 1.2rem;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
@@ -323,7 +409,7 @@ body {
   border-radius: 10px;
   overflow: hidden;
   background: #0d0a09;
-  border: 1px solid rgba(90, 58, 46, 0.6);
+  border: 1px solid rgba(90, 58, 40, 0.55);
 }
 
 .ms-modal-media img {
@@ -380,9 +466,26 @@ body {
 .ms-modal-status--info { color: var(--ms-muted); }
 
 @media (max-width: 640px) {
-  .ms-header-title { font-size: 0.92rem; }
+  .ms-stall-back {
+    flex-direction: column;
+    align-items: center;
+    text-align: left;
+  }
+
+  .ms-speech {
+    margin-bottom: 0.5rem;
+  }
+
+  .ms-speech::after {
+    left: 50%;
+    bottom: auto;
+    top: -10px;
+    transform: translateX(-50%);
+    border-width: 0 8px 12px 8px;
+    border-color: transparent transparent rgba(255, 248, 236, 0.94) transparent;
+  }
+
   .ms-shelf {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .ms-shop-stage { min-height: 24rem; }
 }

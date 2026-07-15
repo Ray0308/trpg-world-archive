@@ -8,7 +8,7 @@
   const GAS_ENDPOINT = (window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl) || '';
   const PLAYER_KEY = 'migo_shop_player_name';
   /** 固定の店員画像。Drive URL に差し替えても可 */
-  const SHOPKEEPER_IMAGE = '../images/yokofolia-mascot.png';
+  const SHOPKEEPER_IMAGE = '../images/marius.png';
 
   const playerNameInput = document.getElementById('playerName');
   const coinBalanceEl = document.getElementById('coinBalance');

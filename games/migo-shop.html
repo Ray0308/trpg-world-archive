@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1a1210">
+  <meta name="theme-color" content="#2a2218">
   <meta name="apple-mobile-web-app-title" content="マリウスの露天商">
   <title>マリウスの露天商 — YOKOFOLIA</title>
   <link rel="icon" href="../icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="migo-shop.css?v=20260715a">
+  <link rel="stylesheet" href="migo-shop.css?v=20260715e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -34,17 +34,28 @@
         <p class="ms-status" id="formStatus" hidden></p>
       </section>
 
-      <section class="ms-shop-stage" aria-label="露天商">
-        <div class="ms-shop-backdrop">
-          <div class="ms-shopkeeper">
-            <img id="shopkeeperImage" src="../images/yokofolia-mascot.png" alt="マリウス" width="160" height="160" decoding="async">
-            <p class="ms-shopkeeper-name">マリウス</p>
-            <p class="ms-shopkeeper-line">よう、菌糸コイン持ってるなら見ていきな。</p>
-          </div>
-        </div>
+      <section class="ms-shop-stage" aria-label="マリウスの屋台">
+        <div class="ms-alley" aria-hidden="true"></div>
 
-        <div class="ms-shelf" id="productShelf" role="list">
-          <p class="ms-shelf-empty" id="shelfEmpty">商品を読み込み中…</p>
+        <div class="ms-stall">
+          <div class="ms-stall-back">
+            <div class="ms-shopkeeper">
+              <img id="shopkeeperImage" src="../images/marius.png" alt="マリウス" width="280" height="280" decoding="async">
+            </div>
+            <div class="ms-speech">
+              <p class="ms-speech-name">マリウス</p>
+              <p class="ms-speech-line">僕も教授やみんなの役に立ちたい！</p>
+              <p class="ms-speech-sub">スラムの角で屋台やってるよ。菌糸コインで見ていきな！</p>
+            </div>
+          </div>
+
+          <div class="ms-counter">
+            <div class="ms-counter-rail" aria-hidden="true"></div>
+            <p class="ms-counter-label">屋台の商品</p>
+            <div class="ms-shelf" id="productShelf" role="list">
+              <p class="ms-shelf-empty" id="shelfEmpty">商品を読み込み中…</p>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -76,6 +87,6 @@
 
   <script src="../js/config.js"></script>
   <script src="../js/image-utils.js"></script>
-  <script src="migo-shop.js?v=20260715a"></script>
+  <script src="migo-shop.js?v=20260715e"></script>
 </body>
 </html>

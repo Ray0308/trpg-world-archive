@@ -85,7 +85,7 @@ shopForm: 'https://docs.google.com/forms/d/e/...../viewform',
 | KP「露天商・商品登録フォーム」 | フォーム新規 |
 | KP オマケ通貨内「マリウスの露天商（KP）」 | 在庫・公開・論理削除・購入履歴 |
 
-店員画像は `games/migo-shop.js` の `SHOPKEEPER_IMAGE`（既定: `images/yokofolia-mascot.png`）。Drive URL に差し替え可。
+店員画像は `images/marius.png`（屋台で出迎えるマリウス）。差し替えは `games/migo-shop.js` の `SHOPKEEPER_IMAGE`。
 
 ---
 
