@@ -26,7 +26,7 @@
     scenarioForm: 'https://docs.google.com/forms/d/e/1FAIpQLSeuLPqiYqKwr7kHQ2y-BU8QT9kAO5rqi2HZsNDS9LOSaJzOZg/viewform',
     pcForm: 'https://docs.google.com/forms/d/e/1FAIpQLSdijWFqVuaMmtu7ORESIks_f5QkNtvhRyk84LcBL7BkNyfhWg/viewform',
     /** マリウスの露天商 — 商品登録フォーム */
-    shopForm: 'https://docs.google.com/forms/d/1KTvMB__JwAiktHzY9cNuMVY65eTXhOyNtQF5SGuj2Ms/viewform',
+    shopForm: 'https://forms.gle/P9zPW7LHHr9CqUqY6',
 
     /** PL/KP 共通 — 配布資料の Google ドライブフォルダ（リンクを知っている人が閲覧できる共有設定にすること） */
     filesDriveFolder: 'https://drive.google.com/drive/folders/1Wh-1nA_FKheUc9V3DdmbcWTVnlfzVfAb?usp=sharing',
