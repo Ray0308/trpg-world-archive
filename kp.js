@@ -91,9 +91,9 @@
       linkKey: 'shopForm',
       icon: '🏪',
       name: '露天商・商品登録フォーム',
-      description: 'マリウスの露天商の商品を追加。在庫・公開切替は下の「オマケ通貨」内ショップ管理から。',
-      editable: false,
-      visibilityControl: false
+      description: 'マリウスの露天商の商品を追加。編集・在庫・公開切替・購入履歴はこのカードから操作できます。',
+      editable: 'shop',
+      visibilityControl: true
     }
   };
 
@@ -331,6 +331,17 @@
 
     const newBtn = `<a href="${escapeAttr(url)}" class="kp-card-btn" target="_blank" rel="noopener noreferrer">新規登録${EXTERNAL_ICON}</a>`;
 
+    if (entity === 'shop') {
+      return `
+      <div class="kp-card-actions">
+        ${newBtn}
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-shop="edit">編集</button>
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-shop="list">一覧・在庫</button>
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-shop="visibility">公開設定</button>
+        <button type="button" class="kp-card-btn kp-card-btn--secondary" data-kp-shop="sales">購入履歴</button>
+      </div>`;
+    }
+
     if (!def.editable) {
       return `<div class="kp-card-actions">${newBtn}</div>`;
     }
@@ -372,6 +383,9 @@
     });
     grid.querySelectorAll('[data-kp-visibility]').forEach(btn => {
       btn.addEventListener('click', () => openVisibility(btn.dataset.kpVisibility));
+    });
+    grid.querySelectorAll('[data-kp-shop]').forEach(btn => {
+      btn.addEventListener('click', () => openShopManager(btn.dataset.kpShop));
     });
   }
 
@@ -965,12 +979,52 @@
     closeModal('kpEntityVisibility');
   }
 
+  function closeShopManager() {
+    closeModal('kpShopManager');
+  }
+
+  function openShopManager(mode) {
+    const modal = document.getElementById('kpShopManager');
+    const title = document.getElementById('kpShopModalTitle');
+    const hint = document.getElementById('kpShopModalHint');
+    if (!modal) return;
+
+    const labels = {
+      edit: {
+        title: '露天商・商品編集',
+        hint: 'フォーム編集リンクから商品名・説明・画像・価格を直せます。在庫と公開はここから。'
+      },
+      list: {
+        title: '露天商・一覧・在庫',
+        hint: '在庫数を変えて「在庫保存」を押してください。'
+      },
+      visibility: {
+        title: '露天商・公開設定',
+        hint: '公開／非公開を切り替えます。非公開や論理削除の商品はPL画面に出ません。'
+      },
+      sales: {
+        title: '露天商・購入履歴',
+        hint: '購入時点の商品名・価格が記録されています。'
+      }
+    };
+    const meta = labels[mode] || labels.list;
+    if (title) title.textContent = meta.title;
+    if (hint) hint.textContent = meta.hint;
+
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+
+    if (mode === 'sales') loadKpShopSales();
+    else loadKpShopProducts();
+  }
+
   function bindModal() {
     document.querySelectorAll('[data-kp-close]').forEach(el => {
       el.addEventListener('click', () => {
         const modalId = el.getAttribute('data-kp-close');
         if (modalId === 'kpEntityVisibility') closeVisibility();
         else if (modalId === 'kpEntityList') closeList();
+        else if (modalId === 'kpShopManager') closeShopManager();
         else closePicker();
       });
     });
@@ -980,7 +1034,16 @@
       if (!document.getElementById('kpEntityPicker').hidden) closePicker();
       if (!document.getElementById('kpEntityVisibility').hidden) closeVisibility();
       if (!document.getElementById('kpEntityList').hidden) closeList();
+      const shopModal = document.getElementById('kpShopManager');
+      if (shopModal && !shopModal.hidden) closeShopManager();
     });
+
+    const refreshBtn = document.getElementById('kpShopModalRefreshBtn');
+    const salesBtn = document.getElementById('kpShopModalSalesBtn');
+    const productsBtn = document.getElementById('kpShopModalProductsBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => loadKpShopProducts());
+    if (salesBtn) salesBtn.addEventListener('click', () => loadKpShopSales());
+    if (productsBtn) productsBtn.addEventListener('click', () => loadKpShopProducts());
   }
 
   function renderFilesDriveSection() {
@@ -1301,28 +1364,40 @@
         <span class="kp-card-icon">🏪</span>
         <h3 class="kp-card-name" id="kpMigoShopTitle">マリウスの露天商（KP）</h3>
         <p class="kp-card-desc">
-          商品の追加はフォーム、ここに在庫と公開状態、購入履歴があります。
-          物理削除はせず、論理削除または非公開にしてください。
+          上の「露天商・商品登録フォーム」カードから、一覧・在庫・公開・購入履歴を開けます。
         </p>
         <div class="kp-migo-toolbar">
-          <button type="button" class="kp-card-btn" id="kpShopRefreshBtn">商品を再読込</button>
-          <button type="button" class="kp-card-btn kp-card-btn--secondary" id="kpShopSalesBtn">購入履歴</button>
+          <button type="button" class="kp-card-btn" id="kpShopOpenManagerBtn">商品管理を開く</button>
+          <button type="button" class="kp-card-btn kp-card-btn--secondary" id="kpShopOpenSalesBtn">購入履歴</button>
         </div>
-        <p class="kp-migo-result" id="kpShopStatus" hidden></p>
-        <div class="kp-migo-players-wrap" id="kpShopProductsBody">
-          <p class="kp-migo-result">読み込み中…</p>
-        </div>
-        <div class="kp-migo-players-wrap" id="kpShopSalesBody" hidden></div>
       </article>
     `;
 
-    document.getElementById('kpShopRefreshBtn').addEventListener('click', () => loadKpShopProducts());
-    document.getElementById('kpShopSalesBtn').addEventListener('click', () => loadKpShopSales());
-    loadKpShopProducts();
+    const openBtn = document.getElementById('kpShopOpenManagerBtn');
+    const salesBtn = document.getElementById('kpShopOpenSalesBtn');
+    if (openBtn) openBtn.addEventListener('click', () => openShopManager('list'));
+    if (salesBtn) salesBtn.addEventListener('click', () => openShopManager('sales'));
+  }
+
+  function getShopUi() {
+    const modal = document.getElementById('kpShopManager');
+    const modalOpen = modal && !modal.hidden;
+    if (modalOpen) {
+      return {
+        productsBody: document.getElementById('kpShopModalBody'),
+        salesBody: null,
+        statusEl: document.getElementById('kpShopModalStatus')
+      };
+    }
+    return {
+      productsBody: document.getElementById('kpShopProductsBody'),
+      salesBody: document.getElementById('kpShopSalesBody'),
+      statusEl: document.getElementById('kpShopStatus')
+    };
   }
 
   function setKpShopStatus(message, kind) {
-    const el = document.getElementById('kpShopStatus');
+    const el = getShopUi().statusEl;
     if (!el) return;
     if (!message) {
       el.hidden = true;
@@ -1346,9 +1421,9 @@
   }
 
   function renderKpShopProducts(products) {
-    const body = document.getElementById('kpShopProductsBody');
-    const salesBody = document.getElementById('kpShopSalesBody');
-    if (salesBody) salesBody.hidden = true;
+    const ui = getShopUi();
+    const body = ui.productsBody;
+    if (ui.salesBody) ui.salesBody.hidden = true;
     if (!body) return;
 
     if (!products.length) {
@@ -1465,7 +1540,7 @@
   }
 
   async function loadKpShopProducts() {
-    const body = document.getElementById('kpShopProductsBody');
+    const body = getShopUi().productsBody;
     if (body) body.innerHTML = '<p class="kp-migo-result">読み込み中…</p>';
     try {
       const data = await fetchKpMigoApi('migo-shop-kp-list');
@@ -1478,19 +1553,19 @@
   }
 
   async function loadKpShopSales() {
-    const body = document.getElementById('kpShopProductsBody');
-    const salesBody = document.getElementById('kpShopSalesBody');
-    if (!salesBody) return;
-    salesBody.hidden = false;
-    salesBody.innerHTML = '<p class="kp-migo-result">購入履歴を読み込み中…</p>';
+    const ui = getShopUi();
+    const target = ui.salesBody || ui.productsBody;
+    if (!target) return;
+    if (ui.salesBody) ui.salesBody.hidden = false;
+    target.innerHTML = '<p class="kp-migo-result">購入履歴を読み込み中…</p>';
     try {
       const data = await fetchKpMigoApi('migo-shop-kp-sales');
       const sales = data.sales || [];
       if (!sales.length) {
-        salesBody.innerHTML = '<p class="kp-migo-result">購入履歴はまだありません。</p>';
+        target.innerHTML = '<p class="kp-migo-result">購入履歴はまだありません。</p>';
         return;
       }
-      salesBody.innerHTML = `
+      target.innerHTML = `
         <h4 class="kp-migo-subtitle">購入履歴</h4>
         <table class="kp-migo-table">
           <thead>
@@ -1518,7 +1593,7 @@
         </table>
       `;
     } catch (err) {
-      salesBody.innerHTML = `<p class="kp-migo-result kp-migo-result--error">${escapeHtml(err.message || '履歴取得失敗')}</p>`;
+      target.innerHTML = `<p class="kp-migo-result kp-migo-result--error">${escapeHtml(err.message || '履歴取得失敗')}</p>`;
     }
   }
 
