@@ -7,8 +7,39 @@
 
   const GAS_ENDPOINT = (window.AppConfig && window.AppConfig.api && window.AppConfig.api.baseUrl) || '';
   const PLAYER_KEY = 'migo_shop_player_name';
-  /** 固定の店員画像。Drive URL に差し替えても可 */
-  const SHOPKEEPER_IMAGE = '../images/marius.png';
+
+  const MARIUS_PATTERNS = [
+    {
+      image: '../images/marius-1.png',
+      line: '僕も教授やみんなの役に立ちたい！',
+      sub: 'スラムの角で屋台やってるよ。菌糸コインで見ていきな！'
+    },
+    {
+      image: '../images/marius-2.png',
+      line: 'おかえり〜！今日もいい品、並べといたよ。',
+      sub: '在庫なくなったらすみません。次はもっと仕入れるね。'
+    },
+    {
+      image: '../images/marius-3.png',
+      line: 'へへっ、秘密の仕入れルートがあるんだ。',
+      sub: '……誰にも言わないでね？教授には自慢しちゃったけど。'
+    },
+    {
+      image: '../images/marius-1.png',
+      line: '買ってくれたら、僕も少し誇らしいな。',
+      sub: 'ゴミみたいな路地でも、役に立てるならそれでいいんだ。'
+    },
+    {
+      image: '../images/marius-2.png',
+      line: 'いらっしゃい！菌糸コイン、持ってる？',
+      sub: '足りなくても大丈夫。見てるだけでも歓迎だよ。'
+    },
+    {
+      image: '../images/marius-3.png',
+      line: 'ん〜こっちの箱、なんか怪しく光ってる……',
+      sub: 'でも効くから問題なし！たぶん！'
+    }
+  ];
 
   const playerNameInput = document.getElementById('playerName');
   const coinBalanceEl = document.getElementById('coinBalance');
@@ -25,14 +56,50 @@
   const productModalStatus = document.getElementById('productModalStatus');
   const buyBtn = document.getElementById('buyBtn');
   const shopkeeperImage = document.getElementById('shopkeeperImage');
+  const speechLine = document.getElementById('speechLine');
+  const speechSub = document.getElementById('speechSub');
 
   let products = [];
   let balance = null;
   let selectedId = null;
   let buying = false;
   let balanceName = '';
+  let lastPatternIndex = -1;
 
-  if (shopkeeperImage) shopkeeperImage.src = SHOPKEEPER_IMAGE;
+  function pickMariusPattern() {
+    if (!MARIUS_PATTERNS.length) return null;
+    let index = Math.floor(Math.random() * MARIUS_PATTERNS.length);
+    if (MARIUS_PATTERNS.length > 1 && index === lastPatternIndex) {
+      index = (index + 1) % MARIUS_PATTERNS.length;
+    }
+    lastPatternIndex = index;
+    return MARIUS_PATTERNS[index];
+  }
+
+  function applyMariusPattern(pattern) {
+    if (!pattern) return;
+    if (shopkeeperImage) {
+      shopkeeperImage.classList.remove('is-swap');
+      // reflow for fade
+      void shopkeeperImage.offsetWidth;
+      shopkeeperImage.src = pattern.image;
+      shopkeeperImage.classList.add('is-swap');
+    }
+    if (speechLine) speechLine.textContent = pattern.line;
+    if (speechSub) speechSub.textContent = pattern.sub;
+  }
+
+  function startMariusRotate() {
+    applyMariusPattern(pickMariusPattern());
+    const rotate = () => {
+      applyMariusPattern(pickMariusPattern());
+      const nextMs = 12000 + Math.floor(Math.random() * 10000);
+      setTimeout(rotate, nextMs);
+    };
+    setTimeout(rotate, 14000 + Math.floor(Math.random() * 8000));
+  }
+
+  startMariusRotate();
 
   window.handleArchiveImgError = window.handleArchiveImgError || function (img) {
     let fallbacks = [];

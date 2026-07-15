@@ -198,27 +198,46 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 0.75rem 1.1rem;
-  padding: 1.1rem 1rem 0.35rem;
+  gap: 0.65rem 1rem;
+  padding: 0.85rem 1rem 0;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
 }
 
 .ms-shopkeeper {
   flex: 0 0 auto;
+  position: relative;
+  z-index: 3;
+  /* 前腕の下端をカウンター天板に食い込ませて「肘つき」に見せる */
+  margin-bottom: -2.65rem;
+  padding-bottom: 0;
+  line-height: 0;
 }
 
 .ms-shopkeeper img {
   display: block;
-  width: clamp(150px, 34vw, 240px);
+  width: clamp(170px, 38vw, 280px);
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+  object-position: bottom center;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.ms-shopkeeper img.is-swap {
+  animation: ms-keeper-in 0.45s ease;
+}
+
+@keyframes ms-keeper-in {
+  from { opacity: 0.35; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .ms-speech {
   flex: 1 1 14rem;
   max-width: 22rem;
-  margin-bottom: 1.2rem;
+  margin: 0 0 2.4rem;
   padding: 0.85rem 1rem;
   background: rgba(255, 248, 236, 0.94);
   color: #2a2118;
@@ -226,18 +245,19 @@ body {
   border: 2px solid rgba(120, 80, 45, 0.35);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   position: relative;
+  z-index: 4;
 }
 
 .ms-speech::after {
   content: '';
   position: absolute;
-  left: -10px;
-  bottom: 28px;
+  right: -10px;
+  bottom: 34px;
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 8px 12px 8px 0;
-  border-color: transparent rgba(255, 248, 236, 0.94) transparent transparent;
+  border-width: 8px 0 8px 12px;
+  border-color: transparent transparent transparent rgba(255, 248, 236, 0.94);
 }
 
 .ms-speech-name {
@@ -261,24 +281,32 @@ body {
 }
 
 .ms-counter {
-  margin-top: auto;
+  margin-top: 0;
   position: relative;
-  padding: 1.15rem 0.85rem 1.2rem;
+  z-index: 5;
+  padding: 1.35rem 0.85rem 1.2rem;
   background:
-    linear-gradient(180deg, rgba(90, 58, 34, 0.55) 0%, rgba(48, 32, 20, 0.95) 18%, #2a1c12 100%);
-  border-top: 4px solid #6b472c;
-  box-shadow: inset 0 12px 24px rgba(0, 0, 0, 0.25);
+    linear-gradient(180deg, rgba(90, 58, 34, 0.7) 0%, rgba(48, 32, 20, 0.97) 20%, #2a1c12 100%);
+  border-top: 0;
+  box-shadow:
+    inset 0 14px 28px rgba(0, 0, 0, 0.28),
+    0 -1px 0 rgba(255, 210, 150, 0.08);
 }
 
 .ms-counter-rail {
   position: absolute;
-  left: 0.6rem;
-  right: 0.6rem;
-  top: -8px;
-  height: 14px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #8a6240, #5a3d28);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  left: 0.4rem;
+  right: 0.4rem;
+  top: -12px;
+  height: 22px;
+  border-radius: 5px;
+  background:
+    linear-gradient(180deg, #9a7050 0%, #6b472c 45%, #4a3020 100%);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 220, 170, 0.25);
+  z-index: 6;
+  pointer-events: none;
 }
 
 .ms-counter-label {
@@ -467,17 +495,22 @@ body {
 
 @media (max-width: 640px) {
   .ms-stall-back {
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: center;
     text-align: left;
   }
 
+  .ms-shopkeeper {
+    margin-bottom: -2.2rem;
+  }
+
   .ms-speech {
-    margin-bottom: 0.5rem;
+    margin: 0 0 0.85rem;
   }
 
   .ms-speech::after {
     left: 50%;
+    right: auto;
     bottom: auto;
     top: -10px;
     transform: translateX(-50%);
